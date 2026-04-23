@@ -150,6 +150,20 @@ input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim)
 .c-btn.off { background: rgba(255, 79, 79, 0.15); color: var(--red); border-color: rgba(255, 79, 79, 0.3); }
 .c-end { background: var(--red) !important; color: #fff; width: 64px; }
 
+/* Loading overlay for auto-reconnect */
+.auto-reconnect-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px);
+  z-index: 50; display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1.5rem;
+}
+.auto-reconnect-overlay.on { display: flex; }
+.spinner {
+  width: 50px; height: 50px; border: 3px solid var(--border);
+  border-top-color: var(--amber); border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* MODALS */
 .overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
@@ -214,7 +228,7 @@ input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim)
 <!-- CALL SCREEN -->
 <div id="call" class="screen">
   <div class="topbar">
-    <div class="pill" onclick="endCall()" style="cursor:pointer">
+    <div class="pill" onclick="endCall(false)" style="cursor:pointer">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       <span style="font-size:0.9rem; font-weight:600">Leave</span>
     </div>
@@ -251,10 +265,17 @@ input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim)
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
       </button>
       <div style="width:1px; height:24px; background:var(--border)"></div>
-      <button class="c-btn c-end" onclick="endCall()">
+      <button class="c-btn c-end" onclick="endCall(false)">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
+  </div>
+
+  <!-- Auto-reconnect overlay -->
+  <div id="autoReconnectOverlay" class="auto-reconnect-overlay">
+    <div class="spinner"></div>
+    <h3 id="autoReconnectMsg" style="font-family:var(--font-d); text-align:center">Finding a new partner...</h3>
+    <button onclick="cancelAutoReconnect()" style="background:var(--s2); border:1px solid var(--border); color:#fff; padding:0.7rem 1.5rem; border-radius:30px; cursor:pointer; font-size:0.9rem">Cancel</button>
   </div>
 </div>
 
@@ -291,6 +312,7 @@ let socket, localStream, pc;
 let roomId=null, peerId=null, myId=null;
 let audioOn=true, videoOn=true;
 let t0=null, timerIv=null, shareFrom=null;
+let isAutoReconnecting = false;
 
 const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
 const $=id=>document.getElementById(id);
@@ -310,12 +332,34 @@ function initSock() {
   socket=io();
   socket.on('connect',()=>{ if(myId) socket.emit('register-orey-id',{oreyId:myId,userName:un()}); });
 
-  socket.on('waiting-for-match',()=>{ $('waitBar').classList.add('on'); $('randomBtn').style.display='none'; });
-  socket.on('random-cancelled',()=>{ $('waitBar').classList.remove('on'); $('randomBtn').style.display=''; });
+  socket.on('waiting-for-match',(data)=>{
+    $('waitBar').classList.add('on'); 
+    $('randomBtn').style.display='none';
+    if(data && data.autoReconnectMode) {
+      showAutoReconnectOverlay(true, "Finding a new partner...");
+    }
+  });
+  
+  socket.on('random-cancelled',()=>{ 
+    $('waitBar').classList.remove('on'); 
+    $('randomBtn').style.display='';
+    hideAutoReconnectOverlay();
+    isAutoReconnecting = false;
+  });
 
-  socket.on('room-joined',async({roomId:r,peers})=>{
-    roomId=r; $('waitBar').classList.remove('on');
-    await startLocal(); showCall();
+  socket.on('room-joined',async({roomId:r,peers, autoReconnected})=>{
+    roomId=r; 
+    $('waitBar').classList.remove('on');
+    hideAutoReconnectOverlay();
+    isAutoReconnecting = false;
+    
+    await startLocal(); 
+    showCall();
+    
+    if(autoReconnected) {
+      showToast("Connected with a new partner!", 2000);
+    }
+    
     if(peers.length){
       const p=peers[0]; peerId=p.socketId; updatePeerUI(p.userName);
       await mkOffer(p.socketId);
@@ -328,7 +372,43 @@ function initSock() {
   socket.on('ice-candidate',async({candidate})=>{ if(pc) await pc.addIceCandidate(new RTCIceCandidate(candidate)); });
 
   socket.on('peer-media-state',({videoEnabled:v})=>{ $('remoteOff').classList.toggle('on',!v); });
-  socket.on('user-left',()=>{ showToast('Partner left'); endCall(); });
+  
+  socket.on('user-left',({autoReconnecting})=>{
+    if(autoReconnecting) {
+      showToast("Partner is finding a new match...");
+      showAutoReconnectOverlay(true, "Partner disconnected. Finding new match...");
+      cleanupCall();
+    } else {
+      showToast('Partner left');
+      endCall(false);
+    }
+  });
+  
+  socket.on('user-disconnected',({willAutoReconnect})=>{
+    if(willAutoReconnect) {
+      showAutoReconnectOverlay(true, "Partner disconnected. Waiting for reconnect...");
+    } else {
+      showToast('Partner disconnected');
+      endCall(false);
+    }
+  });
+  
+  socket.on('waiting-for-reconnect',({message})=>{
+    showAutoReconnectOverlay(true, message);
+  });
+  
+  socket.on('partner-auto-reconnecting',({message})=>{
+    showToast(message);
+  });
+  
+  socket.on('auto-reconnecting',({message, delay})=>{
+    showAutoReconnectOverlay(true, message);
+  });
+  
+  socket.on('auto-reconnect-started',({message})=>{
+    showAutoReconnectOverlay(true, message);
+    isAutoReconnecting = true;
+  });
 
   socket.on('share-id-request',({fromId,fromName})=>{
     shareFrom=fromId;
@@ -336,14 +416,37 @@ function initSock() {
     $('shareModal').classList.add('on');
   });
 
-  socket.on('share-id-reveal',({oreyId})=>{
+  socket.on('share-id-reveal',({oreyId, userName})=>{
     $('shareModal').classList.remove('on');
     $('revealedId').textContent=oreyId;
     $('revealModal').classList.add('on');
+    showToast(`You are now connected with ${userName || 'partner'}!`);
   });
 
   socket.on('share-id-declined',()=>showToast('They declined to share IDs'));
   socket.on('orey-id-not-found',()=>setSt('ID not found or offline','red'));
+}
+
+function showAutoReconnectOverlay(show, message) {
+  const overlay = $('autoReconnectOverlay');
+  const msgEl = $('autoReconnectMsg');
+  if(show) {
+    msgEl.textContent = message || "Finding a new partner...";
+    overlay.classList.add('on');
+  } else {
+    overlay.classList.remove('on');
+  }
+}
+
+function hideAutoReconnectOverlay() {
+  $('autoReconnectOverlay').classList.remove('on');
+}
+
+function cancelAutoReconnect() {
+  isAutoReconnecting = false;
+  hideAutoReconnectOverlay();
+  socket.emit('cancel-random');
+  endCall(false);
 }
 
 async function startLocal() {
@@ -358,15 +461,27 @@ function mkPC(tid) {
   const p=new RTCPeerConnection(ICE);
   localStream?.getTracks().forEach(t=>p.addTrack(t,localStream));
   p.onicecandidate=({candidate})=>candidate&&socket.emit('ice-candidate',{targetId:tid,candidate});
-  p.ontrack=({streams})=>{ $('remoteVideo').srcObject=streams[0]; $('remoteOff').classList.remove('on'); startTimer(); };
+  p.ontrack=({streams})=>{ 
+    $('remoteVideo').srcObject=streams[0]; 
+    $('remoteOff').classList.remove('on'); 
+    startTimer(); 
+    hideAutoReconnectOverlay();
+  };
   pc=p; return p;
 }
 
 async function mkOffer(tid){ const p=mkPC(tid); const o=await p.createOffer(); await p.setLocalDescription(o); socket.emit('offer',{targetId:tid,offer:o}); }
 async function handleOffer(offer,fid){ const p=mkPC(fid); await p.setRemoteDescription(new RTCSessionDescription(offer)); const a=await p.createAnswer(); await p.setLocalDescription(a); socket.emit('answer',{targetId:fid,answer:a}); }
 
-function joinRandom(){ socket.emit('register-orey-id',{oreyId:myId,userName:un()}); socket.emit('join-random'); }
-function cancelRandom(){ socket.emit('cancel-random'); }
+function joinRandom(){ 
+  socket.emit('register-orey-id',{oreyId:myId,userName:un()}); 
+  socket.emit('join-random'); 
+}
+
+function cancelRandom(){ 
+  socket.emit('cancel-random'); 
+  hideAutoReconnectOverlay();
+}
 
 async function connectById(){
   const t=$('targetOreyId').value.trim(); if(!t)return;
@@ -380,19 +495,53 @@ function toggleCam(){
     videoOn=!videoOn; 
     localStream?.getVideoTracks().forEach(t=>t.enabled=videoOn); 
     $('camBtn').classList.toggle('off',!videoOn); 
-    socket.emit('media-state',{roomId, videoEnabled:videoOn});
+    socket.emit('media-state',{roomId, audioEnabled:audioOn, videoEnabled:videoOn});
 }
 
 function requestShareId(){ socket.emit('share-id-request',{roomId}); showToast('Request sent'); }
 function acceptShareId(){ $('shareModal').classList.remove('on'); socket.emit('share-id-accept',{roomId, targetId:shareFrom}); }
 function declineShareId(){ $('shareModal').classList.remove('on'); socket.emit('share-id-decline',{roomId}); }
 
-function endCall(){
-  pc?.close(); pc=null;
-  localStream?.getTracks().forEach(t=>t.stop()); localStream=null;
-  clearInterval(timerIv); timerIv=null; t0=null;
-  socket.emit('leave-room', {roomId});
-  showScreen('lobby');
+function endCall(autoReconnect = false){
+  cleanupCall();
+  
+  if(autoReconnect && roomId) {
+    // User wants to auto-reconnect after leaving
+    socket.emit('leave-chat', { roomId, willAutoReconnect: true });
+    isAutoReconnecting = true;
+    showAutoReconnectOverlay(true, "Finding a new partner...");
+  } else {
+    // Normal leave - go back to lobby
+    if(roomId) {
+      socket.emit('leave-chat', { roomId, willAutoReconnect: false });
+    }
+    showScreen('lobby');
+    isAutoReconnecting = false;
+    hideAutoReconnectOverlay();
+  }
+  
+  roomId = null;
+  peerId = null;
+}
+
+function cleanupCall() {
+  pc?.close(); 
+  pc = null;
+  
+  if(localStream) {
+    localStream.getTracks().forEach(t=>t.stop());
+    localStream = null;
+  }
+  
+  clearInterval(timerIv); 
+  timerIv = null; 
+  t0 = null;
+  
+  const remoteVideo = $('remoteVideo');
+  if(remoteVideo.srcObject) {
+    remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+    remoteVideo.srcObject = null;
+  }
 }
 
 function startTimer(){
@@ -404,13 +553,13 @@ function startTimer(){
 }
 
 function updatePeerUI(name){
-  $('peerNm').textContent=name;
+  $('peerNm').textContent=name || 'Anonymous';
   $('bigAv').textContent=(name||'?')[0].toUpperCase();
 }
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
 function showCall(){ showScreen('call'); }
-function showToast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
+function showToast(msg, duration=3000){ const t=$('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',duration); }
 function setSt(msg,color){ $('lobStatus').textContent=msg; $('lobStatus').style.color=color; }
 function closeReveal(){ $('revealModal').classList.remove('on'); }
 function copyRevealedId(){ navigator.clipboard.writeText($('revealedId').textContent); showToast('Copied!'); }
