@@ -1,0 +1,39 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080810;
+  --s1: #0f0f1a;
+  --s2: #14141f;
+  --border: rgba(255,255,255,0.06);
+  --border-hi: rgba(255,255,255,0.14);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --amber-glow: rgba(245,166,35,0.32);
+  --ice: #a8d8ea;
+  --text: #f2f2f8;
+  --muted: rgba(242,242,248,0.42);
+  --faint: rgba(242,242,248,0.18);
+  --glass: rgba(10,10,20,0.72);
+  --glass-light: rgba(255,255,255,0.06);
+  --red: #ff4f4f;
+  --green: #4fcc8a;
+  --font-d: 'Clash Display', sans-serif;
+  --font-b: 'Instrument Sans', sans-serif;
+  --font-m: 'DM Mono', monospace;
+  --sb: env(safe-area-inset-bottom, 0px);
+  --st: env(safe-area-inset-top, 0px);
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-b);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
