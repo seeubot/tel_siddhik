@@ -39,7 +39,7 @@ app.get("*", (req, res) => {
 
 // ── Data structures ──────────────────────────────────────────────────────────
 
-// oreyId → { expiresAt, socketId }
+// oreyId → { expiresAt, socketId, autoReconnect }
 const oreyIds = new Map();
 
 // roomId → Map<socketId, { userName, oreyId }>
@@ -47,6 +47,9 @@ const rooms = new Map();
 
 // Queue of sockets waiting for a random match
 const randomQueue = [];
+
+// Store users who want auto-reconnect after disconnect
+const autoReconnectQueue = [];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,10 +71,71 @@ function cleanExpiredIds() {
 // Run cleanup every 10 minutes
 setInterval(cleanExpiredIds, 10 * 60 * 1000);
 
+// Auto-reconnect timer for finding new partners (5 seconds delay)
+function attemptAutoReconnect(socket, wasIntentional = false) {
+  // Only auto-reconnect if not intentional leave and user is still connected
+  if (!wasIntentional && socket.connected && socket.data.autoReconnectEnabled) {
+    setTimeout(() => {
+      if (socket.connected && socket.data.autoReconnectEnabled) {
+        // Add to random queue for new match
+        addToRandomQueue(socket);
+        socket.emit("auto-reconnecting", { 
+          message: "Looking for a new partner...",
+          delay: 3000 
+        });
+      }
+    }, 3000); // 3 second delay before searching
+  }
+}
+
+function addToRandomQueue(socket) {
+  // Remove stale entries from queue
+  const validQueue = randomQueue.filter((s) => io.sockets.sockets.has(s.id));
+  randomQueue.length = 0;
+  randomQueue.push(...validQueue);
+
+  if (randomQueue.length > 0) {
+    const partner = randomQueue.shift();
+    const roomId = uuidv4().substring(0, 8).toUpperCase();
+
+    joinRoom(socket, roomId);
+    joinRoom(partner, roomId);
+
+    // Clear auto-reconnect flag for both users
+    socket.data.autoReconnectEnabled = false;
+    partner.data.autoReconnectEnabled = false;
+
+    socket.emit("room-joined", {
+      roomId,
+      peers: [{ socketId: partner.id, userName: partner.data.userName }],
+      autoReconnected: true
+    });
+    partner.emit("room-joined", {
+      roomId,
+      peers: [{ socketId: socket.id, userName: socket.data.userName }],
+      autoReconnected: true
+    });
+    
+    partner.emit("incoming-call", {
+      fromName: socket.data.userName,
+      fromOreyId: socket.data.oreyId,
+      autoReconnected: true
+    });
+  } else {
+    randomQueue.push(socket);
+    socket.emit("waiting-for-match", { autoReconnectMode: true });
+  }
+
+  socket.data.inRandomQueue = true;
+}
+
 // ── Socket.IO ────────────────────────────────────────────────────────────────
 
 io.on("connection", (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
+  
+  // Initialize auto-reconnect flag
+  socket.data.autoReconnectEnabled = false;
 
   // ── Register / re-register an Orey-ID with this socket ──────────────────
   socket.on("register-orey-id", ({ oreyId, userName }) => {
@@ -126,7 +190,12 @@ io.on("connection", (socket) => {
   });
 
   // ── Random match ─────────────────────────────────────────────────────────
-  socket.on("join-random", () => {
+  socket.on("join-random", ({ autoReconnect = false } = {}) => {
+    // Set auto-reconnect flag if this is for auto-reconnection
+    if (autoReconnect) {
+      socket.data.autoReconnectEnabled = true;
+    }
+    
     // Remove stale entries from queue
     const validQueue = randomQueue.filter((s) => io.sockets.sockets.has(s.id));
     randomQueue.length = 0;
@@ -138,18 +207,31 @@ io.on("connection", (socket) => {
 
       joinRoom(socket, roomId);
       joinRoom(partner, roomId);
+      
+      // Clear auto-reconnect flags
+      socket.data.autoReconnectEnabled = false;
+      partner.data.autoReconnectEnabled = false;
 
       socket.emit("room-joined", {
         roomId,
         peers: [{ socketId: partner.id, userName: partner.data.userName }],
+        autoReconnected: autoReconnect
       });
       partner.emit("room-joined", {
         roomId,
         peers: [{ socketId: socket.id, userName: socket.data.userName }],
+        autoReconnected: false
       });
+      
+      if (!autoReconnect) {
+        partner.emit("incoming-call", {
+          fromName: socket.data.userName,
+          fromOreyId: socket.data.oreyId,
+        });
+      }
     } else {
       randomQueue.push(socket);
-      socket.emit("waiting-for-match");
+      socket.emit("waiting-for-match", { autoReconnectMode: autoReconnect });
     }
 
     socket.data.inRandomQueue = true;
@@ -157,7 +239,75 @@ io.on("connection", (socket) => {
 
   socket.on("cancel-random", () => {
     removeFromQueue(socket);
+    socket.data.autoReconnectEnabled = false;
     socket.emit("random-cancelled");
+  });
+
+  // ── User intentionally leaves the chat ───────────────────────────────────
+  socket.on("leave-chat", ({ roomId, willAutoReconnect = false } = {}) => {
+    // If user wants to auto-reconnect after leaving
+    if (willAutoReconnect && roomId) {
+      socket.data.autoReconnectEnabled = true;
+      
+      // Leave current room
+      if (roomId && rooms.has(roomId)) {
+        const room = rooms.get(roomId);
+        const userName = socket.data.userName;
+        room.delete(socket.id);
+        
+        if (room.size === 0) {
+          rooms.delete(roomId);
+        } else {
+          socket.to(roomId).emit("user-left", { 
+            socketId: socket.id, 
+            userName,
+            autoReconnecting: true 
+          });
+          // Notify the remaining user that partner is looking for new match
+          socket.to(roomId).emit("partner-auto-reconnecting", {
+            message: "Your partner is looking for a new match..."
+          });
+        }
+      }
+      
+      // Remove from socket room
+      if (roomId) {
+        socket.leave(roomId);
+        delete socket.data.roomId;
+      }
+      
+      // Add to random queue for new match
+      addToRandomQueue(socket);
+      socket.emit("auto-reconnect-started", { 
+        message: "Finding a new partner..." 
+      });
+    } else {
+      // Normal leave - disable auto-reconnect
+      socket.data.autoReconnectEnabled = false;
+      
+      if (roomId && rooms.has(roomId)) {
+        const room = rooms.get(roomId);
+        const userName = socket.data.userName;
+        room.delete(socket.id);
+        
+        if (room.size === 0) {
+          rooms.delete(roomId);
+        } else {
+          socket.to(roomId).emit("user-left", { 
+            socketId: socket.id, 
+            userName,
+            autoReconnecting: false 
+          });
+        }
+      }
+      
+      if (roomId) {
+        socket.leave(roomId);
+        delete socket.data.roomId;
+      }
+      
+      socket.emit("left-chat-confirmed");
+    }
   });
 
   // ── Join specific room ───────────────────────────────────────────────────
@@ -219,7 +369,7 @@ io.on("connection", (socket) => {
 
   // ── Disconnect ───────────────────────────────────────────────────────────
   socket.on("disconnect", () => {
-    const { roomId, userName, oreyId } = socket.data;
+    const { roomId, userName, oreyId, autoReconnectEnabled } = socket.data;
     removeFromQueue(socket);
 
     if (oreyId && oreyIds.has(oreyId)) {
@@ -230,10 +380,23 @@ io.on("connection", (socket) => {
     if (roomId && rooms.has(roomId)) {
       const room = rooms.get(roomId);
       room.delete(socket.id);
+      
       if (room.size === 0) {
         rooms.delete(roomId);
       } else {
-        socket.to(roomId).emit("user-left", { socketId: socket.id, userName });
+        // Notify remaining user that partner disconnected
+        socket.to(roomId).emit("user-disconnected", { 
+          socketId: socket.id, 
+          userName,
+          willAutoReconnect: autoReconnectEnabled 
+        });
+        
+        // If auto-reconnect is enabled, notify the remaining user
+        if (autoReconnectEnabled) {
+          socket.to(roomId).emit("waiting-for-reconnect", {
+            message: "Your partner disconnected but will try to reconnect..."
+          });
+        }
       }
     }
     console.log(`[-] Disconnected: ${socket.id}`);
