@@ -3,9 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install ALL deps (including dev for build tools if needed)
+# Copy package files and install production deps
+# (npm install is used instead of npm ci so no package-lock.json is required)
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev --no-audit --no-fund
 
 # ── Stage 2: Production image ──────────────────────────────
 FROM node:20-alpine AS runner
