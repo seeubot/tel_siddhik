@@ -7,143 +7,163 @@ import {
   VideoOff, 
   UserPlus, 
   SkipForward, 
-  X 
+  PhoneOff,
+  Share2
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 export default function CallScreen({
   localVideoRef,
   remoteVideoRef,
-  peerName,
-  remoteVideoOn,
-  audioOn,
-  videoOn,
-  onToggleMic,
-  onToggleCam,
-  onShareId,
-  onSkip,
-  onLeave,
-  searching,
-  searchDelay,
-  onCancelSearch,
-  searchMessage,
+  peerName = "Username 1",
+  remoteVideoOn = false,
+  audioOn = true,
+  videoOn = true,
+  onToggleMic = () => {},
+  onToggleCam = () => {},
+  onShareId = () => {},
+  onSkip = () => {},
+  onLeave = () => {},
+  searching = false,
+  searchDelay = 5000,
+  onCancelSearch = () => {},
+  searchMessage = "Finding your next vibe...",
 }) {
-  const [timer, setTimer] = useState('00:00');
-  const timerRef = useRef(null);
-  const t0Ref = useRef(null);
-
-  useEffect(() => {
-    if (remoteVideoOn && !searching) {
-      if (!t0Ref.current) {
-        t0Ref.current = Date.now();
-        timerRef.current = setInterval(() => {
-          const s = Math.floor((Date.now() - t0Ref.current) / 1000);
-          setTimer(
-            `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
-          );
-        }, 1000);
-      }
-    } else {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-      t0Ref.current = null;
-      setTimer('00:00');
-    }
-    return () => clearInterval(timerRef.current);
-  }, [remoteVideoOn, searching]);
-
   const [countdown, setCountdown] = useState(null);
+
+  // Countdown logic for the search overlay
   useEffect(() => {
-    if (!searching || !searchDelay) { setCountdown(null); return; }
+    if (!searching || !searchDelay) {
+      setCountdown(null);
+      return;
+    }
     const end = Date.now() + searchDelay;
-    const iv = setInterval(() => {
+    const interval = setInterval(() => {
       const left = Math.ceil((end - Date.now()) / 1000);
       setCountdown(left > 0 ? left : 0);
     }, 200);
-    return () => clearInterval(iv);
+    return () => clearInterval(interval);
   }, [searching, searchDelay]);
-
-  const initials = (peerName || '?')[0].toUpperCase();
 
   return (
     <div className={styles.stage}>
-      {/* Remote Video Canvas */}
-      <div className={styles.remoteWrapper}>
-        <video ref={remoteVideoRef} autoPlay playsInline className={styles.remoteVideo} />
+      {/* Remote Participant Card */}
+      <div className={styles.card}>
+        <video 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline 
+          className={styles.videoElement}
+        />
+        
+        <div className={styles.badge}>{peerName}</div>
+
         {!remoteVideoOn && (
-          <div className={styles.fallbackOverlay}>
-            <div className={styles.avatarCircle}>{initials}</div>
-            <p className={styles.fallbackText}>Connecting to {peerName || 'Mana Peer'}...</p>
+          <div className={styles.placeholder}>
+            <div className={styles.avatarCircle}>
+              <div className={styles.avatar}>{peerName[0]}</div>
+            </div>
+          </div>
+        )}
+
+        {!remoteVideoOn && (
+          <div className={styles.statusIcon}>
+            <VideoOff size={20} />
           </div>
         )}
       </div>
 
-      {/* Top HUD */}
-      <div className={styles.topHud}>
-        <div className={styles.hudPill}>
-          <div className={styles.statusDot} />
-          <span className={styles.timerText}>{timer}</span>
-        </div>
+      {/* Local Participant Card */}
+      <div className={`${styles.card} ${!videoOn ? styles.localPlaceholderCard : ''}`}>
+        <video 
+          ref={localVideoRef} 
+          autoPlay 
+          muted 
+          playsInline 
+          className={`${styles.videoElement} ${styles.localVideo}`}
+        />
         
-        <div className={styles.peerBadge}>
-          <span className={styles.peerName}>{peerName || 'Connecting...'}</span>
-        </div>
+        <div className={styles.badge}>You (Username 2)</div>
 
-        <button className={styles.exitBtn} onClick={onLeave}>
-          <X size={20} />
+        {!videoOn && (
+          <div className={`${styles.placeholder} ${styles.localPlaceholder}`}>
+            <div className={styles.avatarCircle}>
+              <div className={styles.avatar}>Y</div>
+            </div>
+          </div>
+        )}
+
+        {!audioOn && (
+          <div className={styles.statusIcon}>
+            <MicOff size={20} />
+          </div>
+        )}
+      </div>
+
+      {/* Control Bar */}
+      <div className={styles.controls}>
+        <button 
+          onClick={onToggleCam}
+          className={`${styles.btn} ${videoOn ? styles.btnDark : styles.btnLight}`}
+          aria-label="Toggle Camera"
+        >
+          {videoOn ? <Video size={22} /> : <VideoOff size={22} />}
         </button>
-      </div>
 
-      {/* Local PiP Window */}
-      <div className={styles.pipWindow}>
-        <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} />
-        {!videoOn && <div className={styles.pipOff}><VideoOff size={16} /></div>}
-      </div>
+        <button 
+          onClick={onToggleMic}
+          className={`${styles.btn} ${audioOn ? styles.btnDark : styles.btnLight}`}
+          aria-label="Toggle Microphone"
+        >
+          {audioOn ? <Mic size={22} /> : <MicOff size={22} />}
+        </button>
 
-      {/* Interaction Bar */}
-      <div className={styles.bottomHud}>
-        <div className={styles.controlsPill}>
-          <button 
-            className={`${styles.iconBtn} ${!audioOn ? styles.iconBtnOff : ''}`} 
-            onClick={onToggleMic}
-          >
-            {audioOn ? <Mic size={22} /> : <MicOff size={22} />}
-          </button>
+        <button 
+          onClick={onLeave}
+          className={`${styles.btn} ${styles.btnEnd}`}
+          aria-label="End Call"
+        >
+          <PhoneOff size={28} />
+        </button>
 
-          <button 
-            className={`${styles.iconBtn} ${!videoOn ? styles.iconBtnOff : ''}`} 
-            onClick={onToggleCam}
-          >
-            {videoOn ? <Video size={22} /> : <VideoOff size={22} />}
-          </button>
+        <button 
+          onClick={onShareId}
+          className={`${styles.btn} ${styles.btnDark}`}
+          aria-label="Share ID"
+        >
+          <Share2 size={22} />
+        </button>
 
-          <button className={styles.iconBtn} onClick={onShareId}>
-            <UserPlus size={22} />
-          </button>
-
-          <div className={styles.separator} />
-
-          <button className={styles.skipBtn} onClick={onSkip}>
-            <SkipForward size={24} fill="currentColor" />
-            <span className={styles.skipLabel}>NEXT</span>
-          </button>
-        </div>
+        <button 
+          onClick={onSkip}
+          className={`${styles.btn} ${styles.btnNext}`}
+          aria-label="Next Person"
+        >
+          <SkipForward size={22} />
+        </button>
       </div>
 
       {/* Auto-Search Overlay */}
       {searching && (
-        <div className={styles.searchModal}>
-          <div className={styles.searchGlow} />
-          <div className={styles.spinner} />
-          <h2 className={styles.searchTitle}>{searchMessage || 'Finding your next vibe...'}</h2>
-          {countdown !== null && (
-            <p className={styles.searchCountdown}>Next match in {countdown}s</p>
-          )}
-          <button className={styles.cancelSearch} onClick={onCancelSearch}>
-            Stop Searching
+        <div className={styles.searchOverlay}>
+          <div className={styles.spinnerContainer}>
+            <div className={styles.spinner} />
+            <div className={styles.countdownText}>{countdown}</div>
+          </div>
+          
+          <div className={styles.textCenter}>
+            <h2 className={styles.searchTitle}>{searchMessage}</h2>
+            <p style={{ color: '#6b7280', marginTop: '0.5rem', textAlign: 'center' }}>
+              Finding a safe match for you...
+            </p>
+          </div>
+
+          <button className={styles.btnCancel} onClick={onCancelSearch}>
+            Cancel Search
           </button>
         </div>
       )}
     </div>
   );
 }
+
