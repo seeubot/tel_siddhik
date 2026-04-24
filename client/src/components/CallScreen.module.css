@@ -2,9 +2,9 @@
 .stage {
   position: fixed;
   inset: 0;
-  background: #000;
+  background: #020203;
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
 
@@ -23,7 +23,7 @@
 .fallbackOverlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  background: radial-gradient(circle at center, #050507 0%, #000 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,22 +34,23 @@
 .avatarCircle {
   width: 100px;
   height: 100px;
-  border-radius: 50%;
-  background: #ff0066;
+  border-radius: 2rem;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2.5rem;
   font-weight: 900;
   color: #fff;
-  box-shadow: 0 0 30px rgba(255, 0, 102, 0.4);
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
 }
 
 .fallbackText {
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.2);
   font-size: 0.9rem;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* Top HUD */
@@ -65,59 +66,67 @@
 }
 
 .hudPill {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  padding: 0.6rem 1.25rem;
   border-radius: 100px;
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .statusDot {
   width: 6px;
   height: 6px;
-  background: #00ff88;
+  background: #22c55e;
   border-radius: 50%;
-  box-shadow: 0 0 8px #00ff88;
+  box-shadow: 0 0 10px #22c55e;
 }
 
 .timerText {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ui-monospace, monospace;
   font-size: 0.85rem;
   font-weight: 700;
+  color: #fff;
 }
 
 .peerBadge {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 0.5rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  padding: 0.6rem 1.5rem;
   border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .peerName {
-  font-weight: 800;
-  font-size: 0.8rem;
+  font-weight: 900;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
+  color: #818cf8;
 }
 
 .exitBtn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(255, 0, 102, 0.2);
-  border: 1px solid rgba(255, 0, 102, 0.4);
-  color: #ff0066;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.exitBtn:hover {
+  background: #f43f5e;
+  color: #000;
 }
 
 /* PiP Window */
@@ -125,14 +134,14 @@
   position: absolute;
   top: 6rem;
   right: 1.5rem;
-  width: 100px;
-  height: 140px;
-  border-radius: 1rem;
+  width: 110px;
+  height: 160px;
+  border-radius: 1.25rem;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 30;
   background: #000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
 }
 
 .localVideo {
@@ -148,8 +157,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #111;
-  color: #ff0066;
+  background: #050507;
+  color: #f43f5e;
 }
 
 /* Bottom HUD Controls */
@@ -164,10 +173,10 @@
 }
 
 .controlsPill {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.5rem;
   border-radius: 2rem;
   display: flex;
   align-items: center;
@@ -175,35 +184,39 @@
 }
 
 .iconBtn {
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.iconBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .iconBtnOff {
-  color: #ff0066;
-  background: rgba(255, 0, 102, 0.1);
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.1);
 }
 
 .separator {
   width: 1px;
-  height: 30px;
+  height: 32px;
   background: rgba(255, 255, 255, 0.1);
   margin: 0 0.5rem;
 }
 
 .skipBtn {
-  background: #fff;
-  color: #000;
-  height: 50px;
+  background: #ffffff;
+  color: #000000;
+  height: 52px;
   padding: 0 1.5rem;
   border-radius: 1.5rem;
   border: none;
@@ -215,18 +228,18 @@
   transition: 0.2s;
 }
 
-.skipBtn:active { transform: scale(0.95); }
+.skipBtn:active { transform: scale(0.92); }
 
 .skipLabel {
   font-size: 0.9rem;
-  letter-spacing: 0.05em;
+  letter-spacing: -0.02em;
 }
 
 /* Search Modal Overlay */
 .searchModal {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(2, 2, 3, 0.98);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -239,45 +252,56 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, rgba(255, 0, 102, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
   pointer-events: none;
 }
 
 .spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid rgba(255, 0, 102, 0.1);
-  border-top-color: #ff0066;
+  width: 64px;
+  height: 64px;
+  border: 4px solid rgba(99, 102, 241, 0.1);
+  border-top-color: #6366f1;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .searchTitle {
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 900;
   text-align: center;
   max-width: 80%;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  color: #fff;
 }
 
 .searchCountdown {
-  color: #ff0066;
-  font-weight: 700;
-  font-size: 0.9rem;
+  color: #818cf8;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .cancelSearch {
   margin-top: 2rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  padding: 0.8rem 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0.8rem 2.5rem;
   border-radius: 100px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.cancelSearch:hover {
+  background: rgba(244, 63, 94, 0.1);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.2);
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-
 
