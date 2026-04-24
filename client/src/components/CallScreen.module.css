@@ -1,108 +1,185 @@
-.call {
+```css
+.stage {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
   background: #000;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
 }
 
-.remoteStage {
+.remoteWrapper {
   position: absolute;
   inset: 0;
-  background: #05050d;
+  z-index: 1;
 }
-.remoteVideo { width: 100%; height: 100%; object-fit: cover; }
 
-.remoteOff {
+.remoteVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fallbackOverlay {
   position: absolute;
   inset: 0;
-  display: none;
+  background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 1rem;
-  background: #05050d;
-  z-index: 2;
+  gap: 1.5rem;
 }
-.remoteOff.on { display: flex; }
 
-.bigAv {
-  width: 90px; height: 90px;
+.avatarCircle {
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
-  background: var(--amber);
+  background: #ff0066;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-d);
-  font-size: 2.2rem;
-  color: #000;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 0 30px rgba(255, 0, 102, 0.4);
 }
 
-.topbar {
+.fallbackText {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
+/* Top HUD */
+.topHud {
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 1.5rem;
+  left: 1.5rem;
+  right: 1.5rem;
   z-index: 20;
-  padding: calc(1rem + var(--st)) 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.pill {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  border-radius: 100px;
+.hudPill {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
   padding: 0.5rem 1rem;
+  border-radius: 100px;
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.pip {
-  position: absolute;
-  bottom: calc(120px + var(--sb));
-  right: 1.25rem;
-  width: 110px; height: 160px;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1);
-  z-index: 30;
-  background: #111;
+.statusDot {
+  width: 6px;
+  height: 6px;
+  background: #00ff88;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00ff88;
 }
+
+.timerText {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.peerBadge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1.5rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.peerName {
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.exitBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 0, 102, 0.2);
+  border: 1px solid rgba(255, 0, 102, 0.4);
+  color: #ff0066;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* PiP Window */
+.pipWindow {
+  position: absolute;
+  top: 6rem;
+  right: 1.5rem;
+  width: 100px;
+  height: 140px;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  z-index: 30;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
 .localVideo {
-  width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
 }
 
-.ctrlBar {
+.pipOff {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  color: #ff0066;
+}
+
+/* Bottom HUD Controls */
+.bottomHud {
+  position: absolute;
+  bottom: 2rem;
+  left: 1.5rem;
+  right: 1.5rem;
   z-index: 40;
-  padding: 1.5rem 1.5rem calc(2rem + var(--sb));
   display: flex;
   justify-content: center;
 }
 
-.ctrlPill {
-  background: var(--glass);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid var(--border);
-  border-radius: 100px;
+.controlsPill {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.6rem;
+  border-radius: 2rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.cBtn {
-  width: 54px; height: 54px;
+.iconBtn {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--glass-light);
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
   display: flex;
   align-items: center;
@@ -110,71 +187,97 @@
   cursor: pointer;
   transition: 0.2s;
 }
-.cBtn:hover { background: rgba(255,255,255,0.1); }
-.cBtn.off {
-  background: rgba(255,79,79,0.15);
-  color: var(--red);
-  border-color: rgba(255,79,79,0.3);
+
+.iconBtnOff {
+  color: #ff0066;
+  background: rgba(255, 0, 102, 0.1);
+}
+
+.separator {
+  width: 1px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 0.5rem;
 }
 
 .skipBtn {
-  background: rgba(245,166,35,0.1) !important;
-  color: var(--amber) !important;
-  border-color: rgba(245,166,35,0.3) !important;
-}
-.skipBtn:hover {
-  background: rgba(245,166,35,0.2) !important;
-}
-
-.cEnd {
-  background: var(--red) !important;
-  color: #fff;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  height: 50px;
+  padding: 0 1.5rem;
+  border-radius: 1.5rem;
   border: none;
-}
-
-/* Auto-search overlay */
-.searchOverlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: 50;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.6rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.skipBtn:active { transform: scale(0.95); }
+
+.skipLabel {
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
+/* Search Modal Overlay */
+.searchModal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 100;
+  display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-  animation: fadeIn 0.25s ease;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.searchGlow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, rgba(255, 0, 102, 0.1) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .spinner {
-  width: 50px; height: 50px;
-  border: 3px solid var(--border);
-  border-top-color: var(--amber);
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 0, 102, 0.1);
+  border-top-color: #ff0066;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-.searchMsg {
-  font-family: var(--font-d);
+.searchTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
   text-align: center;
-  font-size: 1.1rem;
+  max-width: 80%;
+  letter-spacing: -0.02em;
 }
 
-.cancelSearchBtn {
-  background: var(--s2);
-  border: 1px solid var(--border);
-  color: #fff;
-  padding: 0.7rem 1.5rem;
-  border-radius: 30px;
-  cursor: pointer;
+.searchCountdown {
+  color: #ff0066;
+  font-weight: 700;
   font-size: 0.9rem;
-  font-family: var(--font-b);
-  transition: 0.2s;
-  margin-top: 0.5rem;
 }
-.cancelSearchBtn:hover { border-color: var(--amber); color: var(--amber); }
+
+.cancelSearch {
+  margin-top: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.8rem 2rem;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+```
