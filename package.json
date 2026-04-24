@@ -1,0 +1,16 @@
+{
+  "name": "orey",
+  "version": "1.0.0",
+  "description": "Orey video chat",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node src/server.js",
+    "build": "cd client && npm install && npm run build",
+    "start": "npm run build && node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.0"
+  }
+}
