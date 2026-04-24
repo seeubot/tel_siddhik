@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY client/ ./
 RUN npm run build
@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install only production backend deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy backend source
 COPY src/ ./src/
