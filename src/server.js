@@ -6,8 +6,12 @@ const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const server = http.createServer(app);
+
+// FIX #6: Restrict CORS to your actual frontend origin in production.
+// Replace the ALLOWED_ORIGIN env var with your domain (e.g. "https://orey.app").
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { origin: ALLOWED_ORIGIN, methods: ["GET", "POST"] },
 });
 
 app.use(express.static(path.join(__dirname, "../public")));
@@ -247,12 +251,11 @@ io.on("connection", (socket) => {
   });
 
   // ── Skip current partner → instantly queue for next ─────────────────────
-  // Client emits: { roomId }
-  socket.on("skip", ({ roomId } = {}) => {
+  socket.on("skip", () => {
     cancelAutoSearch(socket);
     leaveRoom(socket, "skipped");  // notifies partner with reason='skipped'
     requeueSocket(socket);         // immediately search for next partner
-    socket.emit("skip-confirmed"); // optional ack
+    socket.emit("skip-confirmed");
   });
 
   // ── Cancel auto-search (client shows countdown, user clicks cancel) ─────
@@ -261,23 +264,28 @@ io.on("connection", (socket) => {
   });
 
   // ── Intentional leave ───────────────────────────────────────────────────
-  socket.on("leave-chat", ({ roomId } = {}) => {
+  socket.on("leave-chat", () => {
     cancelAutoSearch(socket);
     leaveRoom(socket, "left");
     socket.emit("left-chat-confirmed");
   });
 
   // ── Join specific room ──────────────────────────────────────────────────
+  // FIX #5: Build the peer list BEFORE joinRoom() so socket.id is not yet
+  // in the room map, eliminating the need for the fragile post-join filter.
   socket.on("join-room", ({ roomId, userName }) => {
     const room = rooms.get(roomId) ?? new Map();
     if (room.size >= 2) { socket.emit("room-full"); return; }
 
     socket.data.userName = userName;
-    joinRoom(socket, roomId);
 
-    const peers = [...room.entries()]
-      .filter(([id]) => id !== socket.id)
-      .map(([id, d]) => ({ socketId: id, userName: d.userName }));
+    // Snapshot peers before this socket is added to the room
+    const peers = [...room.entries()].map(([id, d]) => ({
+      socketId: id,
+      userName: d.userName,
+    }));
+
+    joinRoom(socket, roomId);
 
     socket.emit("room-joined", { roomId, peers });
     socket.to(roomId).emit("user-joined", { socketId: socket.id, userName });
@@ -295,11 +303,31 @@ io.on("connection", (socket) => {
   );
 
   // ── Media state ─────────────────────────────────────────────────────────
-  socket.on("media-state", ({ roomId, audioEnabled, videoEnabled }) => {
+  // FIX #2: Include screenSharing flag alongside audio/video state so peers
+  // can update their UI when someone starts or stops a screen share.
+  socket.on("media-state", ({ roomId, audioEnabled, videoEnabled, screenSharing }) => {
     socket.to(roomId).emit("peer-media-state", {
       socketId: socket.id,
       audioEnabled,
       videoEnabled,
+      screenSharing: !!screenSharing,
+    });
+  });
+
+  // ── FIX #1: Screen sharing signaling events ─────────────────────────────
+  // Clients emit these when they start/stop a screen share so peers can
+  // update their UI (e.g., show a "Screen share active" label).
+  socket.on("screen-share-started", ({ roomId }) => {
+    socket.to(roomId).emit("peer-screen-share-started", {
+      socketId: socket.id,
+      userName: socket.data.userName,
+    });
+  });
+
+  socket.on("screen-share-stopped", ({ roomId }) => {
+    socket.to(roomId).emit("peer-screen-share-stopped", {
+      socketId: socket.id,
+      userName: socket.data.userName,
     });
   });
 
@@ -310,22 +338,39 @@ io.on("connection", (socket) => {
       fromName: socket.data.userName,
     });
   });
+
+  // FIX #4: Verify both sockets are in the same room before revealing
+  // Orey IDs to prevent a malicious client from extracting any user's ID.
   socket.on("share-id-accept", ({ roomId, targetId }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.has(socket.id) || !room.has(targetId)) {
+      socket.emit("share-id-error", { reason: "not-in-same-room" });
+      return;
+    }
+
     const target = io.sockets.sockets.get(targetId);
+    if (!target) {
+      socket.emit("share-id-error", { reason: "peer-offline" });
+      return;
+    }
+
     socket.emit("share-id-reveal", {
-      oreyId: target?.data?.oreyId ?? null,
-      userName: target?.data?.userName,
+      oreyId: target.data.oreyId ?? null,
+      userName: target.data.userName,
     });
     io.to(targetId).emit("share-id-reveal", {
       oreyId: socket.data.oreyId ?? null,
       userName: socket.data.userName,
     });
   });
+
   socket.on("share-id-decline", ({ roomId }) => {
     socket.to(roomId).emit("share-id-declined");
   });
 
   // ── Disconnect ──────────────────────────────────────────────────────────
+  // FIX #3: Consolidate all room-cleanup into leaveRoom() to eliminate the
+  // duplicate inline logic that previously existed here.
   socket.on("disconnect", () => {
     const { oreyId } = socket.data;
 
@@ -338,28 +383,20 @@ io.on("connection", (socket) => {
       if (meta.socketId === socket.id) meta.socketId = null;
     }
 
-    // Notify partner and schedule auto-search for them
+    // Capture remaining peers before leaveRoom() removes the socket
     const roomId = socket.data.roomId;
-    if (roomId && rooms.has(roomId)) {
-      const room = rooms.get(roomId);
-      room.delete(socket.id);
+    const room = roomId ? rooms.get(roomId) : null;
+    const remainingPeers = room
+      ? [...room.keys()].filter((id) => id !== socket.id)
+      : [];
 
-      if (room.size === 0) {
-        rooms.delete(roomId);
-      } else {
-        // Notify remaining peer
-        socket.to(roomId).emit("partner-left", {
-          socketId: socket.id,
-          userName: socket.data.userName,
-          reason: "disconnected",
-        });
+    // Unified room cleanup — emits partner-left with reason='disconnected'
+    leaveRoom(socket, "disconnected");
 
-        // Schedule auto-search for every remaining peer
-        for (const [peerId] of room) {
-          const peerSocket = io.sockets.sockets.get(peerId);
-          if (peerSocket) scheduleAutoSearch(peerSocket);
-        }
-      }
+    // Schedule auto-search for every peer still in the room
+    for (const peerId of remainingPeers) {
+      const peerSocket = io.sockets.sockets.get(peerId);
+      if (peerSocket) scheduleAutoSearch(peerSocket);
     }
 
     console.log(`[-] Disconnected: ${socket.id}`);
