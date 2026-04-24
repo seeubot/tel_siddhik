@@ -159,5 +159,20 @@
   transition: 0.2s;
   flex-shrink: 0;
 }
+
+.tagline {
+  font-family: var(--font-b);
+  font-size: 1rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.hint {
+  font-family: var(--font-b);
+  line-height: 1.4;
+  text-align: center;
+  }
 .arrowBtn:hover:not(:disabled) { border-color: var(--amber); }
 .arrowBtn:disabled { opacity: 0.4; }
