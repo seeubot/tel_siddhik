@@ -27,7 +27,8 @@ export default function App() {
   const [peerName, setPeerName] = useState(null)
   const [audioOn, setAudioOn] = useState(true)
   const [videoOn, setVideoOn] = useState(true)
-  const [remoteVideoOn, setRemoteVideoOn] = useState(true)
+  // FIX #4: Default to false so fallback avatar shows until remote stream arrives
+  const [remoteVideoOn, setRemoteVideoOn] = useState(false)
 
   // ── Auto-search state ──────────────────────────────────────────────────────
   const [searching, setSearching] = useState(false)
@@ -35,8 +36,8 @@ export default function App() {
   const searchTimerRef = useRef(null)
 
   // ── Modals ─────────────────────────────────────────────────────────────────
-  const [shareModal, setShareModal] = useState(null) // { fromId, fromName }
-  const [revealModal, setRevealModal] = useState(null) // { oreyId, userName }
+  const [shareModal, setShareModal] = useState(null)
+  const [revealModal, setRevealModal] = useState(null)
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const localVideoRef = useRef(null)
@@ -44,6 +45,9 @@ export default function App() {
   const roomIdRef = useRef(null)
   const peerIdRef = useRef(null)
   const toastRef = useRef(null)
+
+  // FIX: Track pending peer to make offer after screen mounts
+  const pendingPeerRef = useRef(null)
 
   const toast = useCallback((msg, dur) => toastRef.current?.show(msg, dur), [])
 
@@ -78,7 +82,9 @@ export default function App() {
     cancelSearchTimer()
     setPeerId(null)
     setPeerName(null)
-    setRemoteVideoOn(true)
+    // FIX #4: Reset to false on cleanup so next call starts fresh
+    setRemoteVideoOn(false)
+    pendingPeerRef.current = null
   }, [closePC, stopLocal, cancelSearchTimer])
 
   const goLobby = useCallback(() => {
@@ -87,6 +93,16 @@ export default function App() {
     setWaiting(false)
     setScreen('lobby')
   }, [cleanupCall])
+
+  // FIX #1 & #2: After screen === 'call' renders, React has mounted the video
+  // elements and localStreamRef is populated. NOW it is safe to makeOffer.
+  useEffect(() => {
+    if (screen === 'call' && pendingPeerRef.current && localStreamRef.current) {
+      const { socketId } = pendingPeerRef.current
+      pendingPeerRef.current = null
+      makeOffer(socketId)
+    }
+  }, [screen, makeOffer, localStreamRef])
 
   // ── Socket events ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -121,18 +137,24 @@ export default function App() {
       cancelSearchTimer()
       setSearching(false)
 
+      // FIX #1 & #2: Start local stream first, THEN switch screen.
+      // Store the peer in a ref so the useEffect above can call makeOffer
+      // only after React has mounted CallScreen and video refs are live.
       await startLocal()
-      setScreen('call')
-
-      if (autoMatched) toast('Connected with a new partner!', 2000)
 
       if (peers?.length) {
         const p = peers[0]
         setPeerId(p.socketId)
         peerIdRef.current = p.socketId
         updatePeer(p.userName)
-        await makeOffer(p.socketId)
+        // Store peer for deferred makeOffer (triggered by screen useEffect)
+        pendingPeerRef.current = { socketId: p.socketId }
       }
+
+      // Switch screen last — this mounts CallScreen and triggers the useEffect
+      setScreen('call')
+
+      if (autoMatched) toast('Connected with a new partner!', 2000)
     })
 
     socket.on('user-joined', ({ socketId, userName }) => {
@@ -160,9 +182,10 @@ export default function App() {
       setRemoteVideoOn(videoEnabled)
     })
 
-    // Unified partner-left event (reason: 'left' | 'skipped' | 'disconnected')
     socket.on('partner-left', ({ userName, reason }) => {
       closePC()
+      // FIX #4: Reset remote video state when partner leaves
+      setRemoteVideoOn(false)
 
       const msgs = {
         left: 'Partner left',
@@ -171,7 +194,6 @@ export default function App() {
       }
       toast(msgs[reason] || 'Partner left')
 
-      // Trigger auto-search for remaining user
       setSearchMessage('Partner left. Finding a new match…')
       setSearching(true)
       clearTimeout(searchTimerRef.current)
@@ -182,7 +204,6 @@ export default function App() {
       }, AUTO_SEARCH_DELAY)
     })
 
-    // Server-initiated auto-search (e.g. on disconnect)
     socket.on('auto-search-scheduled', ({ delay }) => {
       setSearching(true)
       setSearchMessage('Finding a new partner…')
@@ -197,6 +218,8 @@ export default function App() {
     })
 
     socket.on('skip-confirmed', () => {
+      // FIX #4: Reset remote video on skip
+      setRemoteVideoOn(false)
       setSearching(true)
       setSearchMessage('Skipping… finding next person')
     })
@@ -262,6 +285,7 @@ export default function App() {
 
   const handleSkip = useCallback(() => {
     closePC()
+    setRemoteVideoOn(false)
     socket.emit('skip', { roomId: roomIdRef.current })
   }, [closePC])
 
