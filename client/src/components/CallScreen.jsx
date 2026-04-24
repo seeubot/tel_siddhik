@@ -1,7 +1,15 @@
 
-import React, { useRef, useEffect, useState } from 'react'
-import styles from './CallScreen.module.css'
-import { Mic, MicOff, Video, VideoOff, UserPlus, SkipForward, X, Timer } from 'lucide-react'
+import React, { useRef, useEffect, useState } from 'react';
+import { 
+  Mic, 
+  MicOff, 
+  Video, 
+  VideoOff, 
+  UserPlus, 
+  SkipForward, 
+  X 
+} from 'lucide-react';
+import styles from './CallScreen.module.css';
 
 export default function CallScreen({
   localVideoRef,
@@ -20,42 +28,42 @@ export default function CallScreen({
   onCancelSearch,
   searchMessage,
 }) {
-  const [timer, setTimer] = useState('00:00')
-  const timerRef = useRef(null)
-  const t0Ref = useRef(null)
+  const [timer, setTimer] = useState('00:00');
+  const timerRef = useRef(null);
+  const t0Ref = useRef(null);
 
   useEffect(() => {
     if (remoteVideoOn && !searching) {
       if (!t0Ref.current) {
-        t0Ref.current = Date.now()
+        t0Ref.current = Date.now();
         timerRef.current = setInterval(() => {
-          const s = Math.floor((Date.now() - t0Ref.current) / 1000)
+          const s = Math.floor((Date.now() - t0Ref.current) / 1000);
           setTimer(
             `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
-          )
-        }, 1000)
+          );
+        }, 1000);
       }
     } else {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-      t0Ref.current = null
-      setTimer('00:00')
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+      t0Ref.current = null;
+      setTimer('00:00');
     }
-    return () => clearInterval(timerRef.current)
-  }, [remoteVideoOn, searching])
+    return () => clearInterval(timerRef.current);
+  }, [remoteVideoOn, searching]);
 
-  const [countdown, setCountdown] = useState(null)
+  const [countdown, setCountdown] = useState(null);
   useEffect(() => {
-    if (!searching || !searchDelay) { setCountdown(null); return }
-    const end = Date.now() + searchDelay
+    if (!searching || !searchDelay) { setCountdown(null); return; }
+    const end = Date.now() + searchDelay;
     const iv = setInterval(() => {
-      const left = Math.ceil((end - Date.now()) / 1000)
-      setCountdown(left > 0 ? left : 0)
-    }, 200)
-    return () => clearInterval(iv)
-  }, [searching, searchDelay])
+      const left = Math.ceil((end - Date.now()) / 1000);
+      setCountdown(left > 0 ? left : 0);
+    }, 200);
+    return () => clearInterval(iv);
+  }, [searching, searchDelay]);
 
-  const initials = (peerName || '?')[0].toUpperCase()
+  const initials = (peerName || '?')[0].toUpperCase();
 
   return (
     <div className={styles.stage}>
@@ -65,12 +73,12 @@ export default function CallScreen({
         {!remoteVideoOn && (
           <div className={styles.fallbackOverlay}>
             <div className={styles.avatarCircle}>{initials}</div>
-            <p className={styles.fallbackText}>Connecting with {peerName || 'someone'}...</p>
+            <p className={styles.fallbackText}>Connecting to {peerName || 'Mana Peer'}...</p>
           </div>
         )}
       </div>
 
-      {/* Top Navigation Overlay */}
+      {/* Top HUD */}
       <div className={styles.topHud}>
         <div className={styles.hudPill}>
           <div className={styles.statusDot} />
@@ -78,7 +86,7 @@ export default function CallScreen({
         </div>
         
         <div className={styles.peerBadge}>
-          <span className={styles.peerName}>{peerName || 'Searching...'}</span>
+          <span className={styles.peerName}>{peerName || 'Connecting...'}</span>
         </div>
 
         <button className={styles.exitBtn} onClick={onLeave}>
@@ -86,7 +94,7 @@ export default function CallScreen({
         </button>
       </div>
 
-      {/* Picture in Picture Local Preview */}
+      {/* Local PiP Window */}
       <div className={styles.pipWindow}>
         <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} />
         {!videoOn && <div className={styles.pipOff}><VideoOff size={16} /></div>}
@@ -122,7 +130,7 @@ export default function CallScreen({
         </div>
       </div>
 
-      {/* Auto-Search Blocking Overlay */}
+      {/* Auto-Search Overlay */}
       {searching && (
         <div className={styles.searchModal}>
           <div className={styles.searchGlow} />
@@ -137,6 +145,5 @@ export default function CallScreen({
         </div>
       )}
     </div>
-  )
+  );
 }
-
