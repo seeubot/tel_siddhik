@@ -1,4 +1,4 @@
-```css
+
 .stage {
   position: fixed;
   inset: 0;
@@ -280,4 +280,4 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-```
+
