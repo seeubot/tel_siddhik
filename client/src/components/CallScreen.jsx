@@ -25,7 +25,6 @@ export default function CallScreen({
   // Start timer when remote video appears
   useEffect(() => {
     if (!remoteVideoOn && !searching) {
-      // Remote came back — start timer
       if (!t0Ref.current) {
         t0Ref.current = Date.now()
         timerRef.current = setInterval(() => {
@@ -36,7 +35,12 @@ export default function CallScreen({
         }, 1000)
       }
     }
-    return () => {}
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
   }, [remoteVideoOn, searching])
 
   // Reset timer on new connection
@@ -60,6 +64,47 @@ export default function CallScreen({
   }, [searching, searchDelay])
 
   const initials = (peerName || '?')[0].toUpperCase()
+
+  // Icons (inline SVGs)
+  const MicIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+      {!audioOn && (
+        <line x1="4" y1="4" x2="20" y2="20" strokeWidth="2.5" />
+      )}
+    </svg>
+  )
+
+  const CameraIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M15 10v2m-3-3v6" strokeLinecap="round" />
+    </svg>
+  )
+
+  const ShareIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16,6 12,2 8,6" />
+      <line x1="12" y1="22" x2="12" y2="11" />
+    </svg>
+  )
+
+  const SkipIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <circle cx="12" cy="12" r="10" />
+      <polygon points="10 8 16 12 10 16 10 8" strokeWidth="2" fill="none" />
+    </svg>
+  )
+
+  const EndCallIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+      <path d="M21 16.4V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h3.5" />
+      <path d="M16.5 12.5L18 11M18 11L16.5 9.5M18 11H21" />
+    </svg>
+  )
 
   return (
     <div className={styles.call}>
@@ -97,49 +142,31 @@ export default function CallScreen({
       {/* Control bar */}
       <div className={styles.ctrlBar}>
         <div className={styles.ctrlPill}>
+          {/* Left group: Mic, Camera */}
           <button className={`${styles.cBtn} ${!audioOn ? styles.off : ''}`} onClick={onToggleMic} title="Microphone">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" y1="19" x2="12" y2="23" />
-              <line x1="8" y1="23" x2="16" y2="23" />
-              {!audioOn && <line x1="4" y1="4" x2="20" y2="20" strokeWidth="2.5" />}
-            </svg>
+            <MicIcon />
           </button>
 
           <button className={`${styles.cBtn} ${!videoOn ? styles.off : ''}`} onClick={onToggleCam} title="Camera">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M23 7l-7 5 7 5V7z" />
-              <rect x="1" y="5" width="15" height="14" rx="2" />
-              {!videoOn && <line x1="4" y1="4" x2="20" y2="20" strokeWidth="2.5" />}
-            </svg>
+            <CameraIcon />
           </button>
 
+          <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+
+          {/* Right group: Share, Skip */}
           <button className={styles.cBtn} onClick={onShareId} title="Share Orey-ID">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <line x1="20" y1="8" x2="20" y2="14" />
-              <line x1="23" y1="11" x2="17" y2="11" />
-            </svg>
+            <ShareIcon />
           </button>
 
-          {/* Skip button */}
           <button className={`${styles.cBtn} ${styles.skipBtn}`} onClick={onSkip} title="Skip to next person">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polygon points="5 4 15 12 5 20 5 4" />
-              <line x1="19" y1="5" x2="19" y2="19" />
-            </svg>
+            <SkipIcon />
           </button>
 
           <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
 
           {/* End call */}
-          <button className={`${styles.cBtn} ${styles.cEnd}`} onClick={onLeave}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+          <button className={`${styles.cEnd}`} onClick={onLeave}>
+            <EndCallIcon />
           </button>
         </div>
       </div>
