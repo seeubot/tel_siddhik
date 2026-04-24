@@ -117,8 +117,12 @@ function leaveRoom(socket, reason = "left") {
 
 /**
  * Put a socket into the random queue or match it immediately.
- * Emits `room-joined` + `incoming-call` to both sides on a match,
+ * Emits `room-joined` + `incoming-call` to BOTH sides on a match,
  * or `waiting-for-match` if queued.
+ *
+ * FIX: Previously only the waiting partner received `incoming-call`,
+ * so the initiating socket never navigated away from the lobby.
+ * Now both sockets receive `incoming-call` so both transition to the call screen.
  */
 function requeueSocket(socket) {
   // Prevent double-queuing
@@ -134,6 +138,7 @@ function requeueSocket(socket) {
     joinRoom(socket, roomId);
     joinRoom(partner, roomId);
 
+    // Notify both sides of the room they joined
     socket.emit("room-joined", {
       roomId,
       peers: [{ socketId: partner.id, userName: partner.data.userName }],
@@ -142,6 +147,14 @@ function requeueSocket(socket) {
     partner.emit("room-joined", {
       roomId,
       peers: [{ socketId: socket.id, userName: socket.data.userName }],
+      autoMatched: true,
+    });
+
+    // FIX: Send incoming-call to BOTH users so both navigate to the call screen.
+    // The initiating socket (socket) was previously missing this event.
+    socket.emit("incoming-call", {
+      fromName: partner.data.userName,
+      fromOreyId: partner.data.oreyId,
       autoMatched: true,
     });
     partner.emit("incoming-call", {
