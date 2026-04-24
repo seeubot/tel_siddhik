@@ -1,21 +1,15 @@
 {
-  "name": "orey-client",
+  "name": "orey-server",
   "version": "1.0.0",
-  "private": true,
-  "type": "module",
+  "description": "Orey video chat server",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "node src/server.js",
+    "start": "node src/server.js"
   },
   "dependencies": {
-    "lucide-react": "^0.344.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "socket.io-client": "^4.7.2"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^5.0.0"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.0"
   }
 }
