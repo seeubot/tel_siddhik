@@ -7,7 +7,7 @@ RUN npm install
 
 COPY client/ ./
 RUN npm run build
-# Output lands in /app/public (via vite outDir: '../public')
+# Output lands in /app/client/dist (unless you configured outDir differently)
 
 # ── Stage 2: Production server ────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -22,7 +22,8 @@ RUN npm install --omit=dev
 COPY src/ ./src/
 
 # Copy built React app from builder stage
-COPY --from=builder /app/public ./public/
+# Adjust path based on where Vite actually outputs
+COPY --from=builder /app/client/dist ./public/
 
 ENV NODE_ENV=production
 ENV PORT=3000
