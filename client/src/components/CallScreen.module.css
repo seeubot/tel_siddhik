@@ -130,6 +130,9 @@
   background: var(--red) !important;
   color: #fff;
   width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
 }
 
 /* Auto-search overlay */
