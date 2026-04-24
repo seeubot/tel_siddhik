@@ -5,18 +5,19 @@ import {
   MicOff, 
   Video, 
   VideoOff, 
-  UserPlus, 
   SkipForward, 
   PhoneOff,
   Share2
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
+/**
+ * CallScreen Component
+ * Handles the video interaction interface with integrated searching overlay.
+ */
 export default function CallScreen({
-  localVideoRef,
-  remoteVideoRef,
-  peerName = "Username 1",
-  remoteVideoOn = false,
+  localStream,
+  peerName = "Syncing...",
   audioOn = true,
   videoOn = true,
   onToggleMic = () => {},
@@ -25,48 +26,46 @@ export default function CallScreen({
   onSkip = () => {},
   onLeave = () => {},
   searching = false,
-  searchDelay = 5000,
+  searchDelay = 3,
   onCancelSearch = () => {},
   searchMessage = "Finding your next vibe...",
 }) {
+  const localVideoRef = useRef(null);
   const [countdown, setCountdown] = useState(null);
+
+  // Sync local stream to video element
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
 
   // Countdown logic for the search overlay
   useEffect(() => {
-    if (!searching || !searchDelay) {
+    if (!searching) {
       setCountdown(null);
       return;
     }
-    const end = Date.now() + searchDelay;
-    const interval = setInterval(() => {
-      const left = Math.ceil((end - Date.now()) / 1000);
-      setCountdown(left > 0 ? left : 0);
-    }, 200);
-    return () => clearInterval(interval);
+    setCountdown(searchDelay);
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [searching, searchDelay]);
 
   return (
     <div className={styles.stage}>
       {/* Remote Participant Card */}
       <div className={styles.card}>
-        <video 
-          ref={remoteVideoRef} 
-          autoPlay 
-          playsInline 
-          className={styles.videoElement}
-        />
+        <div className={styles.placeholder}>
+          <div className={styles.avatarCircle}>
+            <div className={styles.avatar}>{peerName[0]}</div>
+          </div>
+        </div>
         
         <div className={styles.badge}>{peerName}</div>
 
-        {!remoteVideoOn && (
-          <div className={styles.placeholder}>
-            <div className={styles.avatarCircle}>
-              <div className={styles.avatar}>{peerName[0]}</div>
-            </div>
-          </div>
-        )}
-
-        {!remoteVideoOn && (
+        {!videoOn && (
           <div className={styles.statusIcon}>
             <VideoOff size={20} />
           </div>
@@ -83,7 +82,7 @@ export default function CallScreen({
           className={`${styles.videoElement} ${styles.localVideo}`}
         />
         
-        <div className={styles.badge}>You (Username 2)</div>
+        <div className={styles.badge}>You</div>
 
         {!videoOn && (
           <div className={`${styles.placeholder} ${styles.localPlaceholder}`}>
@@ -105,7 +104,6 @@ export default function CallScreen({
         <button 
           onClick={onToggleCam}
           className={`${styles.btn} ${videoOn ? styles.btnDark : styles.btnLight}`}
-          aria-label="Toggle Camera"
         >
           {videoOn ? <Video size={22} /> : <VideoOff size={22} />}
         </button>
@@ -113,7 +111,6 @@ export default function CallScreen({
         <button 
           onClick={onToggleMic}
           className={`${styles.btn} ${audioOn ? styles.btnDark : styles.btnLight}`}
-          aria-label="Toggle Microphone"
         >
           {audioOn ? <Mic size={22} /> : <MicOff size={22} />}
         </button>
@@ -121,7 +118,6 @@ export default function CallScreen({
         <button 
           onClick={onLeave}
           className={`${styles.btn} ${styles.btnEnd}`}
-          aria-label="End Call"
         >
           <PhoneOff size={28} />
         </button>
@@ -129,7 +125,6 @@ export default function CallScreen({
         <button 
           onClick={onShareId}
           className={`${styles.btn} ${styles.btnDark}`}
-          aria-label="Share ID"
         >
           <Share2 size={22} />
         </button>
@@ -137,7 +132,6 @@ export default function CallScreen({
         <button 
           onClick={onSkip}
           className={`${styles.btn} ${styles.btnNext}`}
-          aria-label="Next Person"
         >
           <SkipForward size={22} />
         </button>
@@ -153,8 +147,8 @@ export default function CallScreen({
           
           <div className={styles.textCenter}>
             <h2 className={styles.searchTitle}>{searchMessage}</h2>
-            <p style={{ color: '#6b7280', marginTop: '0.5rem', textAlign: 'center' }}>
-              Finding a safe match for you...
+            <p style={{ color: '#94a3b8', marginTop: '0.5rem', textAlign: 'center', fontSize: '0.8rem' }}>
+              CALIBRATING NEURAL MESH...
             </p>
           </div>
 
