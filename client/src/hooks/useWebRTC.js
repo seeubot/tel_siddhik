@@ -20,17 +20,40 @@ export function useWebRTC({ localVideoRef, remoteVideoRef, onRemoteStream, onCal
   }, [localVideoRef])
 
   const makePC = useCallback((targetId) => {
+    // FIX #2 & #3: Close any existing PC before creating a new one
+    if (pcRef.current) {
+      pcRef.current.close()
+      pcRef.current = null
+    }
+
     const pc = new RTCPeerConnection(ICE)
-    localStreamRef.current?.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current))
+
+    // FIX #2: Guard — only add tracks if localStream is actually populated
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t =>
+        pc.addTrack(t, localStreamRef.current)
+      )
+    } else {
+      console.warn('[useWebRTC] makePC called before localStream was ready — no tracks added')
+    }
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) socket.emit('ice-candidate', { targetId, candidate })
     }
 
+    // FIX #3: If remote ref isn't mounted yet, retry once it becomes available
     pc.ontrack = ({ streams }) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = streams[0]
-      onRemoteStream?.()
-      onCallTimer?.()
+      const attach = () => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = streams[0]
+          onRemoteStream?.()
+          onCallTimer?.()
+        } else {
+          // Ref not mounted yet — retry on next frame
+          requestAnimationFrame(attach)
+        }
+      }
+      attach()
     }
 
     pcRef.current = pc
