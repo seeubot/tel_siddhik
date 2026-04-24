@@ -1,19 +1,18 @@
 
 import React, { useState } from 'react';
 import styles from './Lobby.module.css';
-import { Sparkles, Zap, Copy, ArrowRight, X } from 'lucide-react';
+import { Zap, Copy, Plus, ChevronRight, User } from 'lucide-react';
 
 export default function Lobby({ myId, onJoinRandom, onConnectById, waiting, onCancelRandom, status }) {
   const [userName, setUserName] = useState('');
   const [targetId, setTargetId] = useState('');
-  const [vibe, setVibe] = useState('Friendly');
+  const [vibe, setVibe] = useState('Flirty');
 
   const name = userName.trim() || 'Stranger';
-  const vibes = ['Friendly', 'Flirty', 'Deep Talk', 'Chill'];
+  const vibes = ['Friendly', 'Flirty', 'Deep', 'Chill'];
 
   const handleCopy = () => {
     if (myId) {
-      // Compatibility fallback for clipboard
       const el = document.createElement('textarea');
       el.value = myId;
       document.body.appendChild(el);
@@ -24,49 +23,40 @@ export default function Lobby({ myId, onJoinRandom, onConnectById, waiting, onCa
   };
 
   return (
-    <div className={styles.lobby}>
-      {/* Animated Background Elements */}
-      <div className={styles.ambient}>
-        <div className={styles.ab1} />
-        <div className={styles.ab2} />
-      </div>
+    <div className={styles.container}>
+      {/* Dynamic Background */}
+      <div className={styles.glow} />
+      
+      <div className={styles.content}>
+        {/* Top Navigation / Status */}
+        <header className={styles.header}>
+          <div className={styles.logo}>OREY</div>
+          <div className={styles.liveIndicator}>
+            <span className={styles.pulse} />
+            LIVE
+          </div>
+        </header>
 
-      {/* Header Area */}
-      <header className={styles.wordmark}>
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
-          <span className="text-[10px] tracking-[0.3em] font-bold text-rose-500 uppercase">Live Now</span>
-        </div>
-        <h1>Orey</h1>
-        <p>MEET YOUR NEXT CRUSH</p>
-      </header>
-
-      {/* Main Action Area */}
-      <main className={`${styles.panel} ${styles.animate}`}>
-        
-        {/* Profile Section */}
-        <section className="space-y-4">
-          <div className={styles.inputGroup}>
+        {/* Profile Card */}
+        <section className={styles.profileSection}>
+          <div className={styles.inputWrapper}>
+            <User size={18} className={styles.inputIcon} />
             <input
               type="text"
-              placeholder="What's your name?"
-              className={styles.input}
+              placeholder="Your name..."
+              className={styles.nameInput}
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
-              maxLength={15}
+              maxLength={12}
             />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20">
-              <Sparkles size={18} />
-            </div>
           </div>
 
-          {/* Vibe Selector */}
-          <div className={styles.vibeScroll}>
+          <div className={styles.vibeGrid}>
             {vibes.map((v) => (
               <button
                 key={v}
                 onClick={() => setVibe(v)}
-                className={`${styles.vibeChip} ${vibe === v ? styles.vibeChipActive : ''}`}
+                className={`${styles.vibeBtn} ${vibe === v ? styles.vibeActive : ''}`}
               >
                 {v}
               </button>
@@ -74,82 +64,57 @@ export default function Lobby({ myId, onJoinRandom, onConnectById, waiting, onCa
           </div>
         </section>
 
-        {/* Primary CTA */}
-        <section className="space-y-3">
+        {/* Main Actions */}
+        <div className={styles.actionArea}>
           {!waiting ? (
-            <button
-              onClick={() => onJoinRandom(`${name} (${vibe})`)}
+            <button 
+              className={styles.mainCta} 
+              onClick={() => onJoinRandom(`${name} • ${vibe}`)}
               disabled={!myId}
-              className={styles.btnPrimary}
             >
-              <Zap fill="currentColor" size={20} />
-              START MATCHING
+              <span>FIND MATCH</span>
+              <Zap size={24} fill="currentColor" />
             </button>
           ) : (
-            <div className="w-full bg-white/5 border border-white/10 h-[4.5rem] rounded-[1.25rem] flex items-center justify-between px-6 animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-rose-500 rounded-full animate-bounce" />
-                <span className="font-bold text-xs tracking-widest text-rose-400 italic">FINDING A VIBE...</span>
-              </div>
-              <button 
-                onClick={onCancelRandom}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            <button className={styles.waitingBtn} onClick={onCancelRandom}>
+              <div className={styles.spinner} />
+              <span>SEARCHING...</span>
+              <Plus size={20} style={{ transform: 'rotate(45deg)' }} />
+            </button>
           )}
 
-          {/* ID Connection Row */}
-          <div className="flex gap-2 h-14">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Connect by ID..."
-                className={styles.input}
-                style={{ height: '100%', fontSize: '0.9rem', padding: '0 1rem' }}
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value)}
-              />
-            </div>
-            <button
+          <div className={styles.idConnector}>
+            <input
+              type="text"
+              placeholder="Enter Partner ID"
+              className={styles.idInput}
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+            />
+            <button 
+              className={styles.idSubmit}
               onClick={() => onConnectById(targetId.trim(), name)}
               disabled={!targetId.trim()}
-              className="aspect-square h-full bg-white/10 border border-white/10 rounded-xl flex items-center justify-center hover:bg-white hover:text-black transition-all disabled:opacity-30"
             >
-              <ArrowRight size={20} />
+              <ChevronRight size={24} />
             </button>
           </div>
-        </section>
+        </div>
 
-        {/* Footer Identity */}
+        {/* User Identity Footer */}
         <footer className={styles.footer}>
-          <div className={styles.idDisplay}>
-            <div className="flex flex-col">
-              <span className={styles.idLabel}>Your Orey-ID</span>
-              <span className={styles.idValue}>
-                {myId || 'GENERATING...'}
-              </span>
-            </div>
-            <button 
-              onClick={handleCopy}
-              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors border border-white/5"
-            >
-              <Copy size={12} className="text-white/40" />
-              <span className="text-[10px] font-bold uppercase tracking-tighter">Copy</span>
-            </button>
+          <div className={styles.idTag} onClick={handleCopy}>
+            <span className={styles.idLabel}>YOUR ID:</span>
+            <span className={styles.idCode}>{myId || 'LOADING...'}</span>
+            <Copy size={14} />
           </div>
-          
           {status && (
-            <p 
-              className="text-center mt-6 text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: status.color || 'white' }}
-            >
+            <p className={styles.statusMsg} style={{ color: status.color }}>
               {status.msg}
             </p>
           )}
         </footer>
-      </main>
+      </div>
     </div>
   );
 }
