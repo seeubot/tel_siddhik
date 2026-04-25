@@ -1,242 +1,335 @@
-.stage {
+.root {
   position: fixed;
   inset: 0;
-  background-color: #0a0a0c;
-  color: white;
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  overflow: hidden;
+  background: #050507;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
-  gap: 1rem;
-}
-
-.card {
-  flex: 1;
-  position: relative;
-  background-color: #16161a;
-  border-radius: 2.5rem;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* FIX 4: Added missing localPlaceholderCard class */
-.localPlaceholderCard {
-  background-color: #1a1a1e;
+.bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.06) 0%, transparent 60%);
+  pointer-events: none;
 }
 
-.videoElement {
+/* ── Remote video ─────────────────────────────────────────────────────────── */
+
+.remoteCard {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0f;
+  overflow: hidden;
+  flex: 1;
+}
+
+.remoteVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.localVideo {
-  transform: scaleX(-1);
-}
-
-.placeholder {
+.avatarFallback {
   position: absolute;
   inset: 0;
-  background-color: #1f1f23;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.localPlaceholder {
-  background-color: #27272a;
-}
-
-.avatarCircle {
-  width: 8rem;
-  height: 8rem;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.03);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
+  gap: 16px;
 }
 
 .avatar {
-  width: 6rem;
-  height: 6rem;
-  border-radius: 2rem;
-  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  position: relative;
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 2.5rem;
+}
+
+.avatarInitials {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(34, 211, 238, 0.2));
+  border: 2px solid rgba(124, 58, 237, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
   font-weight: 900;
+  color: #fff;
+  letter-spacing: -1px;
 }
 
-.badge {
+.avatarRing {
   position: absolute;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
-  padding: 0.5rem 1.25rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  inset: -6px;
+  border: 2px solid rgba(124, 58, 237, 0.3);
+  border-radius: 50%;
+  animation: ringPulse 2s ease-in-out infinite;
 }
 
-.statusIcon {
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.partnerName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.3px;
+}
+
+.mediaOff {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.partnerBadge {
   position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  padding: 0.6rem;
-  background-color: rgba(244, 63, 94, 0.2);
-  border-radius: 1rem;
-  color: #f43f5e;
-}
-
-/* Controls */
-.controls {
-  padding: 1.5rem 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.btn {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.partnerBadgeName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.mutedIcon {
+  color: rgba(239, 68, 68, 0.8);
+}
+
+/* ── Local video PiP ─────────────────────────────────────────────────────── */
+
+.localCard {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 120px;
+  height: 160px;
+  background: #0d0d14;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  transition: transform 0.2s;
+}
+
+.localCard:hover {
+  transform: scale(1.03);
+}
+
+.localVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror */
+}
+
+.localNoVideo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #0d0d14;
 }
 
-.btnDark {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+.noVideoIcon {
+  color: rgba(255, 255, 255, 0.2);
 }
 
-.btnLight {
-  background-color: white;
-  color: black;
-}
+/* ── Search overlay ──────────────────────────────────────────────────────── */
 
-.btnEnd {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 2rem;
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
-}
-
-.btnEnd:active {
-  transform: scale(0.9);
-}
-
-.btnNext {
-  background-color: #6366f1;
-  color: white;
-  border: none;
-}
-
-/* Search Overlay */
 .searchOverlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(10, 10, 12, 0.9);
-  backdrop-filter: blur(20px);
-  z-index: 100;
+  background: rgba(5, 5, 7, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.searchBox {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2.5rem;
+  gap: 16px;
+  text-align: center;
 }
 
-.spinnerContainer {
-  position: relative;
+.countdown {
+  font-size: 4rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
 }
 
-.spinner {
-  width: 7rem;
-  height: 7rem;
-  border: 4px solid rgba(255, 255, 255, 0.05);
-  border-top-color: #22d3ee;
+.searchLabel {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.searchSpinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(124, 58, 237, 0.2);
+  border-top-color: #7c3aed;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.countdownText {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 1.5rem;
-  color: #22d3ee;
-}
-
-/* FIX 5: Added missing searchTextBlock and searchSubtitle classes */
-.searchTextBlock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.searchTitle {
-  font-size: 1.75rem;
-  font-weight: 900;
-  color: white;
-  text-align: center;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.searchSubtitle {
-  color: #94a3b8;
-  text-align: center;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
-.btnCancel {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.75rem 2.5rem;
-  border-radius: 9999px;
-  font-weight: 800;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.btnCancel:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.5; }
-  50% { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.5; }
+.cancelSearchBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 100px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cancelSearchBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+
+.controls {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  padding: 10px 16px;
+  z-index: 30;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.ctrlBtn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.ctrlBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.07);
+}
+
+.ctrlBtn:active {
+  transform: scale(0.95);
+}
+
+.ctrlOff {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.ctrlOff:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.ctrlSkip {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #a78bfa;
+}
+
+.ctrlSkip:hover {
+  background: rgba(124, 58, 237, 0.22);
+}
+
+.ctrlShare {
+  background: rgba(34, 211, 238, 0.1);
+  border-color: rgba(34, 211, 238, 0.25);
+  color: #22d3ee;
+}
+
+.ctrlShare:hover {
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.ctrlEnd {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.ctrlEnd:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+/* ── Room badge ──────────────────────────────────────────────────────────── */
+
+.roomBadge {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.roomBadge code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 1px;
 }
