@@ -1,173 +1,325 @@
 .root {
-position: fixed;
-inset: 0;
-background: #0c0c0c;
-display: flex;
-flex-direction: column;
-overflow: hidden;
-user-select: none;
-cursor: pointer;
+  position: fixed;
+  inset: 0;
+  background: #0c0c0c;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  cursor: pointer;
 }
-​/* --- Video Containers --- */
+
+/* --- Video Containers --- */
 .videoContainer {
-position: relative;
-flex: 1;
-overflow: hidden;
+  position: relative;
+  flex: 1;
+  overflow: hidden;
 }
-​.remoteView {
-background: #1a1313;
-border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+.remoteView {
+  background: #1a1313;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-​.localView {
-background: #2d1b1b;
+
+.localView {
+  background: #2d1b1b;
 }
-​.videoElement {
-width: 100%;
-height: 100%;
-object-fit: cover;
+
+.videoElement {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-​.mirror {
-transform: scaleX(-1);
+
+.mirror {
+  transform: scaleX(-1);
 }
-​/* --- Fallbacks --- */
+
+/* --- Fallbacks --- */
 .fallback {
-position: absolute;
-inset: 0;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-​.remoteFallback {
-background: linear-gradient(to bottom, #2d1b1b, #1a1313);
+
+.remoteFallback {
+  background: linear-gradient(to bottom, #2d1b1b, #1a1313);
 }
-​.localFallback {
-background: linear-gradient(to bottom, #3d2525, #2d1b1b);
+
+.localFallback {
+  background: linear-gradient(to bottom, #3d2525, #2d1b1b);
 }
-​.avatar {
-width: 96px;
-height: 96px;
-border-radius: 50%;
-background: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-display: flex;
-align-items: center;
-justify-content: center;
-font-size: 1.875rem;
-font-weight: 700;
-color: rgba(255, 255, 255, 0.4);
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
 }
-​.statusText {
-margin-top: 1rem;
-color: rgba(255, 255, 255, 0.3);
-font-size: 0.875rem;
-font-weight: 500;
-letter-spacing: 0.1em;
-text-transform: uppercase;
+
+.statusText {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
-​/* --- Labels --- */
+
+/* --- Labels --- */
 .label {
-position: absolute;
-bottom: 1rem;
-left: 1rem;
-background: white;
-padding: 0.25rem 0.75rem;
-border-radius: 2px;
-box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-pointer-events: none;
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
 }
-​.labelText {
-color: black;
-font-size: 0.875rem;
-font-weight: 700;
-letter-spacing: -0.025em;
+
+.labelText {
+  color: black;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
-​.indicator {
-position: absolute;
-bottom: 1rem;
-right: 1rem;
-color: rgba(255, 255, 255, 0.8);
-transition: opacity 0.3s ease;
+
+.indicator {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  transition: opacity 0.3s ease;
 }
-​/* --- Controls --- */
+
+/* --- Controls --- */
 .controlsWrapper {
-position: absolute;
-bottom: 1.5rem;
-left: 0;
-right: 0;
-padding: 0 1rem;
-z-index: 50;
-display: flex;
-justify-content: center;
-pointer-events: none;
-transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  padding: 0 1rem;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-​.controlsBar {
-display: flex;
-align-items: center;
-gap: 0.75rem;
-background: rgba(0, 0, 0, 0.4);
-backdrop-filter: blur(12px);
-border: 1px solid rgba(255, 255, 255, 0.1);
-padding: 0.75rem;
-border-radius: 32px;
-pointer-events: auto;
-box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+.controlsBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem;
+  border-radius: 32px;
+  pointer-events: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
-​.btn {
-width: 3rem;
-height: 3rem;
-border-radius: 9999px;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: all 0.2s ease;
-cursor: pointer;
-border: none;
+
+.btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
 }
-​.btnDefault {
-background: rgba(255, 255, 255, 0.1);
-color: white;
-border: 1px solid rgba(255, 255, 255, 0.05);
+
+.btnDefault {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
-​.btnOff {
-background: rgba(239, 68, 68, 0.2);
-color: #ef4444;
-border: 1px solid rgba(239, 68, 68, 0.3);
+
+.btnOff {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
-​.btnEnd {
-width: 4rem;
-height: 3.5rem;
-background: #ff4b4b;
-border-radius: 24px;
-color: white;
-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+.btnEnd {
+  width: 4rem;
+  height: 3.5rem;
+  background: #ff4b4b;
+  border-radius: 24px;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-​.btnEnd:hover { background: #ff3535; }
-​.btnGhost {
-background: rgba(255, 255, 255, 0.05);
-color: rgba(255, 255, 255, 0.8);
+
+.btnEnd:hover {
+  background: #ff3535;
 }
-​.btn:active { transform: scale(0.9); }
-​/* --- Overlays --- */
+
+.btnGhost {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.btn:active {
+  transform: scale(0.9);
+}
+
+/* --- Overlays --- */
 .roomBadge {
-position: absolute;
-top: 1rem;
-left: 50%;
-transform: translateX(-50%);
-transition: opacity 0.5s ease;
-pointer-events: none;
-opacity: 0.2;
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  opacity: 0.2;
 }
-​.roomIdText {
-font-size: 10px;
-font-family: monospace;
-text-transform: uppercase;
+
+.roomIdText {
+  font-size: 10px;
+  font-family: monospace;
+  text-transform: uppercase;
+  color: white;
 }
-​.hidden {
-opacity: 0;
-transform: translateY(20px);
+
+.hidden {
+  opacity: 0;
+  transform: translateY(20px);
 }
-​.hiddenFade {
-opacity: 0;
+
+.hiddenFade {
+  opacity: 0;
+}
+
+/* --- Search Overlay (Pure CSS Modules) --- */
+.searchOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+}
+
+.searchModal {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  max-width: 80%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.countdownNumber {
+  font-size: 4rem;
+  font-weight: 900;
+  color: black;
+}
+
+.countdownLabel {
+  color: #6b7280;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+}
+
+.cancelButton {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cancelButton:hover {
+  background: #e5e7eb;
+}
+
+.loader {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 4px solid #e5e7eb;
+  border-top-color: black;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.searchLabel {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  color: #6b7280;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Keyboard Navigation --- */
+.btn:focus-visible,
+.cancelButton:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 640px) {
+  .controlsBar {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .btnEnd {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.25rem;
+  }
+  
+  .searchModal {
+    padding: 1.5rem;
+  }
+  
+  .countdownNumber {
+    font-size: 3rem;
+  }
 }
