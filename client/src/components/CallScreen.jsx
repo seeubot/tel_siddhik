@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
@@ -39,6 +38,10 @@ export default function CallScreen({
     .substring(0, 2)
     .toUpperCase();
 
+  // Safe check for partner media
+  const isPartnerVideoEnabled = partnerMedia?.video !== false;
+  const isPartnerAudioEnabled = partnerMedia?.audio === true;
+
   return (
     <div className={styles.root} onClick={toggleUI}>
       
@@ -49,10 +52,10 @@ export default function CallScreen({
           className={styles.videoElement}
           autoPlay
           playsInline
-          style={{ display: partner && partnerMedia.video ? 'block' : 'none' }}
+          style={{ display: partner && isPartnerVideoEnabled ? 'block' : 'none' }}
         />
         
-        {(!partner || !partnerMedia.video) && (
+        {(!partner || !isPartnerVideoEnabled) && (
           <div className={`${styles.fallback} ${styles.remoteFallback}`}>
              <div className={styles.avatar}>{partnerInitials}</div>
              <p className={styles.statusText}>
@@ -66,7 +69,7 @@ export default function CallScreen({
         </div>
 
         <div className={`${styles.indicator} ${!uiVisible ? styles.hiddenFade : ''}`}>
-          {partnerMedia?.audio ? <Mic size={18} /> : <MicOff size={18} color="#ef4444" />}
+          {isPartnerAudioEnabled ? <Mic size={18} /> : <MicOff size={18} color="#ef4444" />}
         </div>
       </div>
 
@@ -102,6 +105,7 @@ export default function CallScreen({
           <button 
             className={`${styles.btn} ${videoEnabled ? styles.btnDefault : styles.btnOff}`}
             onClick={onToggleVideo}
+            aria-label={videoEnabled ? "Disable video" : "Enable video"}
           >
             {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
           </button>
@@ -109,19 +113,32 @@ export default function CallScreen({
           <button 
             className={`${styles.btn} ${audioEnabled ? styles.btnDefault : styles.btnOff}`}
             onClick={onToggleAudio}
+            aria-label={audioEnabled ? "Mute microphone" : "Unmute microphone"}
           >
             {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
           </button>
 
-          <button className={styles.btnEnd} onClick={onLeave}>
+          <button 
+            className={styles.btnEnd} 
+            onClick={onLeave}
+            aria-label="End call"
+          >
             <PhoneOff size={24} strokeWidth={2.5} style={{ transform: 'rotate(135deg)' }} />
           </button>
 
-          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={onSkip}>
+          <button 
+            className={`${styles.btn} ${styles.btnGhost}`} 
+            onClick={onSkip}
+            aria-label="Skip to next person"
+          >
             <SkipForward size={20} />
           </button>
 
-          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={onShareId}>
+          <button 
+            className={`${styles.btn} ${styles.btnGhost}`} 
+            onClick={onShareId}
+            aria-label="Share room ID"
+          >
             <UserPlus size={20} />
           </button>
         </div>
@@ -132,28 +149,29 @@ export default function CallScreen({
         <p className={styles.roomIdText}>ID: {roomId}</p>
       </div>
 
-      {/* Search Overlay Logic */}
+      {/* Search Overlay Logic - Pure CSS Modules */}
       {(searching || autoSearchCountdown !== null) && (
         <div 
-          className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md" 
+          className={styles.searchOverlay}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 text-black text-center max-w-[80%]">
+          <div className={styles.searchModal}>
             {autoSearchCountdown !== null ? (
               <>
-                <div className="text-7xl font-black">{autoSearchCountdown}</div>
-                <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">Next match in...</p>
+                <div className={styles.countdownNumber}>{autoSearchCountdown}</div>
+                <p className={styles.countdownLabel}>Next match in...</p>
                 <button 
                   onClick={onCancelAutoSearch}
-                  className="mt-2 w-full py-3 bg-gray-100 rounded-xl font-bold flex items-center justify-center gap-2"
+                  className={styles.cancelButton}
+                  aria-label="Cancel auto search"
                 >
                   <X size={16} /> Cancel
                 </button>
               </>
             ) : (
               <>
-                <div className="w-10 h-10 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-                <p className="font-bold uppercase text-[10px] tracking-widest">Looking for someone...</p>
+                <div className={styles.loader} />
+                <p className={styles.searchLabel}>Looking for someone...</p>
               </>
             )}
           </div>
@@ -162,4 +180,3 @@ export default function CallScreen({
     </div>
   );
 }
-
