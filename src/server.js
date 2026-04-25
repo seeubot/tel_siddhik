@@ -242,6 +242,14 @@ io.on("connection", (socket) => {
       roomId,
       peers: [{ socketId: socket.id, userName: socket.data.userName }],
     });
+
+    // FIX: Send incoming-call to BOTH sides so both navigate to the call screen.
+    // Previously only targetSocket received this, leaving the initiating socket
+    // stuck in the lobby while the target moved to the call screen.
+    socket.emit("incoming-call", {
+      fromName: targetSocket.data.userName,
+      fromOreyId: targetSocket.data.oreyId,
+    });
     targetSocket.emit("incoming-call", {
       fromName: socket.data.userName,
       fromOreyId: socket.data.oreyId,
