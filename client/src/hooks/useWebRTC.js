@@ -1,168 +1,206 @@
-import { useRef, useCallback } from 'react'
-import { socket, ICE } from '../lib/socket'
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { ICE } from '../lib/socket';
 
-export function useWebRTC({ localVideoRef, remoteVideoRef, onRemoteStream, onCallTimer }) {
-  const pcRef              = useRef(null)
-  const localStreamRef     = useRef(null)
+export function useWebRTC(socket) {
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const pcRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
+  const remoteDescSetRef = useRef(false);
 
-  // FIX 2: Queue ICE candidates that arrive before setRemoteDescription completes.
-  // addIceCandidate throws InvalidStateError if called before a remote description
-  // is set. We drain this queue at the end of handleOffer / handleAnswer.
-  const iceCandidateQueue  = useRef([])
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [partnerMedia, setPartnerMedia] = useState({ audio: true, video: true });
+  const [callActive, setCallActive] = useState(false);
 
-  // FIX 1: Track the rAF handle so we can cancel it on unmount / PC close.
-  const attachRafRef       = useRef(null)
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const startLocal = useCallback(async () => {
-    if (localStreamRef.current) return localStreamRef.current
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    localStreamRef.current = stream
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream
-    return stream
-  }, [localVideoRef])
+  function createPC() {
+    const pc = new RTCPeerConnection(ICE);
 
-  const stopLocal = useCallback(() => {
-    localStreamRef.current?.getTracks().forEach(t => t.stop())
-    localStreamRef.current = null
-    if (localVideoRef.current) localVideoRef.current.srcObject = null
-  }, [localVideoRef])
-
-  // FIX 1: Cancel any in-flight rAF attach loop before creating a new PC.
-  const cancelAttachLoop = useCallback(() => {
-    if (attachRafRef.current !== null) {
-      cancelAnimationFrame(attachRafRef.current)
-      attachRafRef.current = null
-    }
-  }, [])
-
-  const makePC = useCallback((targetId) => {
-    // Cancel any pending remote-video attach loop from the previous call
-    cancelAttachLoop()
-
-    // Close any existing PC before creating a new one
-    if (pcRef.current) {
-      pcRef.current.close()
-      pcRef.current = null
-    }
-
-    // Clear the ICE queue for the new peer connection
-    iceCandidateQueue.current = []
-
-    const pc = new RTCPeerConnection(ICE)
-
-    // Guard — only add tracks if localStream is actually populated
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t =>
-        pc.addTrack(t, localStreamRef.current)
-      )
-    } else {
-      console.warn('[useWebRTC] makePC called before localStream was ready — no tracks added')
-    }
-
-    pc.onicecandidate = ({ candidate }) => {
-      if (candidate) socket.emit('ice-candidate', { targetId, candidate })
-    }
-
-    // FIX 1: Store the rAF handle so we can cancel it if the component
-    // unmounts or the PC is replaced while the loop is still running.
-    pc.ontrack = ({ streams }) => {
-      const attach = () => {
-        if (remoteVideoRef.current) {
-          attachRafRef.current = null
-          remoteVideoRef.current.srcObject = streams[0]
-          onRemoteStream?.()
-          onCallTimer?.()
-        } else {
-          // Ref not mounted yet — retry on next frame
-          attachRafRef.current = requestAnimationFrame(attach)
+    pc.onicecandidate = (e) => {
+      if (e.candidate && socket.current) {
+        const targetId = pcRef._targetId;
+        if (targetId) {
+          socket.current.emit('ice-candidate', { targetId, candidate: e.candidate });
         }
       }
-      attach()
-    }
+    };
 
-    pcRef.current = pc
-    return pc
-  }, [remoteVideoRef, onRemoteStream, onCallTimer, cancelAttachLoop])
+    pc.ontrack = (e) => {
+      const attachStream = () => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = e.streams[0];
+        } else {
+          requestAnimationFrame(attachStream);
+        }
+      };
+      requestAnimationFrame(attachStream);
+    };
 
-  // FIX 2: Drain the ICE candidate queue once a remote description is set.
-  const drainIceQueue = useCallback(async () => {
-    const pc = pcRef.current
-    if (!pc) return
-    for (const candidate of iceCandidateQueue.current) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate))
-      } catch (err) {
-        console.warn('[useWebRTC] queued addIceCandidate failed:', err)
+    pc.onconnectionstatechange = () => {
+      if (['connected', 'completed'].includes(pc.connectionState)) {
+        setCallActive(true);
       }
+    };
+
+    return pc;
+  }
+
+  // ── Start local stream ─────────────────────────────────────────────────────
+
+  const startLocal = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      return stream;
+    } catch (err) {
+      console.error('getUserMedia error:', err);
+      throw err;
     }
-    iceCandidateQueue.current = []
-  }, [])
+  }, []);
+
+  // ── Stop local stream ──────────────────────────────────────────────────────
+
+  const stopLocal = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+    }
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+  }, []);
+
+  // ── Close peer connection ──────────────────────────────────────────────────
+
+  const closePeer = useCallback(() => {
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    pendingCandidatesRef.current = [];
+    remoteDescSetRef.current = false;
+    setCallActive(false);
+  }, []);
+
+  // ── Flush queued ICE candidates ────────────────────────────────────────────
+
+  async function flushCandidates() {
+    const pc = pcRef.current;
+    if (!pc) return;
+    for (const c of pendingCandidatesRef.current) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (_) {}
+    }
+    pendingCandidatesRef.current = [];
+  }
+
+  // ── Make offer (caller side) ───────────────────────────────────────────────
 
   const makeOffer = useCallback(async (targetId) => {
-    const pc = makePC(targetId)
-    const offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
-    socket.emit('offer', { targetId, offer })
-  }, [makePC])
+    closePeer();
+    const pc = createPC();
+    pcRef.current = pc;
+    pcRef._targetId = targetId;
 
-  const handleOffer = useCallback(async (offer, fromId) => {
-    const pc = makePC(fromId)
-    await pc.setRemoteDescription(new RTCSessionDescription(offer))
-    // FIX 2: Remote description is now set — safe to drain queued candidates
-    await drainIceQueue()
-    const answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
-    socket.emit('answer', { targetId: fromId, answer })
-  }, [makePC, drainIceQueue])
+    const stream = localStreamRef.current || (await startLocal());
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.current?.emit('offer', { targetId, offer });
+  }, [closePeer, startLocal, socket]);
+
+  // ── Handle incoming offer (callee side) ───────────────────────────────────
+
+  const handleOffer = useCallback(async (fromId, offer) => {
+    closePeer();
+    const pc = createPC();
+    pcRef.current = pc;
+    pcRef._targetId = fromId;
+
+    const stream = localStreamRef.current || (await startLocal());
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    remoteDescSetRef.current = true;
+    await flushCandidates();
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.current?.emit('answer', { targetId: fromId, answer });
+  }, [closePeer, startLocal, socket]);
+
+  // ── Handle incoming answer ────────────────────────────────────────────────
 
   const handleAnswer = useCallback(async (answer) => {
-    await pcRef.current?.setRemoteDescription(new RTCSessionDescription(answer))
-    // FIX 2: Remote description is now set — safe to drain queued candidates
-    await drainIceQueue()
-  }, [drainIceQueue])
+    const pc = pcRef.current;
+    if (!pc) return;
+    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    remoteDescSetRef.current = true;
+    await flushCandidates();
+  }, []);
 
-  // FIX 2: Queue candidates that arrive before the remote description is ready.
-  const handleIce = useCallback(async (candidate) => {
-    const pc = pcRef.current
-    if (!pc) return
+  // ── Handle ICE candidate ──────────────────────────────────────────────────
 
-    const hasRemote = pc.remoteDescription && pc.remoteDescription.type
-    if (!hasRemote) {
-      // Remote description not set yet — hold it for drainIceQueue
-      iceCandidateQueue.current.push(candidate)
-      return
+  const handleIceCandidate = useCallback(async (candidate) => {
+    if (remoteDescSetRef.current && pcRef.current) {
+      try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+    } else {
+      pendingCandidatesRef.current.push(candidate);
     }
+  }, []);
 
-    try {
-      await pc.addIceCandidate(new RTCIceCandidate(candidate))
-    } catch (err) {
-      console.warn('[useWebRTC] addIceCandidate failed:', err)
-    }
-  }, [])
+  // ── Media toggles ─────────────────────────────────────────────────────────
 
-  // FIX 1 + FIX 4: Cancel rAF loop, then close PC.
-  // Do NOT call t.stop() on remote tracks — we don't own them and stopping
-  // them permanently kills the MediaStreamTrack on the remote side's stream
-  // object. Just detach by setting srcObject = null.
-  const closePC = useCallback(() => {
-    cancelAttachLoop()
-    pcRef.current?.close()
-    pcRef.current = null
-    iceCandidateQueue.current = []
-    if (remoteVideoRef.current) {
-      // FIX 4: Detach only — do not stop tracks we don't own
-      remoteVideoRef.current.srcObject = null
-    }
-  }, [remoteVideoRef, cancelAttachLoop])
+  const toggleAudio = useCallback((roomId) => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const track = stream.getAudioTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    setAudioEnabled(track.enabled);
+    socket.current?.emit('media-state', { roomId, audioEnabled: track.enabled, videoEnabled });
+  }, [socket, videoEnabled]);
+
+  const toggleVideo = useCallback((roomId) => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    track.enabled = !track.enabled;
+    setVideoEnabled(track.enabled);
+    socket.current?.emit('media-state', { roomId, audioEnabled, videoEnabled: track.enabled });
+  }, [socket, audioEnabled]);
+
+  // ── Cleanup on unmount ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      closePeer();
+      stopLocal();
+    };
+  }, [closePeer, stopLocal]);
 
   return {
-    localStreamRef,
+    localVideoRef,
+    remoteVideoRef,
+    audioEnabled,
+    videoEnabled,
+    partnerMedia,
+    setPartnerMedia,
+    callActive,
     startLocal,
     stopLocal,
+    closePeer,
     makeOffer,
     handleOffer,
     handleAnswer,
-    handleIce,
-    closePC,
-  }
+    handleIceCandidate,
+    toggleAudio,
+    toggleVideo,
+  };
 }
