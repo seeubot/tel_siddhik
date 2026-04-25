@@ -10,36 +10,39 @@ import {
 } from 'lucide-react';
 import styles from './Lobby.module.css';
 
-export default function Lobby({ 
-  myId, 
-  onJoinRandom, 
-  onConnectById, 
-  waiting, 
-  onCancelRandom, 
-  status 
-}) {
+export default function Lobby({ myId, onJoinRandom, onConnectById, waiting, onCancelRandom, status }) {
   const [userName, setUserName] = useState('');
   const [targetId, setTargetId] = useState('');
 
-  const handleCopy = () => {
-    if (myId) {
+  // FIX 1: Use modern Clipboard API with execCommand fallback
+  const handleCopy = async () => {
+    if (!myId) return;
+    try {
+      await navigator.clipboard.writeText(myId);
+    } catch {
+      // Fallback for browsers that block clipboard API without user gesture
       const el = document.createElement('textarea');
       el.value = myId;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
       document.body.appendChild(el);
+      el.focus();
       el.select();
-      document.execCommand('copy');
+      try { document.execCommand('copy'); } catch {}
       document.body.removeChild(el);
     }
   };
 
   return (
     <div className={styles.container}>
+      {/* Background Ambience */}
       <div className={styles.ambience}>
         <div className={styles.glowTop} />
         <div className={styles.gridOverlay} />
       </div>
 
       <div className={styles.content}>
+        {/* Aesthetic Branding Section */}
         <header className={styles.header}>
           <div className={styles.logoWrapper}>
             <h1 className={styles.logoText}>OREY</h1>
@@ -52,7 +55,9 @@ export default function Lobby({
           </div>
         </header>
 
+        {/* Identity & Discovery Modules */}
         <div className={styles.inputGroup}>
+          {/* Name Input */}
           <div className={styles.fieldWrapper}>
             <div className={styles.fieldBg} />
             <div className={styles.fieldInner}>
@@ -67,6 +72,7 @@ export default function Lobby({
             </div>
           </div>
 
+          {/* Copyable ID Card */}
           <div className={styles.idCard} onClick={handleCopy}>
             <div className={styles.idInfo}>
               <div className={styles.idIconBox}>
@@ -81,10 +87,12 @@ export default function Lobby({
           </div>
         </div>
 
+        {/* Fast Action Engine */}
         <div className={styles.actions}>
           {!waiting ? (
             <button
               className={styles.mainBtn}
+              // FIX 2: Pass userName so the parent can forward it to CallScreen
               onClick={() => onJoinRandom(userName)}
               disabled={!myId}
             >
@@ -100,6 +108,7 @@ export default function Lobby({
                 <div className={styles.dot} />
               </div>
               <span className={styles.btnText}>SCANNING</span>
+              {/* FIX 3: cancelIcon class is now defined in the CSS */}
               <X size={18} className={styles.cancelIcon} />
             </button>
           )}
@@ -122,6 +131,7 @@ export default function Lobby({
           </div>
         </div>
 
+        {/* Global Stats & Status */}
         <footer className={styles.footer}>
           {status && (
             <div className={styles.statusBadge}>
