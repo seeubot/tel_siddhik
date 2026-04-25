@@ -8,8 +8,10 @@
   padding: 1.5rem;
   overflow: hidden;
   position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Ambience */
 .ambience {
   position: fixed;
   inset: 0;
@@ -31,10 +33,13 @@
   position: absolute;
   inset: 0;
   opacity: 0.02;
-  background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+  background-image: 
+    linear-gradient(#fff 1px, transparent 1px), 
+    linear-gradient(90deg, #fff 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
+/* Content Layout */
 .content {
   position: relative;
   z-index: 10;
@@ -42,19 +47,34 @@
   max-width: 400px;
   display: flex;
   flex-direction: column;
+  animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
 .header {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 4rem;
+  text-align: center;
+}
+
+.logoWrapper {
+  position: relative;
+  display: inline-block;
 }
 
 .logoText {
   font-size: 3.75rem;
   font-weight: 900;
   letter-spacing: -0.08em;
+  line-height: 1;
+  margin: 0;
   background: linear-gradient(to bottom, #ffffff 50%, rgba(255, 255, 255, 0.2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -76,7 +96,11 @@
   margin-top: 1rem;
 }
 
-.line { height: 1px; width: 1rem; }
+.line {
+  height: 1px;
+  width: 1rem;
+}
+
 .line:first-child { background: linear-gradient(to right, transparent, #6366f1); }
 .line:last-child { background: linear-gradient(to left, transparent, #6366f1); }
 
@@ -86,8 +110,10 @@
   color: #818cf8;
   letter-spacing: 0.25em;
   text-transform: uppercase;
+  margin: 0;
 }
 
+/* Field Styles */
 .inputGroup {
   display: flex;
   flex-direction: column;
@@ -95,13 +121,21 @@
   margin-bottom: 2.5rem;
 }
 
-.fieldWrapper { position: relative; }
+.fieldWrapper {
+  position: relative;
+}
+
 .fieldBg {
   position: absolute;
   inset: 0;
   background-color: rgba(99, 102, 241, 0.05);
   border-radius: 2rem;
   filter: blur(4px);
+  transition: background-color 0.3s;
+}
+
+.fieldWrapper:focus-within .fieldBg {
+  background-color: rgba(99, 102, 241, 0.1);
 }
 
 .fieldInner {
@@ -113,6 +147,21 @@
   display: flex;
   align-items: center;
   backdrop-filter: blur(16px);
+  transition: border-color 0.3s;
+}
+
+.fieldWrapper:focus-within .fieldInner {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.fieldIcon {
+  margin-left: 1rem;
+  color: rgba(255, 255, 255, 0.2);
+  transition: color 0.3s;
+}
+
+.fieldWrapper:focus-within .fieldIcon {
+  color: #818cf8;
 }
 
 .input {
@@ -126,6 +175,11 @@
   outline: none;
 }
 
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.1);
+}
+
+/* ID Card */
 .idCard {
   display: flex;
   align-items: center;
@@ -135,6 +189,22 @@
   border-radius: 1rem;
   padding: 1rem 1.5rem;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.idCard:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.idCard:active {
+  transform: scale(0.98);
+}
+
+.idInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .idIconBox {
@@ -144,10 +214,42 @@
   color: #818cf8;
 }
 
+.idTextStack {
+  display: flex;
+  flex-direction: column;
+}
+
+.idLabel {
+  font-size: 8px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
 .idValue {
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.copyIcon {
+  color: rgba(255, 255, 255, 0.1);
+  transition: color 0.2s;
+}
+
+.idCard:hover .copyIcon {
+  color: #818cf8;
+}
+
+/* Main Buttons */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .mainBtn {
@@ -155,7 +257,7 @@
   width: 100%;
   height: 72px;
   background-color: #ffffff;
-  color: #000;
+  color: #000000;
   border: none;
   border-radius: 2rem;
   display: flex;
@@ -163,7 +265,42 @@
   justify-content: center;
   gap: 0.75rem;
   cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.mainBtn:hover {
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+}
+
+.mainBtn:active {
+  transform: scale(0.95);
+}
+
+.mainBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnText {
+  font-size: 1.125rem;
   font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+}
+
+.mainBtn:hover .shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
 }
 
 .loadingBtn {
@@ -177,13 +314,42 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
+  cursor: pointer;
 }
 
-.dot { width: 4px; height: 4px; background-color: #818cf8; border-radius: 50%; animation: bounce 1s infinite; }
+/* FIX 3: Added missing cancelIcon class */
+.cancelIcon {
+  color: rgba(129, 140, 248, 0.5);
+  flex-shrink: 0;
+}
+
+.dotPulse {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  background-color: #818cf8;
+  border-radius: 50%;
+  animation: bounce 1s infinite;
+}
+
 .dot:nth-child(2) { animation-delay: 0.15s; }
 .dot:nth-child(3) { animation-delay: 0.3s; }
 
-.quickConnect { position: relative; margin-top: 0.5rem; }
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Quick Connect */
+.quickConnect {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
 .quickInput {
   width: 100%;
   height: 3.5rem;
@@ -191,7 +357,16 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 1rem;
   padding: 0 3.5rem 0 1.5rem;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.quickInput:focus {
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .quickBtn {
@@ -201,23 +376,90 @@
   bottom: 0.5rem;
   aspect-ratio: 1;
   background-color: rgba(255, 255, 255, 0.05);
+  border: none;
   border-radius: 0.75rem;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.footer { margin-top: 4rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.quickBtn:hover:not(:disabled) {
+  background-color: #6366f1;
+  color: #000;
+}
+
+.quickBtn:disabled {
+  opacity: 0;
+}
+
+/* Footer */
+.footer {
+  margin-top: auto;
+  padding-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 .statusBadge {
-  display: flex; align-items: center; gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 2rem;
+  backdrop-filter: blur(24px);
+  animation: fadeInDown 0.3s ease-out;
 }
 
-.ping { width: 8px; height: 8px; border-radius: 50%; animation: ping 1.5s infinite; }
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-@keyframes ping { 75%, 100% { transform: scale(3); opacity: 0; } }
-@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.statusIndicator {
+  position: relative;
+  width: 8px;
+  height: 8px;
+}
+
+.ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%, 100% { transform: scale(3); opacity: 0; }
+}
+
+.dotSmall {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.statusText {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.security {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
