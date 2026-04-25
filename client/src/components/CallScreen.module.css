@@ -19,16 +19,31 @@
 .remoteView {
   background: #1a1313;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0 0 24px 24px;
+  margin: 0 12px 0 12px;
+  margin-top: 12px;
 }
 
 .localView {
   background: #2d1b1b;
+  border-radius: 24px 24px 0 0;
+  margin: 0 12px 0 12px;
+  margin-bottom: 12px;
 }
 
 .videoElement {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Apply border-radius to video elements as well */
+.remoteView .videoElement {
+  border-radius: 0 0 24px 24px;
+}
+
+.localView .videoElement {
+  border-radius: 24px 24px 0 0;
 }
 
 .mirror {
@@ -47,10 +62,12 @@
 
 .remoteFallback {
   background: linear-gradient(to bottom, #2d1b1b, #1a1313);
+  border-radius: 0 0 24px 24px;
 }
 
 .localFallback {
   background: linear-gradient(to bottom, #3d2525, #2d1b1b);
+  border-radius: 24px 24px 0 0;
 }
 
 .avatar {
@@ -86,6 +103,7 @@
   border-radius: 2px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
   pointer-events: none;
+  z-index: 10;
 }
 
 .labelText {
@@ -101,6 +119,7 @@
   right: 1rem;
   color: rgba(255, 255, 255, 0.8);
   transition: opacity 0.3s ease;
+  z-index: 10;
 }
 
 /* --- Controls --- */
@@ -185,6 +204,7 @@
   transition: opacity 0.5s ease;
   pointer-events: none;
   opacity: 0.2;
+  z-index: 10;
 }
 
 .roomIdText {
@@ -321,5 +341,13 @@
   
   .countdownNumber {
     font-size: 3rem;
+  }
+
+  .remoteView {
+    margin: 8px 8px 0 8px;
+  }
+
+  .localView {
+    margin: 0 8px 8px 8px;
   }
 }
