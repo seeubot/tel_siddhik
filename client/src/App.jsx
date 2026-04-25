@@ -1,377 +1,329 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { socket } from './lib/socket'
-import { useWebRTC } from './hooks/useWebRTC'
-import Lobby from './components/Lobby.jsx'
-import CallScreen from './components/CallScreen.jsx'
-import { ShareRequestModal, RevealModal } from './components/Modals.jsx'
-import Toast from './components/Toast.jsx'
-
-const AUTO_SEARCH_DELAY = 3000
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getSocket } from './lib/socket';
+import { useWebRTC } from './hooks/useWebRTC';
+import Lobby from './components/Lobby';
+import CallScreen from './components/CallScreen';
+import { ShareRequestModal, RevealModal } from './components/Modals';
+import Toast from './components/Toast';
 
 export default function App() {
-  // ── Identity ───────────────────────────────────────────────────────────────
-  const [myId, setMyId] = useState(null)
-  const myIdRef = useRef(null)
-  const userNameRef = useRef('Anonymous')
+  const socketRef = useRef(null);
 
-  // ── Screen state ───────────────────────────────────────────────────────────
-  const [screen, setScreen] = useState('lobby') // 'lobby' | 'call'
+  const [screen, setScreen] = useState('lobby'); // 'lobby' | 'call'
+  const [userName, setUserName] = useState('');
+  const [oreyId, setOreyId] = useState('');
+  const [oreyIdExpiry, setOreyIdExpiry] = useState(null);
+  const [roomId, setRoomId] = useState('');
+  const [partner, setPartner] = useState(null); // { socketId, userName, oreyId }
+  const [searching, setSearching] = useState(false);
+  const [autoSearchCountdown, setAutoSearchCountdown] = useState(null);
+  const [autoSearchDelay, setAutoSearchDelay] = useState(null);
 
-  // ── Lobby state ────────────────────────────────────────────────────────────
-  const [waiting, setWaiting] = useState(false)
-  const [lobStatus, setLobStatus] = useState(null)
+  const [shareRequest, setShareRequest] = useState(null); // { fromId, fromName }
+  const [revealData, setRevealData] = useState(null);     // { oreyId, userName }
 
-  // ── Call state ─────────────────────────────────────────────────────────────
-  const [roomId, setRoomId] = useState(null)
-  const [peerId, setPeerId] = useState(null)
-  const [peerName, setPeerName] = useState(null)
-  const [audioOn, setAudioOn] = useState(true)
-  const [videoOn, setVideoOn] = useState(true)
-  // FIX #4: Default to false so fallback avatar shows until remote stream arrives
-  const [remoteVideoOn, setRemoteVideoOn] = useState(false)
+  const [toast, setToast] = useState(null);
 
-  // ── Auto-search state ──────────────────────────────────────────────────────
-  const [searching, setSearching] = useState(false)
-  const [searchMessage, setSearchMessage] = useState('')
-  const searchTimerRef = useRef(null)
+  const webrtc = useWebRTC(socketRef);
 
-  // ── Modals ─────────────────────────────────────────────────────────────────
-  const [shareModal, setShareModal] = useState(null)
-  const [revealModal, setRevealModal] = useState(null)
+  // ── Toast helper ───────────────────────────────────────────────────────────
 
-  // ── Refs ───────────────────────────────────────────────────────────────────
-  const localVideoRef = useRef(null)
-  const remoteVideoRef = useRef(null)
-  const roomIdRef = useRef(null)
-  const peerIdRef = useRef(null)
-  const toastRef = useRef(null)
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type, id: Date.now() });
+  }, []);
 
-  // FIX: Track pending peer to make offer after screen mounts
-  const pendingPeerRef = useRef(null)
+  // ── Fetch Orey-ID on mount ─────────────────────────────────────────────────
 
-  const toast = useCallback((msg, dur) => toastRef.current?.show(msg, dur), [])
-
-  // Keep refs in sync
-  useEffect(() => { roomIdRef.current = roomId }, [roomId])
-  useEffect(() => { peerIdRef.current = peerId }, [peerId])
-
-  // ── WebRTC ─────────────────────────────────────────────────────────────────
-  const { startLocal, stopLocal, makeOffer, handleOffer, handleAnswer, handleIce, closePC, localStreamRef } =
-    useWebRTC({
-      localVideoRef,
-      remoteVideoRef,
-      onRemoteStream: () => setRemoteVideoOn(true),
-      onCallTimer: () => {},
-    })
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  const updatePeer = useCallback((name) => {
-    setPeerName(name || 'Anonymous')
-  }, [])
-
-  const cancelSearchTimer = useCallback(() => {
-    clearTimeout(searchTimerRef.current)
-    searchTimerRef.current = null
-    setSearching(false)
-    setSearchMessage('')
-  }, [])
-
-  const cleanupCall = useCallback(() => {
-    closePC()
-    stopLocal()
-    cancelSearchTimer()
-    setPeerId(null)
-    setPeerName(null)
-    // FIX #4: Reset to false on cleanup so next call starts fresh
-    setRemoteVideoOn(false)
-    pendingPeerRef.current = null
-  }, [closePC, stopLocal, cancelSearchTimer])
-
-  const goLobby = useCallback(() => {
-    cleanupCall()
-    setRoomId(null)
-    setWaiting(false)
-    setScreen('lobby')
-  }, [cleanupCall])
-
-  // FIX #1 & #2: After screen === 'call' renders, React has mounted the video
-  // elements and localStreamRef is populated. NOW it is safe to makeOffer.
   useEffect(() => {
-    if (screen === 'call' && pendingPeerRef.current && localStreamRef.current) {
-      const { socketId } = pendingPeerRef.current
-      pendingPeerRef.current = null
-      makeOffer(socketId)
-    }
-  }, [screen, makeOffer, localStreamRef])
-
-  // ── Socket events ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    // Generate ID on mount
     fetch('/generate-orey-id')
-      .then(r => r.json())
-      .then(d => {
-        setMyId(d.oreyId)
-        myIdRef.current = d.oreyId
+      .then((r) => r.json())
+      .then(({ oreyId, expiresAt }) => {
+        setOreyId(oreyId);
+        setOreyIdExpiry(expiresAt);
       })
-      .catch(() => {})
+      .catch(() => showToast('Could not generate Orey-ID', 'error'));
+  }, [showToast]);
+
+  // ── Socket setup ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
 
     socket.on('connect', () => {
-      if (myIdRef.current) {
-        socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: userNameRef.current })
+      if (oreyId) {
+        socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
       }
-    })
+    });
+
+    socket.on('orey-id-registered', ({ oreyId: id, expiresAt }) => {
+      setOreyId(id);
+      setOreyIdExpiry(expiresAt);
+    });
 
     socket.on('waiting-for-match', () => {
-      setWaiting(true)
-    })
+      setSearching(true);
+    });
 
     socket.on('random-cancelled', () => {
-      setWaiting(false)
-      cancelSearchTimer()
-    })
+      setSearching(false);
+    });
 
-    socket.on('room-joined', async ({ roomId: r, peers, autoMatched }) => {
-      setRoomId(r)
-      roomIdRef.current = r
-      setWaiting(false)
-      cancelSearchTimer()
-      setSearching(false)
-
-      // FIX #1 & #2: Start local stream first, THEN switch screen.
-      // Store the peer in a ref so the useEffect above can call makeOffer
-      // only after React has mounted CallScreen and video refs are live.
-      await startLocal()
-
-      if (peers?.length) {
-        const p = peers[0]
-        setPeerId(p.socketId)
-        peerIdRef.current = p.socketId
-        updatePeer(p.userName)
-        // Store peer for deferred makeOffer (triggered by screen useEffect)
-        pendingPeerRef.current = { socketId: p.socketId }
+    socket.on('room-joined', ({ roomId: rid, peers }) => {
+      setRoomId(rid);
+      setSearching(false);
+      if (peers && peers.length > 0) {
+        setPartner(peers[0]);
       }
+      setScreen('call');
+      webrtc.startLocal();
+    });
 
-      // Switch screen last — this mounts CallScreen and triggers the useEffect
-      setScreen('call')
+    socket.on('incoming-call', ({ fromName, fromOreyId, autoMatched }) => {
+      setPartner((prev) => prev ? { ...prev, userName: fromName, oreyId: fromOreyId } : { userName: fromName, oreyId: fromOreyId });
+      if (!autoMatched) {
+        showToast(`${fromName} is calling…`, 'info');
+      }
+    });
 
-      if (autoMatched) toast('Connected with a new partner!', 2000)
-    })
-
-    socket.on('user-joined', ({ socketId, userName }) => {
-      setPeerId(socketId)
-      peerIdRef.current = socketId
-      updatePeer(userName)
-    })
+    socket.on('user-joined', ({ socketId, userName: pName }) => {
+      setPartner({ socketId, userName: pName, oreyId: null });
+    });
 
     socket.on('offer', async ({ offer, fromId, fromName }) => {
-      setPeerId(fromId)
-      peerIdRef.current = fromId
-      updatePeer(fromName)
-      await handleOffer(offer, fromId)
-    })
+      await webrtc.handleOffer(fromId, offer);
+    });
 
     socket.on('answer', async ({ answer }) => {
-      await handleAnswer(answer)
-    })
+      await webrtc.handleAnswer(answer);
+    });
 
     socket.on('ice-candidate', async ({ candidate }) => {
-      await handleIce(candidate)
-    })
+      await webrtc.handleIceCandidate(candidate);
+    });
 
-    socket.on('peer-media-state', ({ videoEnabled }) => {
-      setRemoteVideoOn(videoEnabled)
-    })
+    socket.on('peer-media-state', ({ audioEnabled, videoEnabled }) => {
+      webrtc.setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
+    });
 
-    socket.on('partner-left', ({ userName, reason }) => {
-      closePC()
-      // FIX #4: Reset remote video state when partner leaves
-      setRemoteVideoOn(false)
-
-      const msgs = {
-        left: 'Partner left',
-        skipped: 'Partner skipped',
-        disconnected: 'Partner disconnected',
-      }
-      toast(msgs[reason] || 'Partner left')
-
-      setSearchMessage('Partner left. Finding a new match…')
-      setSearching(true)
-      clearTimeout(searchTimerRef.current)
-      searchTimerRef.current = setTimeout(() => {
-        if (roomIdRef.current) {
-          socket.emit('join-random')
-        }
-      }, AUTO_SEARCH_DELAY)
-    })
+    socket.on('partner-left', ({ userName: pName, reason }) => {
+      showToast(`${pName || 'Partner'} ${reason === 'skip' ? 'skipped' : 'left'}`, 'warning');
+      webrtc.closePeer();
+      setPartner(null);
+    });
 
     socket.on('auto-search-scheduled', ({ delay }) => {
-      setSearching(true)
-      setSearchMessage('Finding a new partner…')
-    })
+      setAutoSearchDelay(delay);
+      setAutoSearchCountdown(Math.ceil(delay / 1000));
+    });
 
     socket.on('auto-search-cancelled', () => {
-      cancelSearchTimer()
-    })
+      setAutoSearchCountdown(null);
+      setAutoSearchDelay(null);
+    });
 
     socket.on('left-chat-confirmed', () => {
-      goLobby()
-    })
+      setScreen('lobby');
+      setPartner(null);
+      setRoomId('');
+      webrtc.stopLocal();
+      webrtc.closePeer();
+    });
 
     socket.on('skip-confirmed', () => {
-      // FIX #4: Reset remote video on skip
-      setRemoteVideoOn(false)
-      setSearching(true)
-      setSearchMessage('Skipping… finding next person')
-    })
+      webrtc.closePeer();
+      setPartner(null);
+      setSearching(true);
+    });
 
     socket.on('share-id-request', ({ fromId, fromName }) => {
-      setShareModal({ fromId, fromName })
-    })
+      setShareRequest({ fromId, fromName });
+    });
 
-    socket.on('share-id-reveal', ({ oreyId, userName }) => {
-      setShareModal(null)
-      setRevealModal({ oreyId, userName })
-      toast(`Now connected with ${userName || 'partner'}!`)
-    })
+    socket.on('share-id-reveal', ({ oreyId: rid, userName: rName }) => {
+      setRevealData({ oreyId: rid, userName: rName });
+    });
 
-    socket.on('share-id-declined', () => toast('They declined to share IDs'))
-    socket.on('orey-id-not-found', () => setLobStatus({ msg: 'ID not found or offline', color: 'var(--red)' }))
-    socket.on('orey-id-invalid', () => setLobStatus({ msg: 'Invalid Orey-ID', color: 'var(--red)' }))
-    socket.on('orey-id-expired', () => setLobStatus({ msg: 'Orey-ID expired', color: 'var(--red)' }))
+    socket.on('share-id-declined', () => {
+      showToast('Partner declined to share ID', 'warning');
+    });
 
-    return () => socket.removeAllListeners()
-  }, []) // eslint-disable-line
+    socket.on('orey-id-not-found', () => showToast('Orey-ID not found', 'error'));
+    socket.on('orey-id-expired', () => showToast('Orey-ID has expired', 'error'));
+    socket.on('orey-id-offline', () => showToast('User is offline', 'error'));
+    socket.on('orey-id-invalid', () => showToast('Invalid Orey-ID', 'error'));
+    socket.on('room-full', () => showToast('Room is full', 'error'));
 
-  // ── User actions ───────────────────────────────────────────────────────────
-  const handleJoinRandom = useCallback((name) => {
-    userNameRef.current = name
-    socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: name })
-    socket.emit('join-random')
-    setWaiting(true)
-    setLobStatus(null)
-  }, [])
+    return () => {
+      socket.removeAllListeners();
+    };
+  }, [oreyId, userName, webrtc, showToast]);
 
-  const handleCancelRandom = useCallback(() => {
-    socket.emit('cancel-random')
-    setWaiting(false)
-  }, [])
+  // ── Register Orey-ID when it's available ──────────────────────────────────
 
-  const handleConnectById = useCallback(async (targetId, name) => {
-    if (!targetId) return
-    userNameRef.current = name
-    socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: name })
-    await startLocal()
-    setScreen('call')
-    socket.emit('connect-by-orey-id', { targetOreyId: targetId })
-    setLobStatus(null)
-  }, [startLocal])
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (socket?.connected && oreyId) {
+      socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
+    }
+  }, [oreyId, userName]);
 
-  const handleToggleMic = useCallback(() => {
-    setAudioOn(prev => {
-      const next = !prev
-      localStreamRef.current?.getAudioTracks().forEach(t => (t.enabled = next))
-      return next
-    })
-  }, [localStreamRef])
+  // ── Auto-search countdown ─────────────────────────────────────────────────
 
-  const handleToggleCam = useCallback(() => {
-    setVideoOn(prev => {
-      const next = !prev
-      localStreamRef.current?.getVideoTracks().forEach(t => (t.enabled = next))
-      socket.emit('media-state', { roomId: roomIdRef.current, audioEnabled: audioOn, videoEnabled: next })
-      return next
-    })
-  }, [localStreamRef, audioOn])
+  useEffect(() => {
+    if (autoSearchCountdown === null) return;
+    if (autoSearchCountdown <= 0) {
+      setAutoSearchCountdown(null);
+      return;
+    }
+    const t = setTimeout(() => setAutoSearchCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [autoSearchCountdown]);
 
-  const handleSkip = useCallback(() => {
-    closePC()
-    setRemoteVideoOn(false)
-    socket.emit('skip', { roomId: roomIdRef.current })
-  }, [closePC])
+  // ── WebRTC: make offer when both in room ──────────────────────────────────
+  // Caller is whoever joined as the "first" peer received via user-joined
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
-  const handleLeave = useCallback(() => {
-    cancelSearchTimer()
-    socket.emit('leave-chat', { roomId: roomIdRef.current })
-  }, [cancelSearchTimer])
+    const handleUserJoined = ({ socketId }) => {
+      // We are the one already in the room → we make the offer
+      webrtc.makeOffer(socketId);
+    };
 
-  const handleCancelSearch = useCallback(() => {
-    cancelSearchTimer()
-    socket.emit('cancel-auto-search')
-    socket.emit('cancel-random')
-  }, [cancelSearchTimer])
+    socket.on('user-joined', handleUserJoined);
+    return () => socket.off('user-joined', handleUserJoined);
+  }, [webrtc]);
 
-  const handleShareId = useCallback(() => {
-    socket.emit('share-id-request', { roomId: roomIdRef.current })
-    toast('Request sent')
-  }, [toast])
+  // Auto-offer when auto-matched (server sends room-joined with peers already populated)
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
-  const handleAcceptShare = useCallback(() => {
-    socket.emit('share-id-accept', { roomId: roomIdRef.current, targetId: shareModal.fromId })
-    setShareModal(null)
-  }, [shareModal])
+    const handleRoomJoined = ({ peers, autoMatched }) => {
+      if (autoMatched && peers && peers.length > 0) {
+        // Small delay to ensure both sides have set up listeners
+        setTimeout(() => {
+          // Only one side makes the offer — lower socket ID wins
+          if (socket.id < peers[0].socketId) {
+            webrtc.makeOffer(peers[0].socketId);
+          }
+        }, 300);
+      }
+    };
 
-  const handleDeclineShare = useCallback(() => {
-    socket.emit('share-id-decline', { roomId: roomIdRef.current })
-    setShareModal(null)
-  }, [])
+    socket.on('room-joined', handleRoomJoined);
+    return () => socket.off('room-joined', handleRoomJoined);
+  }, [webrtc]);
 
-  const handleCopyRevealed = useCallback(() => {
-    navigator.clipboard.writeText(revealModal?.oreyId || '')
-    toast('Copied!')
-  }, [revealModal, toast])
+  // ── Actions ───────────────────────────────────────────────────────────────
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const handleDiscover = () => {
+    socketRef.current?.emit('join-random');
+  };
+
+  const handleCancelSearch = () => {
+    socketRef.current?.emit('cancel-random');
+    setSearching(false);
+  };
+
+  const handleConnectById = (targetOreyId) => {
+    socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
+  };
+
+  const handleSkip = () => {
+    socketRef.current?.emit('skip', { roomId });
+  };
+
+  const handleLeave = () => {
+    socketRef.current?.emit('leave-chat', { roomId });
+    setAutoSearchCountdown(null);
+    cancelAutoSearch();
+  };
+
+  const cancelAutoSearch = () => {
+    socketRef.current?.emit('cancel-auto-search');
+    setAutoSearchCountdown(null);
+    setAutoSearchDelay(null);
+  };
+
+  const handleShareId = () => {
+    socketRef.current?.emit('share-id-request', { roomId });
+    showToast('ID share request sent', 'info');
+  };
+
+  const handleAcceptShare = () => {
+    socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest.fromId });
+    setShareRequest(null);
+  };
+
+  const handleDeclineShare = () => {
+    socketRef.current?.emit('share-id-decline', { roomId });
+    setShareRequest(null);
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <>
       {screen === 'lobby' && (
         <Lobby
-          myId={myId}
-          waiting={waiting}
-          status={lobStatus}
-          onJoinRandom={handleJoinRandom}
-          onCancelRandom={handleCancelRandom}
+          userName={userName}
+          setUserName={setUserName}
+          oreyId={oreyId}
+          oreyIdExpiry={oreyIdExpiry}
+          searching={searching}
+          onDiscover={handleDiscover}
+          onCancelSearch={handleCancelSearch}
           onConnectById={handleConnectById}
         />
       )}
 
       {screen === 'call' && (
         <CallScreen
-          localVideoRef={localVideoRef}
-          remoteVideoRef={remoteVideoRef}
-          peerName={peerName}
-          remoteVideoOn={remoteVideoOn}
-          audioOn={audioOn}
-          videoOn={videoOn}
-          onToggleMic={handleToggleMic}
-          onToggleCam={handleToggleCam}
-          onShareId={handleShareId}
+          partner={partner}
+          roomId={roomId}
+          oreyId={oreyId}
+          localVideoRef={webrtc.localVideoRef}
+          remoteVideoRef={webrtc.remoteVideoRef}
+          audioEnabled={webrtc.audioEnabled}
+          videoEnabled={webrtc.videoEnabled}
+          partnerMedia={webrtc.partnerMedia}
+          searching={searching}
+          autoSearchCountdown={autoSearchCountdown}
+          onToggleAudio={() => webrtc.toggleAudio(roomId)}
+          onToggleVideo={() => webrtc.toggleVideo(roomId)}
           onSkip={handleSkip}
           onLeave={handleLeave}
-          searching={searching}
-          searchDelay={AUTO_SEARCH_DELAY}
-          searchMessage={searchMessage}
-          onCancelSearch={handleCancelSearch}
+          onShareId={handleShareId}
+          onCancelAutoSearch={cancelAutoSearch}
         />
       )}
 
-      {shareModal && (
+      {shareRequest && (
         <ShareRequestModal
-          fromName={shareModal.fromName}
+          fromName={shareRequest.fromName}
           onAccept={handleAcceptShare}
           onDecline={handleDeclineShare}
         />
       )}
 
-      {revealModal && (
+      {revealData && (
         <RevealModal
-          partnerOreyId={revealModal.oreyId}
-          partnerName={revealModal.userName}
-          onCopy={handleCopyRevealed}
-          onClose={() => setRevealModal(null)}
+          oreyId={revealData.oreyId}
+          userName={revealData.userName}
+          onClose={() => setRevealData(null)}
         />
       )}
 
-      <Toast ref={toastRef} />
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onDone={() => setToast(null)}
+        />
+      )}
     </>
-  )
+  );
 }
