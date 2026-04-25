@@ -1,52 +1,56 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, SkipForward, X, UserPlus
+  PhoneOff, SkipForward, X, UserPlus,
+  Zap
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
+/**
+ * Orey! Branded Video Chat Interface
+ * Integrated with CSS Modules and the signature #FF2D55 palette.
+ */
 export default function CallScreen({
-  partner,
-  roomId,
-  oreyId,
+  partner = null,
+  roomId = "000-000",
+  oreyId = "",
   localVideoRef,
   remoteVideoRef,
-  audioEnabled,
-  videoEnabled,
-  partnerMedia,
-  searching,
-  autoSearchCountdown,
-  onToggleAudio,
-  onToggleVideo,
-  onSkip,
-  onLeave,
-  onShareId,
-  onCancelAutoSearch,
+  audioEnabled = true,
+  videoEnabled = true,
+  partnerMedia = { video: true, audio: true },
+  searching = false,
+  autoSearchCountdown = null,
+  onToggleAudio = () => {},
+  onToggleVideo = () => {},
+  onSkip = () => {},
+  onLeave = () => {},
+  onShareId = () => {},
+  onCancelAutoSearch = () => {},
 }) {
   const [uiVisible, setUiVisible] = useState(true);
 
+  // Auto-hide UI logic after 4 seconds of inactivity
+  useEffect(() => {
+    if (!uiVisible) return;
+    const timer = setTimeout(() => setUiVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [uiVisible]);
+
   const toggleUI = useCallback((e) => {
-    // Only toggle if the click wasn't on an interactive button or overlay
+    // Only toggle if not clicking an interactive button
     if (e.target.closest('button')) return;
     setUiVisible((prev) => !prev);
   }, []);
 
-  const partnerInitials = (partner?.userName || '?')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase();
-
-  // Safe check for partner media
   const isPartnerVideoEnabled = partnerMedia?.video !== false;
-  const isPartnerAudioEnabled = partnerMedia?.audio === true;
 
   return (
     <div className={styles.root} onClick={toggleUI}>
       
-      {/* Remote View (Top) */}
-      <div className={`${styles.videoContainer} ${styles.remoteView}`}>
+      {/* --- Remote View (Stranger) --- */}
+      <div className={styles.remoteContainer}>
         <video
           ref={remoteVideoRef}
           className={styles.videoElement}
@@ -56,25 +60,27 @@ export default function CallScreen({
         />
         
         {(!partner || !isPartnerVideoEnabled) && (
-          <div className={`${styles.fallback} ${styles.remoteFallback}`}>
-             <div className={styles.avatar}>{partnerInitials}</div>
-             <p className={styles.statusText}>
-               {searching ? "Finding Partner..." : "Partner Camera Off"}
+          <div className={styles.videoFallback}>
+             <div className={styles.brandGhost}>
+               OREY<span className={styles.accentText}>!</span>
+             </div>
+             <p className={styles.statusSubtext}>
+               {searching ? "LOCATING PEER" : "CAMERA SUSPENDED"}
              </p>
           </div>
         )}
 
-        <div className={styles.label}>
-          <span className={styles.labelText}>{partner?.userName || 'Searching...'}</span>
-        </div>
-
-        <div className={`${styles.indicator} ${!uiVisible ? styles.hiddenFade : ''}`}>
-          {isPartnerAudioEnabled ? <Mic size={18} /> : <MicOff size={18} color="#ef4444" />}
+        {/* Floating Label */}
+        <div className={`${styles.floatingLabel} ${!uiVisible ? styles.uiHidden : ''}`}>
+          <div className={styles.labelCapsule}>
+            <div className={styles.pulseDot} />
+            <span className={styles.labelText}>Stranger</span>
+          </div>
         </div>
       </div>
 
-      {/* Local View (Bottom) */}
-      <div className={`${styles.videoContainer} ${styles.localView}`}>
+      {/* --- Local View (You) --- */}
+      <div className={styles.localContainer}>
         <video
           ref={localVideoRef}
           className={`${styles.videoElement} ${styles.mirror}`}
@@ -85,98 +91,101 @@ export default function CallScreen({
         />
 
         {!videoEnabled && (
-          <div className={`${styles.fallback} ${styles.localFallback}`}>
-             <VideoOff size={48} color="rgba(255,255,255,0.1)" />
+          <div className={styles.videoFallback}>
+             <VideoOff size={32} className={styles.fallbackIcon} />
           </div>
         )}
 
-        <div className={styles.label}>
-          <span className={styles.labelText}>You</span>
-        </div>
-
-        <div className={`${styles.indicator} ${!uiVisible ? styles.hiddenFade : ''}`}>
-          {!audioEnabled && <MicOff size={18} color="#ef4444" />}
+        <div className={`${styles.floatingLabel} ${!uiVisible ? styles.uiHidden : ''}`}>
+          <div className={`${styles.labelCapsule} ${styles.localLabel}`}>
+            <div className={styles.staticDot} />
+            <span className={styles.labelText}>You</span>
+          </div>
         </div>
       </div>
 
-      {/* Controls Bar */}
-      <div className={`${styles.controlsWrapper} ${!uiVisible ? styles.hidden : ''}`}>
-        <div className={styles.controlsBar}>
+      {/* --- Orey! Control Dock --- */}
+      <div className={`${styles.controlsWrapper} ${!uiVisible ? styles.uiDockHidden : ''}`}>
+        <div className={styles.controlsDock}>
           <button 
-            className={`${styles.btn} ${videoEnabled ? styles.btnDefault : styles.btnOff}`}
             onClick={onToggleVideo}
-            aria-label={videoEnabled ? "Disable video" : "Enable video"}
+            className={`${styles.btnCircle} ${!videoEnabled ? styles.btnAlert : ''}`}
+            aria-label="Toggle Video"
           >
             {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
           </button>
           
           <button 
-            className={`${styles.btn} ${audioEnabled ? styles.btnDefault : styles.btnOff}`}
             onClick={onToggleAudio}
-            aria-label={audioEnabled ? "Mute microphone" : "Unmute microphone"}
+            className={`${styles.btnCircle} ${!audioEnabled ? styles.btnAlert : ''}`}
+            aria-label="Toggle Audio"
           >
             {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
           </button>
 
           <button 
-            className={styles.btnEnd} 
-            onClick={onLeave}
-            aria-label="End call"
-          >
-            <PhoneOff size={24} strokeWidth={2.5} style={{ transform: 'rotate(135deg)' }} />
-          </button>
-
-          <button 
-            className={`${styles.btn} ${styles.btnGhost}`} 
             onClick={onSkip}
-            aria-label="Skip to next person"
+            className={styles.btnNext}
           >
-            <SkipForward size={20} />
+            NEXT <Zap size={14} fill="white" />
           </button>
 
           <button 
-            className={`${styles.btn} ${styles.btnGhost}`} 
             onClick={onShareId}
-            aria-label="Share room ID"
+            className={styles.btnGhost}
+            aria-label="Share ID"
           >
-            <UserPlus size={20} />
+            <UserPlus size={18} />
+          </button>
+
+          <button 
+            onClick={onLeave}
+            className={styles.btnEnd}
+            aria-label="End Call"
+          >
+            <PhoneOff size={18} />
           </button>
         </div>
       </div>
 
-      {/* Room ID */}
-      <div className={`${styles.roomBadge} ${!uiVisible ? styles.hiddenFade : ''}`}>
-        <p className={styles.roomIdText}>ID: {roomId}</p>
-      </div>
-
-      {/* Search Overlay Logic - Pure CSS Modules */}
+      {/* --- Search / Countdown Overlay --- */}
       {(searching || autoSearchCountdown !== null) && (
-        <div 
-          className={styles.searchOverlay}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={styles.searchModal}>
+        <div className={styles.overlay} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.overlayContent}>
             {autoSearchCountdown !== null ? (
-              <>
-                <div className={styles.countdownNumber}>{autoSearchCountdown}</div>
-                <p className={styles.countdownLabel}>Next match in...</p>
+              <div className={styles.countdownContainer}>
+                <div className={styles.countdownWrapper}>
+                  <div className={styles.countdownText}>{autoSearchCountdown}</div>
+                  <div className={styles.countdownExclaim}>!</div>
+                </div>
+                <p className={styles.overlaySubtext}>FINDING NEW OREY!</p>
                 <button 
                   onClick={onCancelAutoSearch}
-                  className={styles.cancelButton}
-                  aria-label="Cancel auto search"
+                  className={styles.btnTerminate}
                 >
-                  <X size={16} /> Cancel
+                  TERMINATE
                 </button>
-              </>
+              </div>
             ) : (
-              <>
-                <div className={styles.loader} />
-                <p className={styles.searchLabel}>Looking for someone...</p>
-              </>
+              <div className={styles.loaderContainer}>
+                <div className={styles.brandTitle}>
+                  Orey<span className={styles.accentText}>!</span>
+                </div>
+                <div className={styles.loadingBarTrack}>
+                  <div className={styles.loadingBarFill} />
+                </div>
+              </div>
             )}
           </div>
         </div>
       )}
+
+      {/* Room ID Hint */}
+      <div className={`${styles.roomHint} ${!uiVisible ? styles.uiHidden : ''}`}>
+        ID: {roomId}
+      </div>
     </div>
   );
 }
+
+
