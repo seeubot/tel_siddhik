@@ -1,335 +1,173 @@
 .root {
-  position: fixed;
-  inset: 0;
-  background: #050507;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+position: fixed;
+inset: 0;
+background: #0c0c0c;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+user-select: none;
+cursor: pointer;
 }
-
-.bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(34, 211, 238, 0.06) 0%, transparent 60%);
-  pointer-events: none;
+​/* --- Video Containers --- */
+.videoContainer {
+position: relative;
+flex: 1;
+overflow: hidden;
 }
-
-/* ── Remote video ─────────────────────────────────────────────────────────── */
-
-.remoteCard {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: #0a0a0f;
-  overflow: hidden;
-  flex: 1;
+​.remoteView {
+background: #1a1313;
+border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-
-.remoteVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+​.localView {
+background: #2d1b1b;
 }
-
-.avatarFallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+​.videoElement {
+width: 100%;
+height: 100%;
+object-fit: cover;
 }
-
-.avatar {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+​.mirror {
+transform: scaleX(-1);
 }
-
-.avatarInitials {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(34, 211, 238, 0.2));
-  border: 2px solid rgba(124, 58, 237, 0.4);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -1px;
+​/* --- Fallbacks --- */
+.fallback {
+position: absolute;
+inset: 0;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
 }
-
-.avatarRing {
-  position: absolute;
-  inset: -6px;
-  border: 2px solid rgba(124, 58, 237, 0.3);
-  border-radius: 50%;
-  animation: ringPulse 2s ease-in-out infinite;
+​.remoteFallback {
+background: linear-gradient(to bottom, #2d1b1b, #1a1313);
 }
-
-@keyframes ringPulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.08); opacity: 1; }
+​.localFallback {
+background: linear-gradient(to bottom, #3d2525, #2d1b1b);
 }
-
-.partnerName {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.3px;
+​.avatar {
+width: 96px;
+height: 96px;
+border-radius: 50%;
+background: rgba(255, 255, 255, 0.05);
+border: 1px solid rgba(255, 255, 255, 0.1);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.875rem;
+font-weight: 700;
+color: rgba(255, 255, 255, 0.4);
 }
-
-.mediaOff {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 4px 12px;
-  border-radius: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+​.statusText {
+margin-top: 1rem;
+color: rgba(255, 255, 255, 0.3);
+font-size: 0.875rem;
+font-weight: 500;
+letter-spacing: 0.1em;
+text-transform: uppercase;
 }
-
-.partnerBadge {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 100px;
-  padding: 6px 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+​/* --- Labels --- */
+.label {
+position: absolute;
+bottom: 1rem;
+left: 1rem;
+background: white;
+padding: 0.25rem 0.75rem;
+border-radius: 2px;
+box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+pointer-events: none;
 }
-
-.partnerBadgeName {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+​.labelText {
+color: black;
+font-size: 0.875rem;
+font-weight: 700;
+letter-spacing: -0.025em;
 }
-
-.mutedIcon {
-  color: rgba(239, 68, 68, 0.8);
+​.indicator {
+position: absolute;
+bottom: 1rem;
+right: 1rem;
+color: rgba(255, 255, 255, 0.8);
+transition: opacity 0.3s ease;
 }
-
-/* ── Local video PiP ─────────────────────────────────────────────────────── */
-
-.localCard {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 120px;
-  height: 160px;
-  background: #0d0d14;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  z-index: 10;
-  transition: transform 0.2s;
+​/* --- Controls --- */
+.controlsWrapper {
+position: absolute;
+bottom: 1.5rem;
+left: 0;
+right: 0;
+padding: 0 1rem;
+z-index: 50;
+display: flex;
+justify-content: center;
+pointer-events: none;
+transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.localCard:hover {
-  transform: scale(1.03);
+​.controlsBar {
+display: flex;
+align-items: center;
+gap: 0.75rem;
+background: rgba(0, 0, 0, 0.4);
+backdrop-filter: blur(12px);
+border: 1px solid rgba(255, 255, 255, 0.1);
+padding: 0.75rem;
+border-radius: 32px;
+pointer-events: auto;
+box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
-
-.localVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1); /* mirror */
+​.btn {
+width: 3rem;
+height: 3rem;
+border-radius: 9999px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.2s ease;
+cursor: pointer;
+border: none;
 }
-
-.localNoVideo {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0d0d14;
+​.btnDefault {
+background: rgba(255, 255, 255, 0.1);
+color: white;
+border: 1px solid rgba(255, 255, 255, 0.05);
 }
-
-.noVideoIcon {
-  color: rgba(255, 255, 255, 0.2);
+​.btnOff {
+background: rgba(239, 68, 68, 0.2);
+color: #ef4444;
+border: 1px solid rgba(239, 68, 68, 0.3);
 }
-
-/* ── Search overlay ──────────────────────────────────────────────────────── */
-
-.searchOverlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(5, 5, 7, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
+​.btnEnd {
+width: 4rem;
+height: 3.5rem;
+background: #ff4b4b;
+border-radius: 24px;
+color: white;
+box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-
-.searchBox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
+​.btnEnd:hover { background: #ff3535; }
+​.btnGhost {
+background: rgba(255, 255, 255, 0.05);
+color: rgba(255, 255, 255, 0.8);
 }
-
-.countdown {
-  font-size: 4rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, #7c3aed, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
-}
-
-.searchLabel {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.searchSpinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(124, 58, 237, 0.2);
-  border-top-color: #7c3aed;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.cancelSearchBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 100px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.cancelSearchBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-/* ── Controls ────────────────────────────────────────────────────────────── */
-
-.controls {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 100px;
-  padding: 10px 16px;
-  z-index: 30;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.ctrlBtn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.ctrlBtn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: scale(1.07);
-}
-
-.ctrlBtn:active {
-  transform: scale(0.95);
-}
-
-.ctrlOff {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-.ctrlOff:hover {
-  background: rgba(239, 68, 68, 0.25);
-}
-
-.ctrlSkip {
-  background: rgba(124, 58, 237, 0.12);
-  border-color: rgba(124, 58, 237, 0.3);
-  color: #a78bfa;
-}
-
-.ctrlSkip:hover {
-  background: rgba(124, 58, 237, 0.22);
-}
-
-.ctrlShare {
-  background: rgba(34, 211, 238, 0.1);
-  border-color: rgba(34, 211, 238, 0.25);
-  color: #22d3ee;
-}
-
-.ctrlShare:hover {
-  background: rgba(34, 211, 238, 0.2);
-}
-
-.ctrlEnd {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
-}
-
-.ctrlEnd:hover {
-  background: rgba(239, 68, 68, 0.35);
-}
-
-/* ── Room badge ──────────────────────────────────────────────────────────── */
-
+​.btn:active { transform: scale(0.9); }
+​/* --- Overlays --- */
 .roomBadge {
-  position: absolute;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.2);
-  white-space: nowrap;
-  z-index: 5;
+position: absolute;
+top: 1rem;
+left: 50%;
+transform: translateX(-50%);
+transition: opacity 0.5s ease;
+pointer-events: none;
+opacity: 0.2;
 }
-
-.roomBadge code {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 1px;
+​.roomIdText {
+font-size: 10px;
+font-family: monospace;
+text-transform: uppercase;
+}
+​.hidden {
+opacity: 0;
+transform: translateY(20px);
+}
+​.hiddenFade {
+opacity: 0;
 }
