@@ -1,20 +1,35 @@
 # Maya Connect — Backend Setup Guide
 
 ## Structure
-
-```
-maya-connect/
-├── signaling-server/   → Koyeb Account 1  (WebSocket)
-│   ├── index.js
-│   └── package.json
-├── api-server/         → Koyeb Account 2  (REST + MongoDB)
-│   ├── index.js
-│   └── package.json
-├── frontend/
-│   └── App.jsx         → Updated PWA frontend
-└── .env.example
-```
-
+'''
+orey/
+├── .gitignore
+├── package.json                        # Server deps (Express, Socket.IO, uuid)
+├── src/
+│   └── server.js                       # Signaling server + REST endpoints
+│
+└── client/
+    ├── index.html                      # SPA entry point
+    ├── package.json                    # Client deps (React, Vite, Socket.IO, Lucide)
+    ├── vite.config.js                  # Dev proxy + build → ../public
+    └── src/
+        ├── index.jsx                   # React root mount
+        ├── index.css                   # Global reset + base styles
+        ├── App.jsx                     # Root — state machine & socket listeners
+        ├── lib/
+        │   └── socket.js              # Socket.IO singleton + ICE/STUN config
+        ├── hooks/
+        │   └── useWebRTC.js           # WebRTC hook (streams, peer, ICE queuing)
+        └── components/
+            ├── CallScreen.jsx         # Video call UI + controls + search overlay
+            ├── CallScreen.module.css
+            ├── Lobby.jsx              # Landing — name, Orey-ID, discover, direct call
+            ├── Lobby.module.css
+            ├── Modals.jsx             # ShareRequestModal + RevealModal
+            ├── Modals.module.css
+            ├── Toast.jsx              # Notification toasts
+            └── Toast.module.css
+'''
 ---
 
 ## 1. MongoDB Atlas (free tier)
