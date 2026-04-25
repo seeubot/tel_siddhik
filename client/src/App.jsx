@@ -1,217 +1,341 @@
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { socket } from './lib/socket'
+import { useWebRTC } from './hooks/useWebRTC'
+import Lobby from './components/Lobby.jsx'
+import CallScreen from './components/CallScreen.jsx'
+import { ShareRequestModal, RevealModal } from './components/Modals.jsx'
+import Toast from './components/Toast.jsx'
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { 
-  Video, 
-  Mic, 
-  MicOff, 
-  VideoOff, 
-  SkipForward, 
-  LogOut, 
-  UserPlus, 
-  Copy, 
-  X,
-  Loader2,
-  ShieldCheck
-} from 'lucide-react';
+const AUTO_SEARCH_DELAY = 3000
 
-/**
- * MOCK SOCKET & HOOKS 
- * (In your real app, these are imported from './lib/socket' and './hooks/useWebRTC')
- */
-const AUTO_SEARCH_DELAY = 3000;
-
-// --- DUMMY COMPONENTS FOR DEMONSTRATION ---
-// In your project, these are separate .jsx files.
-
-const Lobby = ({ myId, waiting, onJoinRandom, onConnectById }) => {
-  const [name, setName] = useState('');
-  const [targetId, setTargetId] = useState('');
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-md bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="bg-indigo-600 p-3 rounded-2xl"><Video size={24} /></div>
-          <h1 className="text-2xl font-bold italic tracking-tighter text-indigo-400">OREY</h1>
-        </div>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Your Display Name</label>
-            <input 
-              className="w-full bg-slate-800 border-none rounded-xl p-3 mt-1 focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="Guest User"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-            <p className="text-xs text-slate-400">Your Unique ID</p>
-            <p className="font-mono text-indigo-300 select-all cursor-pointer">{myId || 'Generating...'}</p>
-          </div>
-
-          <button 
-            disabled={waiting}
-            onClick={() => onJoinRandom(name)}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 p-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-          >
-            {waiting ? <Loader2 className="animate-spin" /> : <UserPlus size={20} />}
-            {waiting ? 'Searching...' : 'Random Match'}
-          </button>
-
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-900 px-2 text-slate-500">Or Connect via ID</span></div>
-          </div>
-
-          <div className="flex gap-2">
-            <input 
-              className="flex-1 bg-slate-800 border-none rounded-xl p-3 outline-none"
-              placeholder="Orey-XXXX-XXXX"
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-            />
-            <button 
-              onClick={() => onConnectById(targetId, name)}
-              className="bg-slate-700 hover:bg-slate-600 p-3 rounded-xl"
-            >
-              Connect
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CallScreen = ({ 
-  localVideoRef, remoteVideoRef, peerName, remoteVideoOn, 
-  audioOn, videoOn, onToggleMic, onToggleCam, onSkip, onLeave,
-  searching, searchMessage
-}) => (
-  <div className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col">
-    {/* Video Grid */}
-    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 h-full">
-      <div className="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800">
-         <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
-         <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium">You</div>
-      </div>
-      <div className="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 flex items-center justify-center">
-         {remoteVideoOn ? (
-           <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-         ) : (
-           <div className="text-center">
-             <div className="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
-               <UserPlus size={40} className="text-slate-600" />
-             </div>
-             <p className="text-slate-500 font-medium">{searching ? 'Searching...' : `Waiting for ${peerName}`}</p>
-           </div>
-         )}
-         <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium">{peerName}</div>
-         
-         {searching && (
-           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-center items-center justify-center z-20">
-             <div className="text-center p-6">
-                <Loader2 className="animate-spin mx-auto text-indigo-500 mb-4" size={40} />
-                <p className="text-lg font-bold">{searchMessage}</p>
-             </div>
-           </div>
-         )}
-      </div>
-    </div>
-
-    {/* Controls */}
-    <div className="p-6 flex justify-center items-center gap-4 bg-gradient-to-t from-black/80 to-transparent">
-       <button onClick={onToggleMic} className={`p-4 rounded-full transition-all ${audioOn ? 'bg-slate-800 hover:bg-slate-700' : 'bg-red-500'}`}>
-         {audioOn ? <Mic size={24} /> : <MicOff size={24} />}
-       </button>
-       <button onClick={onToggleCam} className={`p-4 rounded-full transition-all ${videoOn ? 'bg-slate-800 hover:bg-slate-700' : 'bg-red-500'}`}>
-         {videoOn ? <Video size={24} /> : <VideoOff size={24} />}
-       </button>
-       <button onClick={onSkip} className="bg-indigo-600 hover:bg-indigo-500 p-4 rounded-2xl flex items-center gap-2 font-bold px-8">
-         <SkipForward size={24} /> Skip
-       </button>
-       <button onClick={onLeave} className="bg-slate-800 hover:bg-red-600 p-4 rounded-full transition-all">
-         <LogOut size={24} />
-       </button>
-    </div>
-  </div>
-);
-
-/**
- * MAIN APP COMPONENT
- */
 export default function App() {
-  // Logic from your provided code integrated with functional UI
-  const [screen, setScreen] = useState('lobby');
-  const [myId, setMyId] = useState(null);
-  const [waiting, setWaiting] = useState(false);
-  const [peerName, setPeerName] = useState('Partner');
-  const [searching, setSearching] = useState(false);
-  const [searchMessage, setSearchMessage] = useState('');
-  const [audioOn, setAudioOn] = useState(true);
-  const [videoOn, setVideoOn] = useState(true);
-  const [remoteVideoOn, setRemoteVideoOn] = useState(false);
+  // ── Identity ───────────────────────────────────────────────────────────────
+  const [myId, setMyId] = useState(null)
+  const myIdRef = useRef(null)
+  const userNameRef = useRef('Anonymous')
 
-  // Refs
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const localStreamRef = useRef(null);
+  // ── Screen state ───────────────────────────────────────────────────────────
+  const [screen, setScreen] = useState('lobby') // 'lobby' | 'call'
 
-  // --- Mock Socket Events ---
-  // In your real code, these are handled by the large useEffect you provided.
+  // ── Lobby state ────────────────────────────────────────────────────────────
+  const [waiting, setWaiting] = useState(false)
+  const [lobStatus, setLobStatus] = useState(null)
+
+  // ── Call state ─────────────────────────────────────────────────────────────
+  const [roomId, setRoomId] = useState(null)
+  const [peerId, setPeerId] = useState(null)
+  const [peerName, setPeerName] = useState(null)
+  const [audioOn, setAudioOn] = useState(true)
+  const [videoOn, setVideoOn] = useState(true)
+  // FIX #4: Default to false so fallback avatar shows until remote stream arrives
+  const [remoteVideoOn, setRemoteVideoOn] = useState(false)
+
+  // ── Auto-search state ──────────────────────────────────────────────────────
+  const [searching, setSearching] = useState(false)
+  const [searchMessage, setSearchMessage] = useState('')
+  const searchTimerRef = useRef(null)
+
+  // ── Modals ─────────────────────────────────────────────────────────────────
+  const [shareModal, setShareModal] = useState(null)
+  const [revealModal, setRevealModal] = useState(null)
+
+  // ── Refs ───────────────────────────────────────────────────────────────────
+  const localVideoRef = useRef(null)
+  const remoteVideoRef = useRef(null)
+  const roomIdRef = useRef(null)
+  const peerIdRef = useRef(null)
+  const toastRef = useRef(null)
+
+  // FIX: Track pending peer to make offer after screen mounts
+  const pendingPeerRef = useRef(null)
+
+  const toast = useCallback((msg, dur) => toastRef.current?.show(msg, dur), [])
+
+  // Keep refs in sync
+  useEffect(() => { roomIdRef.current = roomId }, [roomId])
+  useEffect(() => { peerIdRef.current = peerId }, [peerId])
+
+  // ── WebRTC ─────────────────────────────────────────────────────────────────
+  const { startLocal, stopLocal, makeOffer, handleOffer, handleAnswer, handleIce, closePC, localStreamRef } =
+    useWebRTC({
+      localVideoRef,
+      remoteVideoRef,
+      onRemoteStream: () => setRemoteVideoOn(true),
+      onCallTimer: () => {},
+    })
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const updatePeer = useCallback((name) => {
+    setPeerName(name || 'Anonymous')
+  }, [])
+
+  const cancelSearchTimer = useCallback(() => {
+    clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = null
+    setSearching(false)
+    setSearchMessage('')
+  }, [])
+
+  const cleanupCall = useCallback(() => {
+    closePC()
+    stopLocal()
+    cancelSearchTimer()
+    setPeerId(null)
+    setPeerName(null)
+    // FIX #4: Reset to false on cleanup so next call starts fresh
+    setRemoteVideoOn(false)
+    pendingPeerRef.current = null
+  }, [closePC, stopLocal, cancelSearchTimer])
+
+  const goLobby = useCallback(() => {
+    cleanupCall()
+    setRoomId(null)
+    setWaiting(false)
+    setScreen('lobby')
+  }, [cleanupCall])
+
+  // FIX #1 & #2: After screen === 'call' renders, React has mounted the video
+  // elements and localStreamRef is populated. NOW it is safe to makeOffer.
   useEffect(() => {
-    // Generate dummy ID
-    setMyId("Orey-ABCD-1234");
-  }, []);
+    if (screen === 'call' && pendingPeerRef.current && localStreamRef.current) {
+      const { socketId } = pendingPeerRef.current
+      pendingPeerRef.current = null
+      makeOffer(socketId)
+    }
+  }, [screen, makeOffer, localStreamRef])
 
-  const handleJoinRandom = (name) => {
-    setWaiting(true);
-    // Simulate finding a match
-    setTimeout(() => {
-      setWaiting(false);
-      setScreen('call');
-      setPeerName("Random User");
-      setRemoteVideoOn(true);
-    }, 2000);
-  };
+  // ── Socket events ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    // Generate ID on mount
+    fetch('/generate-orey-id')
+      .then(r => r.json())
+      .then(d => {
+        setMyId(d.oreyId)
+        myIdRef.current = d.oreyId
+      })
+      .catch(() => {})
 
-  const handleConnectById = (id, name) => {
-    if(!id) return;
-    setScreen('call');
-    setPeerName("User " + id.slice(-4));
-  };
+    socket.on('connect', () => {
+      if (myIdRef.current) {
+        socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: userNameRef.current })
+      }
+    })
 
-  const handleToggleMic = () => setAudioOn(!audioOn);
-  const handleToggleCam = () => setVideoOn(!videoOn);
-  
-  const handleSkip = () => {
-    setSearching(true);
-    setSearchMessage("Finding next person...");
-    setRemoteVideoOn(false);
-    setTimeout(() => {
-      setSearching(false);
-      setRemoteVideoOn(true);
-      setPeerName("Next Partner");
-    }, 1500);
-  };
+    socket.on('waiting-for-match', () => {
+      setWaiting(true)
+    })
 
-  const handleLeave = () => {
-    setScreen('lobby');
-    setRemoteVideoOn(false);
-  };
+    socket.on('random-cancelled', () => {
+      setWaiting(false)
+      cancelSearchTimer()
+    })
 
+    socket.on('room-joined', async ({ roomId: r, peers, autoMatched }) => {
+      setRoomId(r)
+      roomIdRef.current = r
+      setWaiting(false)
+      cancelSearchTimer()
+      setSearching(false)
+
+      // FIX #1 & #2: Start local stream first, THEN switch screen.
+      // Store the peer in a ref so the useEffect above can call makeOffer
+      // only after React has mounted CallScreen and video refs are live.
+      await startLocal()
+
+      if (peers?.length) {
+        const p = peers[0]
+        setPeerId(p.socketId)
+        peerIdRef.current = p.socketId
+        updatePeer(p.userName)
+        // Store peer for deferred makeOffer (triggered by screen useEffect)
+        pendingPeerRef.current = { socketId: p.socketId }
+      }
+
+      // Switch screen last — this mounts CallScreen and triggers the useEffect
+      setScreen('call')
+
+      if (autoMatched) toast('Connected with a new partner!', 2000)
+    })
+
+    socket.on('user-joined', ({ socketId, userName }) => {
+      setPeerId(socketId)
+      peerIdRef.current = socketId
+      updatePeer(userName)
+    })
+
+    socket.on('offer', async ({ offer, fromId, fromName }) => {
+      setPeerId(fromId)
+      peerIdRef.current = fromId
+      updatePeer(fromName)
+      await handleOffer(offer, fromId)
+    })
+
+    socket.on('answer', async ({ answer }) => {
+      await handleAnswer(answer)
+    })
+
+    socket.on('ice-candidate', async ({ candidate }) => {
+      await handleIce(candidate)
+    })
+
+    socket.on('peer-media-state', ({ videoEnabled }) => {
+      setRemoteVideoOn(videoEnabled)
+    })
+
+    socket.on('partner-left', ({ userName, reason }) => {
+      closePC()
+      // FIX #4: Reset remote video state when partner leaves
+      setRemoteVideoOn(false)
+
+      const msgs = {
+        left: 'Partner left',
+        skipped: 'Partner skipped',
+        disconnected: 'Partner disconnected',
+      }
+      toast(msgs[reason] || 'Partner left')
+
+      setSearchMessage('Partner left. Finding a new match…')
+      setSearching(true)
+      clearTimeout(searchTimerRef.current)
+      searchTimerRef.current = setTimeout(() => {
+        if (roomIdRef.current) {
+          socket.emit('join-random')
+        }
+      }, AUTO_SEARCH_DELAY)
+    })
+
+    socket.on('auto-search-scheduled', ({ delay }) => {
+      setSearching(true)
+      setSearchMessage('Finding a new partner…')
+    })
+
+    socket.on('auto-search-cancelled', () => {
+      cancelSearchTimer()
+    })
+
+    socket.on('left-chat-confirmed', () => {
+      goLobby()
+    })
+
+    socket.on('skip-confirmed', () => {
+      // FIX #4: Reset remote video on skip
+      setRemoteVideoOn(false)
+      setSearching(true)
+      setSearchMessage('Skipping… finding next person')
+    })
+
+    socket.on('share-id-request', ({ fromId, fromName }) => {
+      setShareModal({ fromId, fromName })
+    })
+
+    socket.on('share-id-reveal', ({ oreyId, userName }) => {
+      setShareModal(null)
+      setRevealModal({ oreyId, userName })
+      toast(`Now connected with ${userName || 'partner'}!`)
+    })
+
+    socket.on('share-id-declined', () => toast('They declined to share IDs'))
+    socket.on('orey-id-not-found', () => setLobStatus({ msg: 'ID not found or offline', color: 'var(--red)' }))
+    socket.on('orey-id-invalid', () => setLobStatus({ msg: 'Invalid Orey-ID', color: 'var(--red)' }))
+    socket.on('orey-id-expired', () => setLobStatus({ msg: 'Orey-ID expired', color: 'var(--red)' }))
+
+    return () => socket.removeAllListeners()
+  }, []) // eslint-disable-line
+
+  // ── User actions ───────────────────────────────────────────────────────────
+  const handleJoinRandom = useCallback((name) => {
+    userNameRef.current = name
+    socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: name })
+    socket.emit('join-random')
+    setWaiting(true)
+    setLobStatus(null)
+  }, [])
+
+  const handleCancelRandom = useCallback(() => {
+    socket.emit('cancel-random')
+    setWaiting(false)
+  }, [])
+
+  const handleConnectById = useCallback(async (targetId, name) => {
+    if (!targetId) return
+    userNameRef.current = name
+    socket.emit('register-orey-id', { oreyId: myIdRef.current, userName: name })
+    await startLocal()
+    setScreen('call')
+    socket.emit('connect-by-orey-id', { targetOreyId: targetId })
+    setLobStatus(null)
+  }, [startLocal])
+
+  const handleToggleMic = useCallback(() => {
+    setAudioOn(prev => {
+      const next = !prev
+      localStreamRef.current?.getAudioTracks().forEach(t => (t.enabled = next))
+      return next
+    })
+  }, [localStreamRef])
+
+  const handleToggleCam = useCallback(() => {
+    setVideoOn(prev => {
+      const next = !prev
+      localStreamRef.current?.getVideoTracks().forEach(t => (t.enabled = next))
+      socket.emit('media-state', { roomId: roomIdRef.current, audioEnabled: audioOn, videoEnabled: next })
+      return next
+    })
+  }, [localStreamRef, audioOn])
+
+  const handleSkip = useCallback(() => {
+    closePC()
+    setRemoteVideoOn(false)
+    socket.emit('skip', { roomId: roomIdRef.current })
+  }, [closePC])
+
+  const handleLeave = useCallback(() => {
+    cancelSearchTimer()
+    socket.emit('leave-chat', { roomId: roomIdRef.current })
+  }, [cancelSearchTimer])
+
+  const handleCancelSearch = useCallback(() => {
+    cancelSearchTimer()
+    socket.emit('cancel-auto-search')
+    socket.emit('cancel-random')
+  }, [cancelSearchTimer])
+
+  const handleShareId = useCallback(() => {
+    socket.emit('share-id-request', { roomId: roomIdRef.current })
+    toast('Request sent')
+  }, [toast])
+
+  const handleAcceptShare = useCallback(() => {
+    socket.emit('share-id-accept', { roomId: roomIdRef.current, targetId: shareModal.fromId })
+    setShareModal(null)
+  }, [shareModal])
+
+  const handleDeclineShare = useCallback(() => {
+    socket.emit('share-id-decline', { roomId: roomIdRef.current })
+    setShareModal(null)
+  }, [])
+
+  const handleCopyRevealed = useCallback(() => {
+    navigator.clipboard.writeText(revealModal?.oreyId || '')
+    toast('Copied!')
+  }, [revealModal, toast])
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="selection:bg-indigo-500 selection:text-white">
-      {screen === 'lobby' ? (
-        <Lobby 
-          myId={myId} 
-          waiting={waiting} 
+    <>
+      {screen === 'lobby' && (
+        <Lobby
+          myId={myId}
+          waiting={waiting}
+          status={lobStatus}
           onJoinRandom={handleJoinRandom}
+          onCancelRandom={handleCancelRandom}
           onConnectById={handleConnectById}
         />
-      ) : (
-        <CallScreen 
+      )}
+
+      {screen === 'call' && (
+        <CallScreen
           localVideoRef={localVideoRef}
           remoteVideoRef={remoteVideoRef}
           peerName={peerName}
@@ -220,13 +344,34 @@ export default function App() {
           videoOn={videoOn}
           onToggleMic={handleToggleMic}
           onToggleCam={handleToggleCam}
+          onShareId={handleShareId}
           onSkip={handleSkip}
           onLeave={handleLeave}
           searching={searching}
+          searchDelay={AUTO_SEARCH_DELAY}
           searchMessage={searchMessage}
+          onCancelSearch={handleCancelSearch}
         />
       )}
-    </div>
-  );
-}
 
+      {shareModal && (
+        <ShareRequestModal
+          fromName={shareModal.fromName}
+          onAccept={handleAcceptShare}
+          onDecline={handleDeclineShare}
+        />
+      )}
+
+      {revealModal && (
+        <RevealModal
+          partnerOreyId={revealModal.oreyId}
+          partnerName={revealModal.userName}
+          onCopy={handleCopyRevealed}
+          onClose={() => setRevealModal(null)}
+        />
+      )}
+
+      <Toast ref={toastRef} />
+    </>
+  )
+}
