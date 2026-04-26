@@ -1,7 +1,9 @@
 node_modules
 client/node_modules
-public
 .git
 .gitignore
 *.md
 .env*
+
+# Don't ignore public entirely - we need admin.html
+!public/admin.html
