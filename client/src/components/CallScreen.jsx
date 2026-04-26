@@ -1,19 +1,19 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, UserPlus, Zap
+  PhoneOff, UserPlus, Zap, X
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
- * Orey! Pro — Half & Half CallScreen
- * Remote video on top half, local video on bottom half.
- * Controls dock floats over the center divider.
+ * Orey! Pro — Responsive Call Interface
+ * Divided into separate JSX and CSS Module.
  */
-export default function CallScreen({
+
+const CallScreen = ({
   partner = null,
   roomId = "000-000",
-  oreyId = "",
   localVideoRef,
   remoteVideoRef,
   audioEnabled = true,
@@ -27,7 +27,7 @@ export default function CallScreen({
   onLeave = () => {},
   onShareId = () => {},
   onCancelAutoSearch = () => {},
-}) {
+}) => {
   const [uiVisible, setUiVisible] = useState(true);
   const uiTimerRef = useRef(null);
 
@@ -35,7 +35,7 @@ export default function CallScreen({
 
   const resetUiTimer = useCallback(() => {
     clearTimeout(uiTimerRef.current);
-    uiTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
+    uiTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
   }, []);
 
   useEffect(() => {
@@ -52,58 +52,52 @@ export default function CallScreen({
   }, [resetUiTimer]);
 
   return (
-    <div className={styles.root} onClick={handleRootClick}>
+    <div 
+      className={`${styles.container} ${uiVisible ? '' : styles.uiHidden}`}
+      onClick={handleRootClick}
+    >
+      {/* Grain overlay */}
+      <div className={styles.grainOverlay} aria-hidden="true" />
 
-      {/* ── Grain overlay ── */}
-      <div className={styles.grain} aria-hidden="true" />
-
-      {/* ════════════════════════════
-          TOP HALF — Remote / Stranger
-      ════════════════════════════ */}
-      <div className={`${styles.halfPanel} ${styles.remotePanel} ${searching ? styles.remotePanelSearching : ''}`}>
-
+      {/* STRANGER PANEL */}
+      <div className={`${styles.panel} ${styles.remotePanel} ${searching ? styles.searchingBlur : ''}`}>
         <video
           ref={remoteVideoRef}
-          className={`${styles.halfVideo} ${!searching ? styles.animateZoom : ''}`}
+          className={styles.videoStream}
           autoPlay
           playsInline
           style={{ display: partner && isPartnerVideoEnabled ? 'block' : 'none' }}
         />
 
         {(!partner || !isPartnerVideoEnabled) && (
-          <div className={styles.halfFallback}>
-            <div className={styles.brandGhost}>OREY!</div>
-            <p className={styles.idleText}>
+          <div className={styles.idleOverlay}>
+            <div className={styles.brandBg}>OREY!</div>
+            <p className={styles.statusText}>
               {searching ? 'SYNCING...' : 'STREAM IDLE'}
             </p>
           </div>
         )}
 
-        {/* Stranger label — top-left of top panel */}
-        <div className={`${styles.panelLabel} ${styles.panelLabelTopLeft} ${!uiVisible ? styles.uiHidden : ''}`}>
-          <div className={styles.capsule}>
+        <div className={styles.floatingLabelTop}>
+          <div className={styles.badge}>
             <span className={styles.liveDot} />
-            <span className={styles.labelText}>Stranger</span>
+            <span className={styles.badgeText}>Stranger</span>
           </div>
         </div>
 
-        {/* Room ID — top-right of top panel */}
-        <div className={`${styles.roomId} ${!uiVisible ? styles.uiHidden : ''}`}>
-          {roomId} // SECURE_LINE
-        </div>
-
-        {/* Bottom vignette fades into divider */}
-        <div className={styles.bottomVignette} aria-hidden="true" />
+        <div className={styles.roomInfo}>{roomId}</div>
+        <div className={`${styles.gradient} ${styles.gradientBottom} md:hidden`} />
+        <div className={`${styles.gradient} ${styles.gradientRight} hidden md:block`} />
       </div>
 
-      {/* ════════════════════════════
-          BOTTOM HALF — Local / You
-      ════════════════════════════ */}
-      <div className={`${styles.halfPanel} ${styles.localPanel}`}>
+      {/* DIVIDER */}
+      <div className={styles.divider} aria-hidden="true" />
 
+      {/* YOU PANEL */}
+      <div className={`${styles.panel} ${styles.localPanel}`}>
         <video
           ref={localVideoRef}
-          className={`${styles.halfVideo} ${styles.mirror}`}
+          className={`${styles.videoStream} ${styles.mirrored}`}
           autoPlay
           playsInline
           muted
@@ -111,95 +105,88 @@ export default function CallScreen({
         />
 
         {!videoEnabled && (
-          <div className={styles.halfFallback}>
-            <VideoOff size={28} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.2)' }} />
+          <div className={styles.idleOverlay}>
+            <VideoOff size={32} strokeWidth={1} className="opacity-20" />
           </div>
         )}
 
-        {/* You label — bottom-left of bottom panel */}
-        <div className={`${styles.panelLabel} ${styles.panelLabelBottomLeft} ${!uiVisible ? styles.uiHidden : ''}`}>
-          <div className={styles.capsule}>
-            <span className={styles.neutralDot} />
-            <span className={styles.labelText}>You</span>
+        <div className={styles.floatingLabelBottom}>
+          <div className={styles.badge}>
+            <span className={styles.staticDot} />
+            <span className={styles.badgeText}>You</span>
           </div>
         </div>
 
-        {/* Top vignette fades into divider */}
-        <div className={styles.topVignette} aria-hidden="true" />
+        <div className={`${styles.gradient} ${styles.gradientTop} md:hidden`} />
+        <div className={`${styles.gradient} ${styles.gradientLeft} hidden md:block`} />
       </div>
 
-      {/* ════════════════════════════
-          CENTER DIVIDER LINE
-      ════════════════════════════ */}
-      <div className={styles.divider} aria-hidden="true" />
+      {/* CONTROL DOCK */}
+      <div className={styles.controlDock}>
+        <div className={styles.navGroup}>
+          <button onClick={onLeave} className={styles.iconBtnSecondary} title="Stop Call">
+            <X size={20} strokeWidth={2.5} />
+          </button>
+          
+          <button onClick={onSkip} className={styles.nextBtn}>
+            NEXT
+            <div className={styles.nextIconBox}>
+              <Zap size={14} fill="currentColor" />
+            </div>
+          </button>
+        </div>
 
-      {/* ════════════════════════════
-          CONTROLS DOCK — floats over center
-      ════════════════════════════ */}
-      <div className={`${styles.dockWrapper} ${!uiVisible ? styles.dockHidden : ''}`}>
-        <div className={styles.dock}>
-
-          <div className={styles.mediaGroup}>
+        <div className={styles.mediaGroup}>
+            <button onClick={onShareId} className={styles.iconBtnSecondary}>
+              <UserPlus size={18} />
+            </button>
+            <div className={styles.vSeparator} />
             <button
               onClick={onToggleVideo}
-              className={`${styles.btnCircle} ${!videoEnabled ? styles.btnAlert : ''}`}
-              aria-label="Toggle Video"
+              className={`${styles.iconBtnMedia} ${!videoEnabled ? styles.btnActive : ''}`}
             >
-              {videoEnabled ? <Video size={18} strokeWidth={1.8} /> : <VideoOff size={18} strokeWidth={1.8} />}
+              {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
             </button>
             <button
               onClick={onToggleAudio}
-              className={`${styles.btnCircle} ${!audioEnabled ? styles.btnAlert : ''}`}
-              aria-label="Toggle Audio"
+              className={`${styles.iconBtnMedia} ${!audioEnabled ? styles.btnActive : ''}`}
             >
-              {audioEnabled ? <Mic size={18} strokeWidth={1.8} /> : <MicOff size={18} strokeWidth={1.8} />}
+              {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
             </button>
-          </div>
-
-          <button onClick={onSkip} className={styles.btnNext}>
-            NEXT <Zap size={13} className={styles.zapIcon} />
-          </button>
-
-          <div className={styles.utilityGroup}>
-            <button onClick={onShareId} className={styles.btnGhost} aria-label="Share ID">
-              <UserPlus size={18} strokeWidth={1.8} />
-            </button>
-            <button onClick={onLeave} className={styles.btnEnd} aria-label="End Call">
-              <PhoneOff size={18} strokeWidth={1.8} />
-            </button>
-          </div>
-
         </div>
       </div>
 
-      {/* ── Searching / Countdown overlay ── */}
+      {/* SEARCH OVERLAYS */}
       {(searching || autoSearchCountdown !== null) && (
-        <div className={styles.overlay} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.overlayContent}>
+        <div className={styles.fullOverlay} onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center">
             {autoSearchCountdown !== null ? (
-              <div className={styles.countdownContainer}>
-                <div className={styles.countdownRow}>
+              <div className="flex flex-col items-center">
+                <div className="flex items-start text-white">
                   <span className={styles.countdownNumber}>{autoSearchCountdown}</span>
-                  <span className={styles.countdownExclaim}>!</span>
+                  <span className={styles.countdownExclamation}>!</span>
                 </div>
-                <p className={styles.overlaySubtext}>CONNECTION INCOMING</p>
-                <button onClick={onCancelAutoSearch} className={styles.btnCancel}>
-                  STOP SEARCH
+                <p className={styles.incomingLabel}>INCOMING PEER</p>
+                <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
+                  CANCEL
                 </button>
               </div>
             ) : (
-              <div className={styles.loaderContainer}>
-                <div className={styles.loaderBrand}>OREY!</div>
-                <div className={styles.loaderTrack}>
-                  <div className={styles.loaderFill} />
+              <div className="flex flex-col items-center">
+                <div className={styles.loadingBrand}>OREY!</div>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} />
                 </div>
-                <p className={styles.loaderSubtext}>SYNCING...</p>
+                <p className={styles.syncLabel}>SYNCING PEERS</p>
               </div>
             )}
           </div>
         </div>
       )}
-
     </div>
   );
-}
+};
+
+export default CallScreen;
+
+
