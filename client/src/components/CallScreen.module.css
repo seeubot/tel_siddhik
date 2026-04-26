@@ -55,14 +55,27 @@
   background-color: #050505;
 }
 
-.videoSim {
+/* ── Video elements ─────────────────────────────────────────────────────── */
+
+.videoEl {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(20, 20, 40, 0.4), rgba(0, 0, 0, 1));
+  object-fit: cover;
+  display: block;
 }
 
 .mirrored {
   transform: scaleX(-1);
+}
+
+/* Partner waiting / no-stream placeholder */
+.partnerWaiting {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0a0f;
 }
 
 .searchingBlur {
@@ -70,12 +83,33 @@
   transform: scale(1.1);
 }
 
-.placeholderBrand {
-  position: absolute;
-  inset: 0;
+/* Camera permission error */
+.camError {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Video-off fallback */
+.idleIcon {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Brand watermark ────────────────────────────────────────────────────── */
+
+.placeholderBrand {
   font-size: 15vw;
   font-weight: 900;
   font-style: italic;
@@ -86,6 +120,8 @@
 @media (min-width: 768px) {
   .placeholderBrand { font-size: 8vw; }
 }
+
+/* ── Status badge ───────────────────────────────────────────────────────── */
 
 .statusBadge {
   position: absolute;
@@ -115,12 +151,13 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
+  flex-shrink: 0;
   animation: pulse-badge 2s infinite;
 }
 
 .dotGreen { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
-.dotRed { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.dotGray { background-color: rgba(255, 255, 255, 0.3); animation: none; }
+.dotRed   { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
+.dotGray  { background-color: rgba(255, 255, 255, 0.3); animation: none; }
 
 .badgeText {
   font-size: 10px;
@@ -128,9 +165,45 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.9);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Controls */
+/* Inline name input inside the badge */
+.badgeNameInput {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 90px;
+  font-family: inherit;
+}
+
+/* Pencil / check button inside the badge */
+.badgeEditBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.badgeEditBtn:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Controls dock ──────────────────────────────────────────────────────── */
+
 .controlDock {
   position: fixed;
   bottom: 2rem;
@@ -168,11 +241,12 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.15em;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .nextBtn:hover {
@@ -204,7 +278,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .iconBtn:hover {
@@ -218,7 +292,8 @@
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
 }
 
-/* Overlays */
+/* ── Overlays ───────────────────────────────────────────────────────────── */
+
 .overlay {
   position: fixed;
   inset: 0;
@@ -230,7 +305,8 @@
   justify-content: center;
 }
 
-.countdownContainer, .loadingContainer {
+.countdownContainer,
+.loadingContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -275,7 +351,14 @@
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.1em;
+  font-family: inherit;
   cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.cancelBtn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .loadingTrack {
@@ -305,20 +388,14 @@
   margin-top: 1.5rem;
 }
 
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
 @keyframes pulse-badge {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.1); }
+  50%       { opacity: 0.6; transform: scale(1.1); }
 }
 
 @keyframes loading-slide {
-  0% { left: -40%; }
+  0%   { left: -40%; }
   100% { left: 100%; }
-}
-
-.idleIcon {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.05);
 }
