@@ -12,13 +12,12 @@ const server = http.createServer(app);
 
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false, // Allow inline scripts for admin page
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
 
-// Rate limiting for API endpoints
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: 'Too many requests, please try again later.' }
 });
@@ -33,7 +32,7 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST'],
   },
-  maxHttpBufferSize: 1e8, // 100 MB
+  maxHttpBufferSize: 1e8,
   pingTimeout: 60000,
   pingInterval: 25000,
 });
@@ -393,7 +392,6 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
   
   notifications.push(newNotification);
   
-  // Broadcast to all connected clients via WebSocket
   io.emit('new-notification', newNotification);
   
   console.log(`📢 Notification sent: "${title}" to ${io.engine.clientsCount} clients`);
@@ -477,17 +475,36 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
   });
 });
 
-// ─── Static Files & SPA ─────────────────────────────────────────────────────
+// ─── Admin Panel Routes (NO AUTH REQUIRED for the page itself) ────────────────
+// IMPORTANT: These must be BEFORE the static file serving and catch-all route
 
-// Admin panel
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
-// Production static files
+app.get('/admin.html', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+});
+
+// ─── Static Files & SPA ─────────────────────────────────────────────────────
+
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '..', 'public')));
-  app.get('*', (_req, res) => {
+  // Serve static files from public directory
+  app.use(express.static(path.join(__dirname, '..', 'public'), {
+    index: false // Don't auto-serve index.html
+  }));
+  
+  // Catch-all for React SPA - but skip API and Admin routes
+  app.get('*', (req, res) => {
+    // Don't interfere with API or admin routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    // Don't serve admin page as SPA
+    if (req.path === '/admin' || req.path === '/admin.html') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    // Serve React app for all other routes
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 }
@@ -497,10 +514,16 @@ if (process.env.NODE_ENV === 'production') {
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id} (Total: ${io.engine.clientsCount})`);
 
+  // Send config on connect
   socket.emit('video-quality-config', {
     quality: appConfig.videoQuality,
     servers: ICE_SERVERS
   });
+
+  // Check for active maintenance
+  if (appConfig.maintenance.enabled) {
+    socket.emit('maintenance-mode', appConfig.maintenance);
+  }
 
   socket.on('register-orey-id', ({ oreyId, userName }) => {
     cleanExpiredOreyIds();
@@ -778,5 +801,6 @@ server.listen(PORT, () => {
   console.log(`📹 Quality:    ${Object.keys(VIDEO_QUALITY).join(', ')}`);
   console.log(`🔑 API Key:    ${API_KEY.substring(0, 8)}...`);
   console.log(`🛡️ Admin Key:  ${ADMIN_KEY.substring(0, 8)}...`);
+  console.log(`🖥️  Admin Page: http://localhost:${PORT}/admin`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
