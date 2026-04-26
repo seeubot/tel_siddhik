@@ -1,281 +1,322 @@
 .root {
-min-height: 100vh;
-background-color: #000000;
-display: flex;
-align-items: center;
-justify-content: center;
-position: relative;
-overflow: hidden;
-font-family: system-ui, -apple-system, sans-serif;
-color: #ffffff;
+  min-height: 100vh;
+  background-color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #ffffff;
 }
-​.grid {
-position: absolute;
-inset: 0;
-background-image:
-linear-gradient(rgba(255, 45, 85, 0.03) 1px, transparent 1px),
-linear-gradient(90deg, rgba(255, 45, 85, 0.03) 1px, transparent 1px);
-background-size: 50px 50px;
-pointer-events: none;
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 45, 85, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 85, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
 }
-​.scanline {
-position: absolute;
-width: 100%;
-height: 2px;
-background: linear-gradient(to right, transparent, rgba(255, 45, 85, 0.2), transparent);
-animation: scanlineAnim 8s linear infinite;
-opacity: 0.5;
-pointer-events: none;
+
+.scanline {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255, 45, 85, 0.2), transparent);
+  animation: scanlineAnim 8s linear infinite;
+  opacity: 0.5;
+  pointer-events: none;
 }
-​@keyframes scanlineAnim {
-0% { transform: translateY(-100vh); }
-100% { transform: translateY(100vh); }
+
+@keyframes scanlineAnim {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
 }
-​.orb {
-position: absolute;
-width: 600px;
-height: 600px;
-background: radial-gradient(circle, rgba(255, 45, 85, 0.12) 0%, transparent 70%);
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-pointer-events: none;
+
+.orb {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255, 45, 85, 0.12) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
-​.container {
-width: 100%;
-max-width: 440px;
-padding: 24px;
-position: relative;
-z-index: 10;
-display: flex;
-flex-direction: column;
-gap: 20px;
+
+.container {
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
-​.header {
-text-align: center;
-margin-bottom: 16px;
+
+.header {
+  text-align: center;
+  margin-bottom: 16px;
 }
-​.logo {
-display: flex;
-align-items: baseline;
-justify-content: center;
-font-size: 5.5rem;
-font-weight: 900;
-letter-spacing: -4px;
-line-height: 0.9;
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  font-size: 5.5rem;
+  font-weight: 900;
+  letter-spacing: -4px;
+  line-height: 0.9;
 }
-​.logoText {
-text-shadow: 0 0 30px rgba(255, 45, 85, 0.6);
+
+.logoText {
+  text-shadow: 0 0 30px rgba(255, 45, 85, 0.6);
 }
-​.logoAccent {
-color: #FF2D55;
-text-shadow: 0 0 40px rgba(255, 45, 85, 0.8);
+
+.logoAccent {
+  color: #FF2D55;
+  text-shadow: 0 0 40px rgba(255, 45, 85, 0.8);
 }
-​.tagline {
-margin-top: 8px;
-color: rgba(255, 255, 255, 0.4);
-font-size: 11px;
-font-weight: 700;
-letter-spacing: 0.2em;
-text-transform: uppercase;
+
+.tagline {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
-​.card {
-background: rgba(20, 20, 20, 0.6);
-border: 1px solid rgba(255, 255, 255, 0.08);
-border-radius: 24px;
-padding: 24px;
-backdrop-filter: blur(20px);
-display: flex;
-flex-direction: column;
-gap: 16px;
-transition: border-color 0.3s;
+
+.card {
+  background: rgba(20, 20, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.3s;
 }
-​.card:hover {
-border-color: rgba(255, 45, 85, 0.3);
+
+.card:hover {
+  border-color: rgba(255, 45, 85, 0.3);
 }
-​.label {
-display: flex;
-align-items: center;
-gap: 8px;
-font-size: 10px;
-font-weight: 700;
-color: rgba(255, 255, 255, 0.4);
-text-transform: uppercase;
-letter-spacing: 0.15em;
-margin-bottom: 8px;
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
 }
-​.input {
-width: 100%;
-background: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 12px;
-padding: 14px 16px;
-color: #ffffff;
-font-size: 1rem;
-outline: none;
-transition: all 0.2s;
+
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s;
 }
-​.input:focus {
-border-color: #FF2D55;
-background: rgba(255, 255, 255, 0.08);
+
+.input:focus {
+  border-color: #FF2D55;
+  background: rgba(255, 255, 255, 0.08);
 }
-​.input.mono {
-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-letter-spacing: 0.2em;
-text-transform: uppercase;
+
+.input.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
-​.idBox {
-background: rgba(255, 45, 85, 0.05);
-border: 1px solid rgba(255, 45, 85, 0.2);
-border-radius: 12px;
-padding: 16px;
-display: flex;
-flex-direction: column;
-gap: 8px;
+
+.idBox {
+  background: rgba(255, 45, 85, 0.05);
+  border: 1px solid rgba(255, 45, 85, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-​.idHeader {
-display: flex;
-justify-content: space-between;
-align-items: center;
+
+.idHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-​.idLabel {
-font-size: 9px;
-font-weight: 900;
-color: #FF2D55;
-text-transform: uppercase;
+
+.idLabel {
+  font-size: 9px;
+  font-weight: 900;
+  color: #FF2D55;
+  text-transform: uppercase;
 }
-​.expiry {
-font-size: 8px;
-color: rgba(255, 255, 255, 0.3);
+
+.expiry {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
 }
-​.idRow {
-display: flex;
-align-items: center;
-gap: 12px;
+
+.idRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-​.idValue {
-flex: 1;
-color: #FF2D55;
-font-size: 1.5rem;
-font-weight: 900;
-letter-spacing: 4px;
-font-family: ui-monospace, monospace;
-text-shadow: 0 0 10px rgba(255, 45, 85, 0.3);
+
+.idValue {
+  flex: 1;
+  color: #FF2D55;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  font-family: ui-monospace, monospace;
+  text-shadow: 0 0 10px rgba(255, 45, 85, 0.3);
 }
-​.copyBtn {
-background: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 8px;
-padding: 8px;
-color: rgba(255, 255, 255, 0.6);
-cursor: pointer;
-transition: all 0.2s;
+
+.copyBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
 }
-​.copyBtn:hover {
-background: rgba(255, 45, 85, 0.2);
-color: #ffffff;
-border-color: rgba(255, 45, 85, 0.4);
+
+.copyBtn:hover {
+  background: rgba(255, 45, 85, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 45, 85, 0.4);
 }
-​.hint {
-font-size: 9px;
-color: rgba(255, 255, 255, 0.25);
-margin: 0;
+
+.hint {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  margin: 0;
 }
-​.discoverBtn {
-width: 100%;
-padding: 16px;
-background: #FF2D55;
-border: none;
-border-radius: 16px;
-color: #ffffff;
-font-size: 1rem;
-font-weight: 900;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 12px;
-transition: all 0.2s;
-box-shadow: 0 8px 32px rgba(255, 45, 85, 0.3);
+
+.discoverBtn {
+  width: 100%;
+  padding: 16px;
+  background: #FF2D55;
+  border: none;
+  border-radius: 16px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 8px 32px rgba(255, 45, 85, 0.3);
 }
-​.discoverBtn:hover {
-transform: scale(1.02);
-filter: brightness(1.1);
+
+.discoverBtn:hover {
+  transform: scale(1.02);
+  filter: brightness(1.1);
 }
-​.discoverBtn:active {
-transform: scale(0.98);
+
+.discoverBtn:active {
+  transform: scale(0.98);
 }
-​.searchingRow {
-display: flex;
-gap: 12px;
+
+.searchingRow {
+  display: flex;
+  gap: 12px;
 }
-​.statusBox {
-flex: 1;
-display: flex;
-align-items: center;
-gap: 12px;
-padding: 16px;
-background: rgba(255, 45, 85, 0.1);
-border: 1px solid rgba(255, 45, 85, 0.3);
-border-radius: 16px;
-color: #FF2D55;
-font-size: 14px;
-font-weight: 700;
+
+.statusBox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 45, 85, 0.1);
+  border: 1px solid rgba(255, 45, 85, 0.3);
+  border-radius: 16px;
+  color: #FF2D55;
+  font-size: 14px;
+  font-weight: 700;
 }
-​.cancelBtn {
-padding: 0 24px;
-background: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 16px;
-color: rgba(255, 255, 255, 0.6);
-font-size: 12px;
-font-weight: 700;
-cursor: pointer;
-transition: all 0.2s;
+
+.cancelBtn {
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-​.cancelBtn:hover {
-background: rgba(255, 255, 255, 0.1);
-color: #ffffff;
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
-​.connectRow {
-display: flex;
-gap: 8px;
+
+.connectRow {
+  display: flex;
+  gap: 8px;
 }
-​.callBtn {
-padding: 0 24px;
-background: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 12px;
-color: #ffffff;
-font-size: 14px;
-font-weight: 700;
-cursor: pointer;
-transition: all 0.2s;
+
+.callBtn {
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-​.callBtn:hover:not(:disabled) {
-background: rgba(255, 255, 255, 0.1);
+
+.callBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
 }
-​.callBtn:disabled {
-opacity: 0.2;
-cursor: not-allowed;
+
+.callBtn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
-​.footer {
-text-align: center;
-font-size: 9px;
-color: rgba(255, 255, 255, 0.2);
-font-weight: 500;
-letter-spacing: 0.05em;
-margin-top: 8px;
+
+.footer {
+  text-align: center;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-top: 8px;
 }
-​.footerMuted {
-opacity: 0.5;
+
+.footerMuted {
+  opacity: 0.5;
 }
-​.accentText {
-color: #FF2D55;
+
+.accentText {
+  color: #FF2D55;
 }
-​.spin {
-animation: spinAnim 1s linear infinite;
+
+.spin {
+  animation: spinAnim 1s linear infinite;
 }
-​@keyframes spinAnim {
-to { transform: rotate(360deg); }
+
+@keyframes spinAnim {
+  to { transform: rotate(360deg); }
 }
