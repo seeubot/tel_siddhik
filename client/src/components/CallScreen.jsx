@@ -1,39 +1,59 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import {
   Mic, MicOff, Video, VideoOff,
-  UserPlus, Zap, Pencil, Check
+  UserPlus, Zap, Pencil, Check,
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
-/**
- * CallScreen Component
- * Stacks vertically on mobile, side-by-side on desktop.
- * Real camera/mic via getUserMedia, editable username badge.
- */
+// ── Server URL ────────────────────────────────────────────────────────────────
+// Set VITE_SERVER_URL in your .env, e.g. VITE_SERVER_URL=https://your-server.com
+const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const CallScreen = () => {
-  const [partner, setPartner]                         = useState(null);
-  const [audioEnabled, setAudioEnabled]               = useState(true);
-  const [videoEnabled, setVideoEnabled]               = useState(true);
-  const [searching, setSearching]                     = useState(false);
-  const [autoSearchCountdown, setAutoSearchCountdown] = useState(null);
-  const [uiVisible, setUiVisible]                     = useState(true);
-  const [partnerName, setPartnerName]                 = useState('Waiting...');
-  const [userName, setUserName]                       = useState('You');
-  const [editingName, setEditingName]                 = useState(false);
-  const [nameInput, setNameInput]                     = useState('You');
-  const [camError, setCamError]                       = useState(false);
+  // Media
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [camError,     setCamError]     = useState(false);
 
+  // Connection
+  const [roomId,      setRoomId]      = useState(null);
+  const [partnerId,   setPartnerId]   = useState(null);
+  const [partnerName, setPartnerName] = useState('Waiting...');
+  const [searching,   setSearching]   = useState(false);
+
+  // UI
+  const [uiVisible,    setUiVisible]    = useState(true);
+  const [userName,     setUserName]     = useState('You');
+  const [editingName,  setEditingName]  = useState(false);
+  const [nameInput,    setNameInput]    = useState('You');
+
+  // Refs — values that must be readable inside socket callbacks without stale closures
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const socketRef      = useRef(null);
+  const pcRef          = useRef(null);   // RTCPeerConnection
   const uiTimerRef     = useRef(null);
   const nameInputRef   = useRef(null);
+  const roomIdRef      = useRef(null);
+  const partnerIdRef   = useRef(null);
+  const audioRef       = useRef(audioEnabled);
+  const videoRef       = useRef(videoEnabled);
+  const userNameRef    = useRef('You');
 
-  // ── Acquire local camera + mic ───────────────────────────────────────────
+  // Keep mutable refs in sync
+  useEffect(() => { roomIdRef.current    = roomId;      }, [roomId]);
+  useEffect(() => { partnerIdRef.current = partnerId;   }, [partnerId]);
+  useEffect(() => { audioRef.current     = audioEnabled; }, [audioEnabled]);
+  useEffect(() => { videoRef.current     = videoEnabled; }, [videoEnabled]);
+  useEffect(() => { userNameRef.current  = userName;    }, [userName]);
+
+  // ── 1. Acquire local camera + mic ─────────────────────────────────────────
   useEffect(() => {
     let active = true;
-
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
@@ -49,21 +69,179 @@ const CallScreen = () => {
     };
   }, []);
 
-  // ── Toggle video track ───────────────────────────────────────────────────
+  // ── 2. Toggle video track (+ broadcast to partner) ────────────────────────
   useEffect(() => {
-    localStreamRef.current
-      ?.getVideoTracks()
-      .forEach(t => { t.enabled = videoEnabled; });
+    localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = videoEnabled; });
+    if (socketRef.current?.connected && roomIdRef.current) {
+      socketRef.current.emit('media-state', {
+        roomId: roomIdRef.current,
+        audioEnabled: audioRef.current,
+        videoEnabled,
+      });
+    }
   }, [videoEnabled]);
 
-  // ── Toggle audio track ───────────────────────────────────────────────────
+  // ── 3. Toggle audio track (+ broadcast to partner) ────────────────────────
   useEffect(() => {
-    localStreamRef.current
-      ?.getAudioTracks()
-      .forEach(t => { t.enabled = audioEnabled; });
+    localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = audioEnabled; });
+    if (socketRef.current?.connected && roomIdRef.current) {
+      socketRef.current.emit('media-state', {
+        roomId: roomIdRef.current,
+        audioEnabled,
+        videoEnabled: videoRef.current,
+      });
+    }
   }, [audioEnabled]);
 
-  // ── UI auto-hide timer ───────────────────────────────────────────────────
+  // ── 4. Close peer connection helper ──────────────────────────────────────
+  const closePeerConnection = useCallback(() => {
+    if (pcRef.current) {
+      pcRef.current.ontrack        = null;
+      pcRef.current.onicecandidate = null;
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+  }, []);
+
+  // ── 5. Create RTCPeerConnection ───────────────────────────────────────────
+  const createPeerConnection = useCallback((iceServers, targetId) => {
+    closePeerConnection();
+
+    const pc = new RTCPeerConnection({ iceServers });
+    pcRef.current = pc;
+
+    // Add our local tracks so the partner receives them
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current);
+      });
+    }
+
+    // Forward ICE candidates to the partner via the signalling server
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate && socketRef.current) {
+        socketRef.current.emit('ice-candidate', { targetId, candidate });
+      }
+    };
+
+    // When the partner's tracks arrive, attach them to the remote <video>
+    pc.ontrack = ({ streams }) => {
+      if (remoteVideoRef.current && streams[0]) {
+        remoteVideoRef.current.srcObject = streams[0];
+      }
+    };
+
+    return pc;
+  }, [closePeerConnection]);
+
+  // ── 6. Socket.IO + signalling ─────────────────────────────────────────────
+  useEffect(() => {
+    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+    socketRef.current = socket;
+
+    // ── Connected ──────────────────────────────────────────────────────────
+    socket.on('connect', () => {
+      // Tell the server our name immediately
+      socket.emit('set-user-name', { userName: userNameRef.current });
+      // Join the random queue straight away
+      socket.emit('join-random');
+      setSearching(true);
+      setPartnerName('Searching...');
+    });
+
+    // ── In queue, waiting ──────────────────────────────────────────────────
+    socket.on('waiting-for-match', () => {
+      setSearching(true);
+      setPartnerName('Searching...');
+    });
+
+    // ── Matched — create peer connection ──────────────────────────────────
+    socket.on('room-joined', async ({ roomId: rid, peers, iceServers }) => {
+      const peer = peers[0];
+      if (!peer) return;
+
+      setRoomId(rid);
+      setPartnerId(peer.socketId);
+      setPartnerName(peer.userName || 'Stranger');
+      setSearching(false);
+
+      const pc = createPeerConnection(iceServers, peer.socketId);
+
+      // The side with the lower socket ID is the caller (creates the offer).
+      // This guarantees exactly one side initiates.
+      if (socket.id < peer.socketId) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('offer', { targetId: peer.socketId, offer });
+      }
+    });
+
+    // ── Receive offer (callee) ─────────────────────────────────────────────
+    socket.on('offer', async ({ offer, fromId }) => {
+      const pc = pcRef.current;
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('answer', { targetId: fromId, answer });
+    });
+
+    // ── Receive answer (caller) ───────────────────────────────────────────
+    socket.on('answer', async ({ answer }) => {
+      const pc = pcRef.current;
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    // ── Exchange ICE candidates ────────────────────────────────────────────
+    socket.on('ice-candidate', async ({ candidate }) => {
+      const pc = pcRef.current;
+      if (!pc || !candidate) return;
+      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) { /* ignore */ }
+    });
+
+    // ── Partner disconnected / left ────────────────────────────────────────
+    socket.on('partner-left', () => {
+      closePeerConnection();
+      setPartnerId(null);
+      setRoomId(null);
+      setPartnerName('Waiting...');
+      // Server will schedule auto-search — just show the state
+      setTimeout(() => {
+        setSearching(true);
+        setPartnerName('Searching...');
+      }, 600);
+    });
+
+    // ── Skip confirmed — we're already searching again ─────────────────────
+    socket.on('skip-confirmed', () => {
+      // Server put us back in the queue; waiting-for-match will fire shortly
+      closePeerConnection();
+      setPartnerId(null);
+      setRoomId(null);
+    });
+
+    // ── Server scheduled an auto-search for us ─────────────────────────────
+    socket.on('auto-search-scheduled', () => {
+      setSearching(true);
+      setPartnerName('Searching...');
+    });
+
+    return () => {
+      closePeerConnection();
+      socket.disconnect();
+    };
+  }, [createPeerConnection, closePeerConnection]); // stable — only runs once
+
+  // ── 7. Sync username changes to the server ────────────────────────────────
+  useEffect(() => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('set-user-name', { userName });
+    }
+  }, [userName]);
+
+  // ── 8. UI auto-hide timer ─────────────────────────────────────────────────
   const resetUiTimer = useCallback(() => {
     if (uiTimerRef.current) clearTimeout(uiTimerRef.current);
     uiTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
@@ -76,10 +254,10 @@ const CallScreen = () => {
 
   const handleRootClick = (e) => {
     if (e.target.closest('button') || e.target.closest('input')) return;
-    setUiVisible((prev) => { if (!prev) resetUiTimer(); return !prev; });
+    setUiVisible(prev => { if (!prev) resetUiTimer(); return !prev; });
   };
 
-  // ── Editable username ────────────────────────────────────────────────────
+  // ── 9. Editable username ──────────────────────────────────────────────────
   const startEditName = (e) => {
     e.stopPropagation();
     setNameInput(userName);
@@ -99,44 +277,44 @@ const CallScreen = () => {
     if (e.key === 'Escape') { setEditingName(false); setNameInput(userName); }
   };
 
-  // ── Skip / match logic ───────────────────────────────────────────────────
+  // ── 10. Skip ──────────────────────────────────────────────────────────────
   const onSkip = () => {
-    setPartner(null);
-    setPartnerName('Searching...');
+    closePeerConnection();
+
+    if (roomIdRef.current && socketRef.current) {
+      // Tell server to skip — it will re-queue both sides
+      socketRef.current.emit('skip', { roomId: roomIdRef.current });
+    } else if (socketRef.current) {
+      socketRef.current.emit('join-random');
+    }
+
+    setPartnerId(null);
+    setRoomId(null);
     setSearching(true);
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setTimeout(() => { setSearching(false); setAutoSearchCountdown(3); }, 1500);
+    setPartnerName('Searching...');
   };
 
-  useEffect(() => {
-    if (autoSearchCountdown !== null && autoSearchCountdown > 0) {
-      const timer = setTimeout(() => setAutoSearchCountdown(prev => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-    if (autoSearchCountdown === 0) {
-      setAutoSearchCountdown(null);
-      const randomId = Math.floor(Math.random() * 9000) + 1000;
-      setPartner({ id: randomId });
-      setPartnerName(`Stranger #${randomId}`);
-    }
-  }, [autoSearchCountdown]);
+  const isConnected = !!partnerId;
 
-  const isConnected = !!partner;
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={styles.appContainer} onClick={handleRootClick}>
       <div className={styles.grain} aria-hidden="true" />
 
       {/* ── PARTNER PANEL ── */}
       <div className={`${styles.panel} ${styles.partnerPanel} ${searching ? styles.searchingBlur : ''}`}>
-        {isConnected ? (
-          <video
-            ref={remoteVideoRef}
-            className={styles.videoEl}
-            autoPlay
-            playsInline
-          />
-        ) : (
+
+        {/* Remote video — always in DOM; srcObject is set/cleared by WebRTC */}
+        <video
+          ref={remoteVideoRef}
+          className={styles.videoEl}
+          autoPlay
+          playsInline
+          style={{ display: isConnected ? 'block' : 'none' }}
+        />
+
+        {/* Placeholder shown when no partner */}
+        {!isConnected && (
           <div className={styles.partnerWaiting}>
             <span className={styles.placeholderBrand}>OREY!</span>
           </div>
@@ -157,24 +335,26 @@ const CallScreen = () => {
             <VideoOff size={36} />
             <span>Camera unavailable</span>
           </div>
-        ) : videoEnabled ? (
-          <video
-            ref={localVideoRef}
-            className={`${styles.videoEl} ${styles.mirrored}`}
-            autoPlay
-            muted
-            playsInline
-          />
         ) : (
-          <div className={styles.idleIcon}>
-            <VideoOff size={40} />
-          </div>
+          <>
+            {/* Local video — always mounted so srcObject assignment lands correctly */}
+            <video
+              ref={localVideoRef}
+              className={`${styles.videoEl} ${styles.mirrored}`}
+              autoPlay
+              muted
+              playsInline
+              style={{ display: videoEnabled ? 'block' : 'none' }}
+            />
+            {!videoEnabled && (
+              <div className={styles.idleIcon}><VideoOff size={40} /></div>
+            )}
+          </>
         )}
 
         <div className={`${styles.statusBadge} ${!uiVisible ? styles.uiHidden : ''}`}>
           <div className={styles.badgeContent}>
             <div className={`${styles.dot} ${styles.dotGray}`} />
-
             {editingName ? (
               <>
                 <input
@@ -234,27 +414,24 @@ const CallScreen = () => {
       </div>
 
       {/* ── SEARCHING OVERLAY ── */}
-      {(searching || autoSearchCountdown !== null) && (
+      {searching && (
         <div className={styles.overlay}>
-          {autoSearchCountdown !== null ? (
-            <div className={styles.countdownContainer}>
-              <div className={styles.numberRow}>
-                <span className={styles.countdownNum}>{autoSearchCountdown}</span>
-                <span className={styles.exclamation}>!</span>
-              </div>
-              <p className={styles.overlayLabel}>MATCH FOUND</p>
-              <button onClick={() => setAutoSearchCountdown(null)} className={styles.cancelBtn}>
-                CANCEL
-              </button>
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingTrack}>
+              <div className={styles.loadingFill} />
             </div>
-          ) : (
-            <div className={styles.loadingContainer}>
-              <div className={styles.loadingTrack}>
-                <div className={styles.loadingFill} />
-              </div>
-              <p className={styles.syncLabel}>SYNCING PEERS</p>
-            </div>
-          )}
+            <p className={styles.syncLabel}>SYNCING PEERS</p>
+            <button
+              className={styles.cancelBtn}
+              onClick={() => {
+                socketRef.current?.emit('cancel-random');
+                setSearching(false);
+                setPartnerName('Waiting...');
+              }}
+            >
+              CANCEL
+            </button>
+          </div>
         </div>
       )}
     </div>
