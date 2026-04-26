@@ -22,8 +22,10 @@ RUN npm install --omit=dev
 COPY src/ ./src/
 
 # Copy built React app from builder stage
-# The build output is in /app/public, not /app/client/dist
 COPY --from=builder /app/public ./public/
+
+# IMPORTANT: Copy admin.html from repo (overwrites if exists, ensures it's there)
+COPY public/admin.html ./public/admin.html
 
 ENV NODE_ENV=production
 ENV PORT=3000
