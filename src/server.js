@@ -39,6 +39,9 @@ app.use('/admin/', apiLimiter);
 
 app.use(express.json());
 
+// ─── Create HTTP Server ─────────────────────────────────────────────────────
+const server = http.createServer(app);
+
 // ─── Socket.IO Setup ────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
@@ -49,8 +52,6 @@ const io = new Server(server, {
   pingTimeout: 60000,
   pingInterval: 25000,
 });
-
-const server = http.createServer(app);
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
@@ -490,19 +491,17 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
   });
 });
 
-// ─── Static File Serving ────────────────────────────────────────────────────
+// ─── Admin Panel Routes ─────────────────────────────────────────────────────
 
 const publicDir = path.join(__dirname, '..', 'public');
 
-// Debug: Check if admin.html exists
+// Check if admin.html exists on startup
 if (fs.existsSync(path.join(publicDir, 'admin.html'))) {
-  console.log('✅ admin.html found in public directory');
+  console.log('✅ admin.html found');
 } else {
   console.log('❌ admin.html NOT found in:', publicDir);
-  console.log('Files available:', fs.readdirSync(publicDir).join(', '));
 }
 
-// Admin page routes - MUST be before static and catch-all
 app.get('/admin', (_req, res) => {
   const adminFile = path.join(publicDir, 'admin.html');
   res.sendFile(adminFile, (err) => {
@@ -517,20 +516,12 @@ app.get('/admin.html', (_req, res) => {
   res.redirect('/admin');
 });
 
-// Serve static files
-app.use(express.static(publicDir, { 
-  index: false,
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('admin.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    }
-  }
-}));
+// ─── Static Files & SPA ─────────────────────────────────────────────────────
 
-// React SPA catch-all (only in production)
+app.use(express.static(publicDir, { index: false }));
+
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res, next) => {
-    // Skip API and admin routes
     if (req.path.startsWith('/api/') || 
         req.path.startsWith('/admin') || 
         req.path === '/admin.html') {
@@ -832,6 +823,8 @@ server.listen(PORT, () => {
   console.log(`🔑 API Key:    ${API_KEY.substring(0, 8)}...`);
   console.log(`🛡️  Admin Key: ${ADMIN_KEY.substring(0, 8)}...`);
   console.log(`📁 Public Dir: ${publicDir}`);
-  console.log(`📄 Files:      ${fs.readdirSync(publicDir).join(', ')}`);
+  if (fs.existsSync(publicDir)) {
+    console.log(`📄 Files:      ${fs.readdirSync(publicDir).join(', ')}`);
+  }
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
