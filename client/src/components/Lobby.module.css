@@ -1,6 +1,6 @@
 .root {
   min-height: 100vh;
-  background: #050507;
+  background: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,313 +9,53 @@
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
+/* Red grid matching the subtle tech vibe */
 .grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(124, 58, 237, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(255, 45, 85, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 85, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
 }
 
+/* The "Glow" effect from your shadowRadius */
 .orb1 {
   position: absolute;
-  width: 480px;
-  height: 480px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
-  top: -120px;
-  left: -120px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 45, 85, 0.15) 0%, transparent 70%);
+  top: -150px;
+  left: -150px;
   pointer-events: none;
-}
-
-.orb2 {
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.1) 0%, transparent 70%);
-  bottom: -100px;
-  right: -100px;
-  pointer-events: none;
-}
-
-.container {
-  width: 100%;
-  max-width: 420px;
-  padding: 24px 20px;
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 8px;
 }
 
 .logo {
-  font-size: 3rem;
+  font-size: 4rem;
   font-weight: 900;
   color: #fff;
   letter-spacing: -2px;
-  line-height: 1;
-  text-shadow: 0 0 40px rgba(124, 58, 237, 0.5);
+  /* Matching the exclamation point glow */
+  text-shadow: 0 0 30px rgba(255, 45, 85, 0.6);
 }
 
 .logoAccent {
-  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  background: linear-gradient(135deg, #FF2D55, #ff6b8b);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.tagline {
-  margin-top: 6px;
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 0.85rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 18px 20px;
-  backdrop-filter: blur(12px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition: border-color 0.2s;
-}
-
-.card:hover {
-  border-color: rgba(124, 58, 237, 0.25);
-}
-
-.idCard {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(34, 211, 238, 0.04));
-  border-color: rgba(124, 58, 237, 0.2);
-}
-
-.label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 12px 14px;
-  color: #fff;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  border-color: rgba(124, 58, 237, 0.5);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-}
-
-.input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.idHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.expiry {
-  font-size: 0.72rem;
-  color: rgba(34, 211, 238, 0.6);
-}
-
-.idRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  padding: 12px 14px;
-  border: 1px solid rgba(124, 58, 237, 0.15);
-}
-
-.idValue {
-  flex: 1;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  background: linear-gradient(90deg, #7c3aed, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.copyBtn {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.copyBtn:hover {
-  background: rgba(124, 58, 237, 0.2);
-  color: #fff;
-  border-color: rgba(124, 58, 237, 0.4);
-}
-
-.idHint {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.25);
-  margin: 0;
-}
-
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .discoverBtn {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  /* Solid gradient using the Electric Red */
+  background: linear-gradient(135deg, #FF2D55, #D40032);
   border: none;
   border-radius: 14px;
   color: #fff;
-  font-size: 1rem;
   font-weight: 700;
+  box-shadow: 0 8px 32px rgba(255, 45, 85, 0.35);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: opacity 0.2s, transform 0.1s;
-  letter-spacing: 0.3px;
-  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.35);
-}
-
-.discoverBtn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.45);
-}
-
-.discoverBtn:active {
-  transform: translateY(0);
-}
-
-.searchingRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.searchingPulse {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.25);
-  border-radius: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-  font-weight: 500;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.cancelBtn {
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.connectRow {
-  display: flex;
-  gap: 10px;
-}
-
-.connectRow .input {
-  flex: 1;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.connectBtn {
-  padding: 12px 20px;
-  background: rgba(34, 211, 238, 0.1);
-  border: 1px solid rgba(34, 211, 238, 0.25);
-  border-radius: 10px;
-  color: #22d3ee;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.connectBtn:hover:not(:disabled) {
-  background: rgba(34, 211, 238, 0.2);
-  border-color: rgba(34, 211, 238, 0.5);
-}
-
-.connectBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.footer {
-  text-align: center;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.2);
-  padding-top: 4px;
+  transition: transform 0.1s;
 }
