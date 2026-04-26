@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orey Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 650px; margin: 0 auto; }
+        h1 { text-align: center; color: #FF2D55; margin-bottom: 30px; font-size: 28px; }
+        .card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        .card h2 { font-size: 18px; margin-bottom: 16px; color: #FF2D55; }
+        label { display: block; font-size: 13px; margin-bottom: 4px; color: #999; }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea { min-height: 70px; resize: vertical; }
+        input:focus, select:focus, textarea:focus { border-color: #FF2D55; outline: none; }
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #FF2D55;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background: #e02648; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #FF2D55;
+            color: #FF2D55;
+            margin-top: 8px;
+        }
+        .btn-outline:hover { background: #FF2D55; color: #fff; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        .toast.success { background: #4CAF50; display: block; }
+        .toast.error { background: #f44336; display: block; }
+        .toast.info { background: #2196F3; display: block; }
+        .notif-list { max-height: 350px; overflow-y: auto; }
+        .notif-item {
+            background: #0a0a0a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #FF2D55;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .notif-content { flex: 1; }
+        .notif-content strong { font-size: 14px; display: block; margin-bottom: 4px; }
+        .notif-content small { color: #999; font-size: 12px; }
+        .notif-content p { font-size: 13px; color: #ccc; margin-top: 4px; }
+        .delete-btn {
+            background: #f44336;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            white-space: nowrap;
+        }
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge.high { background: #f44336; }
+        .badge.normal { background: #2196F3; }
+        .badge.low { background: #4CAF50; }
+        .stats { display: flex; gap: 10px; margin-top: 8px; }
+        .stat { flex: 1; background: #0a0a0a; padding: 10px; border-radius: 8px; text-align: center; }
+        .stat .num { font-size: 24px; font-weight: bold; color: #FF2D55; }
+        .stat .label { font-size: 11px; color: #999; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Orey Admin</h1>
+        
+        <!-- Send Notification -->
+        <div class="card">
+            <h2>📤 Send Push Notification</h2>
+            <form id="notifForm">
+                <label>Admin Key</label>
+                <input type="password" id="adminKey" placeholder="Enter admin key" required>
+                
+                <div class="row">
+                    <div>
+                        <label>Title *</label>
+                        <input type="text" id="title" placeholder="Notification title" required>
+                    </div>
+                    <div>
+                        <label>Icon (Emoji)</label>
+                        <input type="text" id="icon" placeholder="🎉" maxlength="4">
+                    </div>
+                </div>
+                
+                <label>Message *</label>
+                <textarea id="message" placeholder="Notification message" required></textarea>
+                
+                <div class="row">
+                    <div>
+                        <label>Type</label>
+                        <select id="type">
+                            <option value="info">ℹ️ Info</option>
+                            <option value="feature">⭐ Feature</option>
+                            <option value="system">⚙️ System</option>
+                            <option value="alert">🚨 Alert</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Priority</label>
+                        <select id="priority">
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div>
+                        <label>Action URL</label>
+                        <input type="text" id="actionUrl" placeholder="/welcome">
+                    </div>
+                    <div>
+                        <label>Expires (days)</label>
+                        <input type="number" id="expiresIn" value="30" min="1" max="365">
+                    </div>
+                </div>
+                
+                <button type="submit">🚀 Send Now</button>
+            </form>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <h2>⚡ Quick Actions</h2>
+            <button class="btn-outline" onclick="loadNotifications()">📋 View All Notifications</button>
+            <button class="btn-outline" onclick="checkHealth()">💚 Server Status</button>
+            <button class="btn-outline" onclick="toggleMaintenance()">🔧 Toggle Maintenance</button>
+        </div>
+        
+        <!-- Notifications List -->
+        <div class="card" id="listCard" style="display:none;">
+            <h2>📋 Notifications (<span id="notifCount">0</span>)</h2>
+            <div class="notif-list" id="notifList"></div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const SERVER = window.location.origin;
+        
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            setTimeout(() => t.className = 'toast', 3000);
+        }
+        
+        function getAdminKey() {
+            return document.getElementById('adminKey').value;
+        }
+        
+        // Send notification
+        document.getElementById('notifForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            
+            const data = {
+                title: document.getElementById('title').value,
+                message: document.getElementById('message').value,
+                icon: document.getElementById('icon').value || '📢',
+                type: document.getElementById('type').value,
+                priority: document.getElementById('priority').value,
+                actionUrl: document.getElementById('actionUrl').value || '/',
+                expiresIn: parseInt(document.getElementById('expiresIn').value)
+            };
+            
+            try {
+                const res = await fetch(SERVER + '/admin/notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-key': getAdminKey()
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showToast('✅ Notification sent to all users!', 'success');
+                    document.getElementById('title').value = '';
+                    document.getElementById('message').value = '';
+                } else {
+                    showToast('❌ ' + (result.error || 'Failed'), 'error');
+                }
+            } catch (err) {
+                showToast('❌ Network error', 'error');
+            }
+            btn.disabled = false;
+            btn.textContent = '🚀 Send Now';
+        });
+        
+        // Load notifications
+        async function loadNotifications() {
+            if (!getAdminKey()) { showToast('⚠️ Enter admin key first', 'error'); return; }
+            
+            try {
+                const res = await fetch(SERVER + '/admin/notifications', {
+                    headers: { 'x-admin-key': getAdminKey() }
+                });
+                const data = await res.json();
+                
+                document.getElementById('listCard').style.display = 'block';
+                document.getElementById('notifCount').textContent = data.total;
+                
+                const list = document.getElementById('notifList');
+                if (data.notifications.length === 0) {
+                    list.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">No notifications yet</p>';
+                    return;
+                }
+                
+                list.innerHTML = data.notifications.reverse().map(n => `
+                    <div class="notif-item">
+                        <div class="notif-content">
+                            <strong>${n.icon || '📢'} ${n.title}</strong>
+                            <span class="badge ${n.priority}">${n.priority}</span>
+                            <p>${n.message}</p>
+                            <small>Type: ${n.type} | Action: ${n.actionUrl} | Expires: ${n.expiresIn}d</small>
+                        </div>
+                        <button class="delete-btn" onclick="deleteNotif(${n.id})">🗑️</button>
+                    </div>
+                `).join('');
+                list.scrollTop = 0;
+            } catch (err) {
+                showToast('❌ Failed to load', 'error');
+            }
+        }
+        
+        // Delete notification
+        async function deleteNotif(id) {
+            if (!confirm('Delete this notification?')) return;
+            try {
+                const res = await fetch(SERVER + '/admin/notifications/' + id, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-key': getAdminKey() }
+                });
+                if (res.ok) {
+                    showToast('✅ Deleted!', 'success');
+                    loadNotifications();
+                }
+            } catch (err) {
+                showToast('❌ Error', 'error');
+            }
+        }
+        
+        // Health check
+        async function checkHealth() {
+            try {
+                const res = await fetch(SERVER + '/health');
+                const data = await res.json();
+                showToast('✅ Server: ' + data.status + ' | Active: ' + data.activeConnections + ' | Uptime: ' + Math.floor(data.uptime) + 's', 'success');
+            } catch (err) {
+                showToast('❌ Server unreachable', 'error');
+            }
+        }
+        
+        // Toggle maintenance
+        async function toggleMaintenance() {
+            if (!getAdminKey()) { showToast('⚠️ Enter admin key first', 'error'); return; }
+            const enabled = confirm('Enable maintenance mode?\n\nOK = Enable\nCancel = Disable');
+            try {
+                const res = await fetch(SERVER + '/admin/maintenance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-key': getAdminKey()
+                    },
+                    body: JSON.stringify({
+                        enabled: enabled,
+                        message: enabled ? 'Orey is under maintenance. Back soon! 🚧' : ''
+                    })
+                });
+                if (res.ok) {
+                    showToast('✅ Maintenance ' + (enabled ? 'ENABLED' : 'DISABLED'), 'info');
+                }
+            } catch (err) {
+                showToast('❌ Error', 'error');
+            }
+        }
+        
+        // Save admin key
+        const keyInput = document.getElementById('adminKey');
+        const saved = localStorage.getItem('orey_admin_key');
+        if (saved) keyInput.value = saved;
+        keyInput.addEventListener('input', () => localStorage.setItem('orey_admin_key', keyInput.value));
+    </script>
+</body>
+</html>
