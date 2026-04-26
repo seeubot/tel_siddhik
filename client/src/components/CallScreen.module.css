@@ -16,6 +16,7 @@
   }
 }
 
+/* Subtle film-grain overlay */
 .grain {
   position: absolute;
   inset: 0;
@@ -25,12 +26,15 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
 }
 
+/* ── Panels ─────────────────────────────────────────────────────────────── */
+
 .panel {
   position: relative;
   flex: 1;
   height: 50%;
   overflow: hidden;
-  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: filter 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (min-width: 768px) {
@@ -41,18 +45,24 @@
 
 .partnerPanel {
   background-color: #0a0a0f;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 @media (min-width: 768px) {
   .partnerPanel {
     border-bottom: none;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 
 .localPanel {
   background-color: #050505;
+}
+
+/* Blur/dim the partner panel while searching */
+.searchingBlur {
+  filter: blur(50px) brightness(0.3);
+  transform: scale(1.1);
 }
 
 /* ── Video elements ─────────────────────────────────────────────────────── */
@@ -64,27 +74,40 @@
   display: block;
 }
 
+/* Mirror the local camera so it looks natural */
 .mirrored {
   transform: scaleX(-1);
 }
 
-/* Partner waiting / no-stream placeholder */
+/* ── Partner waiting placeholder ────────────────────────────────────────── */
+
 .partnerWaiting {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0a0a0f;
 }
 
-.searchingBlur {
-  filter: blur(50px) brightness(0.4);
-  transform: scale(1.1);
+.placeholderBrand {
+  font-size: 15vw;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  color: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
 }
 
-/* Camera permission error */
+@media (min-width: 768px) {
+  .placeholderBrand {
+    font-size: 8vw;
+  }
+}
+
+/* ── Camera permission error ────────────────────────────────────────────── */
+
 .camError {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -98,27 +121,14 @@
   text-transform: uppercase;
 }
 
-/* Video-off fallback */
+/* Video-off fallback icon */
 .idleIcon {
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.05);
-}
-
-/* ── Brand watermark ────────────────────────────────────────────────────── */
-
-.placeholderBrand {
-  font-size: 15vw;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -0.05em;
-  color: rgba(255, 255, 255, 0.03);
-}
-
-@media (min-width: 768px) {
-  .placeholderBrand { font-size: 8vw; }
+  color: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Status badge ───────────────────────────────────────────────────────── */
@@ -140,24 +150,35 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.4rem 0.8rem;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
 }
 
 .dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
-  animation: pulse-badge 2s infinite;
 }
 
-.dotGreen { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
-.dotRed   { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.dotGray  { background-color: rgba(255, 255, 255, 0.3); animation: none; }
+.dotGreen {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseDot 2s infinite;
+}
+
+.dotRed {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: pulseDot 2s infinite;
+}
+
+.dotGray {
+  background-color: rgba(255, 255, 255, 0.3);
+}
 
 .badgeText {
   font-size: 10px;
@@ -171,7 +192,7 @@
   white-space: nowrap;
 }
 
-/* Inline name input inside the badge */
+/* Inline editable name input inside the badge */
 .badgeNameInput {
   font-size: 10px;
   font-weight: 700;
@@ -185,7 +206,7 @@
   font-family: inherit;
 }
 
-/* Pencil / check button inside the badge */
+/* Pencil / check icon button inside the badge */
 .badgeEditBtn {
   background: none;
   border: none;
@@ -199,7 +220,7 @@
 }
 
 .badgeEditBtn:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* ── Controls dock ──────────────────────────────────────────────────────── */
@@ -210,7 +231,8 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.3s ease;
 }
 
 .dockHidden {
@@ -224,7 +246,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem;
-  background-color: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(32px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
@@ -234,31 +256,31 @@
 .nextBtn {
   height: 2.75rem;
   padding: 0 1.5rem;
-  background-color: #fff;
+  background: #fff;
   color: #000;
   border: none;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.18em;
   font-family: inherit;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .nextBtn:hover {
-  background-color: #FF2D55;
+  background: #FF2D55;
   color: #fff;
 }
 
 .divider {
   width: 1px;
   height: 1.5rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  margin: 0 0.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 0.2rem;
 }
 
 .mediaActions {
@@ -272,32 +294,33 @@
   height: 2.75rem;
   border-radius: 50%;
   border: none;
-  background-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .iconBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
+/* Active = muted / camera off */
 .btnActive {
-  background-color: #ef4444;
+  background: #ef4444;
   color: #fff;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
 }
 
-/* ── Overlays ───────────────────────────────────────────────────────────── */
+/* ── Searching / overlay ────────────────────────────────────────────────── */
 
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.95);
+  background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(20px);
   z-index: 100;
   display: flex;
@@ -310,6 +333,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0;
 }
 
 .numberRow {
@@ -323,7 +347,7 @@
   font-weight: 900;
   font-style: italic;
   line-height: 1;
-  animation: pulse-badge 1s infinite;
+  animation: pulseDot 1s infinite;
 }
 
 .exclamation {
@@ -343,28 +367,29 @@
 }
 
 .cancelBtn {
+  margin-top: 2rem;
   padding: 0.8rem 2rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.4);
   border-radius: 9999px;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .cancelBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
 .loadingTrack {
   width: 12rem;
   height: 2px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 9999px;
   position: relative;
   overflow: hidden;
@@ -375,9 +400,9 @@
   top: 0;
   bottom: 0;
   width: 40%;
-  background-color: #ef4444;
+  background: #ef4444;
   box-shadow: 0 0 10px #ef4444;
-  animation: loading-slide 1.2s infinite linear;
+  animation: loadingSlide 1.2s infinite linear;
 }
 
 .syncLabel {
@@ -390,12 +415,12 @@
 
 /* ── Keyframes ──────────────────────────────────────────────────────────── */
 
-@keyframes pulse-badge {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.1); }
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
 }
 
-@keyframes loading-slide {
+@keyframes loadingSlide {
   0%   { left: -40%; }
   100% { left: 100%; }
 }
