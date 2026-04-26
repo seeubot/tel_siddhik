@@ -7,7 +7,6 @@ RUN npm install
 
 COPY client/ ./
 RUN npm run build
-# Output lands in /app/public (via vite outDir: '../public')
 
 # ── Stage 2: Production server ────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -21,10 +20,11 @@ RUN npm install --omit=dev
 # Copy backend source
 COPY src/ ./src/
 
-# Copy built React app from builder stage
+# Copy built React app from builder stage (this has admin.html overwritten)
 COPY --from=builder /app/public ./public/
 
-# IMPORTANT: Copy admin.html from repo (overwrites if exists, ensures it's there)
+# NOW restore admin.html from the original repo
+# The file is at repo-root/public/admin.html
 COPY public/admin.html ./public/admin.html
 
 ENV NODE_ENV=production
