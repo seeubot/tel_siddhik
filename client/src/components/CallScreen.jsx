@@ -5,21 +5,21 @@ UserPlus, Zap,
 Share2, VolumeX
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
-​/**
-​OREY! PRO - Call Screen Component
-​Handles media streams, peer searching, and immersive UI states.
+/**
+OREY! PRO - Call Screen Component
+Handles media streams, peer searching, and immersive UI states.
 */
-​const CallScreen = () => {
+const CallScreen = () => {
 const [partner, setPartner] = useState(null);
 const [searching, setSearching] = useState(false);
 const [audioEnabled, setAudioEnabled] = useState(true);
 const [videoEnabled, setVideoEnabled] = useState(true);
 const [uiVisible, setUiVisible] = useState(true);
 const [countdown, setCountdown] = useState(null);
-​const uiTimerRef = useRef(null);
+const uiTimerRef = useRef(null);
 const localVideoRef = useRef(null);
 const streamRef = useRef(null);
-​// Initialize and Update Local Media Stream
+// Initialize and Update Local Media Stream
 useEffect(() => {
 async function setupMedia() {
 try {
@@ -48,20 +48,20 @@ streamRef.current.getTracks().forEach(track => track.stop());
 }
 };
 }, [videoEnabled, audioEnabled]);
-​// Auto-hide UI Logic
+// Auto-hide UI Logic
 const resetUiTimer = useCallback(() => {
 clearTimeout(uiTimerRef.current);
 uiTimerRef.current = setTimeout(() => setUiVisible(false), 8000);
 }, []);
-​useEffect(() => {
+useEffect(() => {
 if (uiVisible) resetUiTimer();
 return () => clearTimeout(uiTimerRef.current);
 }, [uiVisible, resetUiTimer, searching]);
-​const handleToggleUI = (e) => {
-if (e.target.closest(.${styles.dock})) return;
+const handleToggleUI = (e) => {
+if (e.target.closest(`.${styles.dock}`)) return;
 setUiVisible(!uiVisible);
 };
-​const handleSkip = () => {
+const handleSkip = () => {
 setPartner(null);
 setSearching(true);
 setCountdown(null);
@@ -70,7 +70,7 @@ setSearching(false);
 setCountdown(3);
 }, 2000);
 };
-​useEffect(() => {
+useEffect(() => {
 if (countdown !== null && countdown > 0) {
 const t = setTimeout(() => setCountdown(countdown - 1), 1000);
 return () => clearTimeout(t);
@@ -79,11 +79,11 @@ setPartner({ id: 'Stranger_' + Math.floor(Math.random() * 9000 + 1000) });
 setCountdown(null);
 }
 }, [countdown]);
-​return (
+return (
 <div className={styles.container} onClick={handleToggleUI}>
 <div className={styles.grainOverlay} />
-​{/* PEER PANEL */}
-<div className={${styles.panel} ${styles.strangerPanel} ${searching ? styles.searchingPanel : ''}}>
+{/* PEER PANEL */}
+<div className={`${styles.panel} ${styles.strangerPanel} ${searching ? styles.searchingPanel : ''}`}>
 {partner ? (
 <div className={styles.videoPlaceholder}>
 <span className="text-white/10 text-[10px] tracking-[0.4em] uppercase font-bold italic">Secure Node Live</span>
@@ -94,26 +94,26 @@ setCountdown(null);
 <div className="text-[8px] md:text-[10px] tracking-[0.6em] font-bold uppercase mt-2">{searching ? 'SCANNING' : 'ESTABLISHING'}</div>
 </div>
 )}
-​<div className={${styles.badgeWrapper} ${uiVisible ? styles.visible : styles.hiddenTop}}>
+<div className={`${styles.badgeWrapper} ${uiVisible ? styles.visible : styles.hiddenTop}`}>
 <div className={styles.badge}>
-<div className={${styles.statusDot} ${partner ? styles.online : styles.offline}} />
+<div className={`${styles.statusDot} ${partner ? styles.online : styles.offline}`} />
 <span className={styles.badgeText}>
 {partner ? partner.id : 'Awaiting Peer'}
 </span>
 </div>
 </div>
 </div>
-​<div className={styles.divider} />
-​{/* USER PANEL */}
-<div className={${styles.panel} ${styles.youPanel}}>
+<div className={styles.divider} />
+{/* USER PANEL */}
+<div className={`${styles.panel} ${styles.youPanel}`}>
 {videoEnabled ? (
-<video ref={localVideoRef} className={${styles.video} ${styles.mirror}} autoPlay playsInline muted />
+<video ref={localVideoRef} className={`${styles.video} ${styles.mirror}`} autoPlay playsInline muted />
 ) : (
 <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/40">
 <VideoOff size={48} className="text-white/5" strokeWidth={1} />
 </div>
 )}
-​<div className={${styles.badgeWrapper} ${uiVisible ? styles.visible : styles.hiddenBottom}}>
+<div className={`${styles.badgeWrapper} ${uiVisible ? styles.visible : styles.hiddenBottom}`}>
 <div className={styles.badge}>
 <div className="flex items-center gap-2">
 <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
@@ -128,42 +128,42 @@ setCountdown(null);
 </div>
 </div>
 </div>
-​{/* --- CONTROL INTERFACE --- */}
-<div className={${styles.dockWrapper} ${uiVisible ? '' : styles.dockHidden}}>
+{/* --- CONTROL INTERFACE --- */}
+<div className={`${styles.dockWrapper} ${uiVisible ? '' : styles.dockHidden}`}>
 <div className={styles.dock}>
 <div className={styles.dockGroup}>
 <button className={styles.utilBtn}>
 <Share2 size={18} strokeWidth={2} />
 </button>
-<button className={${styles.utilBtn} hidden sm:flex}>
+<button className={`${styles.utilBtn} hidden sm:flex`}>
 <UserPlus size={18} strokeWidth={2} />
 </button>
 </div>
-​<div className={styles.dockSeparator} />
-​<div className={styles.dockGroup}>
+<div className={styles.dockSeparator} />
+<div className={styles.dockGroup}>
 <button
 onClick={() => setVideoEnabled(!videoEnabled)}
-className={${styles.mediaBtn} ${!videoEnabled ? styles.mediaActive : ''}}
+className={`${styles.mediaBtn} ${!videoEnabled ? styles.mediaActive : ''}`}
 >
 {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
 </button>
 <button
 onClick={() => setAudioEnabled(!audioEnabled)}
-className={${styles.mediaBtn} ${!audioEnabled ? styles.mediaActive : ''}}
+className={`${styles.mediaBtn} ${!audioEnabled ? styles.mediaActive : ''}`}
 >
 {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
 </button>
 </div>
-​<button onClick={handleSkip} className={styles.skipBtn}>
+<button onClick={handleSkip} className={styles.skipBtn}>
 <span className={styles.skipText}>Skip</span>
 <div className={styles.skipIconWrapper}>
 <Zap size={15} fill="currentColor" />
 </div>
 </button>
 </div>
-​<div className={styles.hintText}>Tap Screen to Focus</div>
+<div className={styles.hintText}>Tap Screen to Focus</div>
 </div>
-​{/* --- TRANSITION OVERLAYS --- */}
+{/* --- TRANSITION OVERLAYS --- */}
 {searching && (
 <div className={styles.overlay}>
 <div className={styles.loadingLine}>
@@ -172,7 +172,7 @@ className={${styles.mediaBtn} ${!audioEnabled ? styles.mediaActive : ''}}
 <div className={styles.overlayText}>Syncing Connection</div>
 </div>
 )}
-​{countdown !== null && (
+{countdown !== null && (
 <div className={styles.overlay}>
 <div className={styles.countdownValue}>{countdown}</div>
 <div className={styles.countdownSub}>Establishing Secure Node</div>
@@ -181,4 +181,4 @@ className={${styles.mediaBtn} ${!audioEnabled ? styles.mediaActive : ''}}
 </div>
 );
 };
-​export default CallScreen;
+export default CallScreen;
