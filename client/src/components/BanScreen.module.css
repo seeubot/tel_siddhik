@@ -1,5 +1,3 @@
-# Create BanScreen.module.css
-cat > src/client/src/components/BanScreen.module.css << 'EOF'
 .root {
   min-height: 100vh;
   background-color: #000000;
@@ -27,11 +25,20 @@ cat > src/client/src/components/BanScreen.module.css << 'EOF'
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.icon { color: #ef4444; margin-bottom: 0.5rem; }
+.icon {
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+}
 
 .title {
   font-size: 1.75rem;
@@ -88,155 +95,6 @@ cat > src/client/src/components/BanScreen.module.css << 'EOF'
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.contact a:hover { color: #ffffff; }
-EOF
-
-# Create ReportModal.module.css
-cat > src/client/src/components/ReportModal.module.css << 'EOF'
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.modal {
-  background: #111115;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.icon { color: #ef4444; flex-shrink: 0; }
-
-.header h2 {
-  flex: 1;
-  font-size: 1.125rem;
-  font-weight: 700;
+.contact a:hover {
   color: #ffffff;
-  margin: 0;
 }
-
-.closeBtn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.3);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-}
-
-.closeBtn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.4);
-  margin: 0;
-}
-
-.subtitle strong { color: rgba(255, 255, 255, 0.7); }
-
-.reasons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.reasonBtn {
-  padding: 0.5rem 0.875rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.reasonBtn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.reasonBtn.selected {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-.textarea {
-  width: 100%;
-  min-height: 80px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-family: inherit;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.textarea:focus { border-color: rgba(255, 255, 255, 0.2); }
-.textarea::placeholder { color: rgba(255, 255, 255, 0.2); }
-
-.submitBtn {
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.875rem;
-  border: none;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 0.875rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.submitBtn:hover:not(:disabled) { background: #dc2626; }
-.submitBtn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.disclaimer {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.2);
-  text-align: center;
-  margin: 0;
-}
-EOF
-
-echo "✅ CSS module files created!"
