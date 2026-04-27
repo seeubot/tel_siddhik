@@ -1,19 +1,21 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, UserPlus, Zap, X
+  UserPlus, Zap, MoreHorizontal, 
+  ShieldCheck
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
  * Orey! Pro — Responsive Call Interface
- * Divided into separate JSX and CSS Module.
+ * - Mobile: Top/Bottom split
+ * - Desktop: Side-by-Side split
+ * - Features: Rebuilt branding & Mute indicators
  */
 
 const CallScreen = ({
   partner = null,
-  roomId = "000-000",
+  roomId = "BR-772-XP",
   localVideoRef,
   remoteVideoRef,
   audioEnabled = true,
@@ -32,10 +34,11 @@ const CallScreen = ({
   const uiTimerRef = useRef(null);
 
   const isPartnerVideoEnabled = partnerMedia?.video !== false;
+  const isRemoteConnected = partner && isPartnerVideoEnabled;
 
   const resetUiTimer = useCallback(() => {
     clearTimeout(uiTimerRef.current);
-    uiTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+    uiTimerRef.current = setTimeout(() => setUiVisible(false), 6000);
   }, []);
 
   useEffect(() => {
@@ -53,47 +56,39 @@ const CallScreen = ({
 
   return (
     <div 
-      className={`${styles.container} ${uiVisible ? '' : styles.uiHidden}`}
+      className={`${styles.container} ${!uiVisible ? styles.uiHidden : ''}`}
       onClick={handleRootClick}
     >
-      {/* Grain overlay */}
-      <div className={styles.grainOverlay} aria-hidden="true" />
-
-      {/* STRANGER PANEL */}
+      {/* Texture Overlay */}
+      <div className={styles.grainOverlay} />
+      
+      {/* REMOTE STREAM (Top on Mobile / Left on Desktop) */}
       <div className={`${styles.panel} ${styles.remotePanel} ${searching ? styles.searchingBlur : ''}`}>
         <video
           ref={remoteVideoRef}
           className={styles.videoStream}
           autoPlay
           playsInline
-          style={{ display: partner && isPartnerVideoEnabled ? 'block' : 'none' }}
+          style={{ display: isRemoteConnected ? 'block' : 'none' }}
         />
 
-        {(!partner || !isPartnerVideoEnabled) && (
-          <div className={styles.idleOverlay}>
-            <div className={styles.brandBg}>OREY!</div>
-            <p className={styles.statusText}>
-              {searching ? 'SYNCING...' : 'STREAM IDLE'}
+        {!isRemoteConnected && (
+          <div className={styles.brandingCenter}>
+            <div className={styles.brandTextMain}>OREY!</div>
+            <p className={styles.statusLabel}>
+              {searching ? 'Syncing Mesh' : 'Secure Node'}
             </p>
           </div>
         )}
 
-        <div className={styles.floatingLabelTop}>
-          <div className={styles.badge}>
-            <span className={styles.liveDot} />
-            <span className={styles.badgeText}>Stranger</span>
-          </div>
+        <div className={styles.roomTag}>
+           <div className={styles.tagContent}>
+              <span className={styles.monoText}>{roomId}</span>
+           </div>
         </div>
-
-        <div className={styles.roomInfo}>{roomId}</div>
-        <div className={`${styles.gradient} ${styles.gradientBottom} md:hidden`} />
-        <div className={`${styles.gradient} ${styles.gradientRight} hidden md:block`} />
       </div>
 
-      {/* DIVIDER */}
-      <div className={styles.divider} aria-hidden="true" />
-
-      {/* YOU PANEL */}
+      {/* LOCAL STREAM (Bottom on Mobile / Right on Desktop) */}
       <div className={`${styles.panel} ${styles.localPanel}`}>
         <video
           ref={localVideoRef}
@@ -104,80 +99,90 @@ const CallScreen = ({
           style={{ display: videoEnabled ? 'block' : 'none' }}
         />
 
-        {!videoEnabled && (
-          <div className={styles.idleOverlay}>
-            <VideoOff size={32} strokeWidth={1} className="opacity-20" />
+        {/* Local Mute Indicator */}
+        {!audioEnabled && (
+          <div className={styles.muteIndicator}>
+            <MicOff size={16} />
           </div>
         )}
 
-        <div className={styles.floatingLabelBottom}>
-          <div className={styles.badge}>
-            <span className={styles.staticDot} />
-            <span className={styles.badgeText}>You</span>
+        {!videoEnabled && (
+          <div className={styles.brandingCenter}>
+             <div className={`${styles.brandTextMain} opacity-5`}>OREY!</div>
+             <p className={styles.cameraOffText}>Camera Off</p>
+          </div>
+        )}
+
+        <div className={styles.previewTag}>
+          <div className={styles.tagContent}>
+              <div className={styles.statusDot} />
+              <span className={styles.tagLabel}>Preview</span>
           </div>
         </div>
-
-        <div className={`${styles.gradient} ${styles.gradientTop} md:hidden`} />
-        <div className={`${styles.gradient} ${styles.gradientLeft} hidden md:block`} />
       </div>
 
-      {/* CONTROL DOCK */}
-      <div className={styles.controlDock}>
-        <div className={styles.navGroup}>
-          <button onClick={onLeave} className={styles.iconBtnSecondary} title="Stop Call">
-            <X size={20} strokeWidth={2.5} />
-          </button>
-          
-          <button onClick={onSkip} className={styles.nextBtn}>
-            NEXT
-            <div className={styles.nextIconBox}>
-              <Zap size={14} fill="currentColor" />
-            </div>
-          </button>
-        </div>
+      {/* OMNI-PILL CONTROL BAR */}
+      <div className={styles.controlWrapper}>
+        <div className={styles.omniPill}>
+          <div className={styles.btnGroup}>
+            <button 
+              onClick={onToggleVideo}
+              className={`${styles.actionBtn} ${!videoEnabled ? styles.btnAlert : ''}`}
+            >
+              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+            </button>
+            <button 
+              onClick={onToggleAudio}
+              className={`${styles.actionBtn} ${!audioEnabled ? styles.btnAlert : ''}`}
+            >
+              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+            </button>
+          </div>
 
-        <div className={styles.mediaGroup}>
-            <button onClick={onShareId} className={styles.iconBtnSecondary}>
+          <button onClick={onSkip} className={styles.nextBtn}>
+            <span className={styles.nextText}>NEXT</span>
+            <Zap size={10} fill="currentColor" className={styles.zapIcon} />
+          </button>
+
+          <div className={styles.btnGroup}>
+            <button onClick={onShareId} className={styles.actionBtn}>
               <UserPlus size={18} />
             </button>
-            <div className={styles.vSeparator} />
-            <button
-              onClick={onToggleVideo}
-              className={`${styles.iconBtnMedia} ${!videoEnabled ? styles.btnActive : ''}`}
-            >
-              {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+            <button className={styles.actionBtn}>
+              <MoreHorizontal size={18} />
             </button>
-            <button
-              onClick={onToggleAudio}
-              className={`${styles.iconBtnMedia} ${!audioEnabled ? styles.btnActive : ''}`}
-            >
-              {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
-            </button>
+          </div>
+        </div>
+        
+        <div className={styles.footerNote}>
+            <ShieldCheck size={10} />
+            <span>Encrypted Peer Node</span>
         </div>
       </div>
 
-      {/* SEARCH OVERLAYS */}
+      {/* SEARCHING OVERLAYS */}
       {(searching || autoSearchCountdown !== null) && (
         <div className={styles.fullOverlay} onClick={(e) => e.stopPropagation()}>
-          <div className="flex flex-col items-center">
+          <div className={styles.overlayContent}>
             {autoSearchCountdown !== null ? (
-              <div className="flex flex-col items-center">
-                <div className="flex items-start text-white">
-                  <span className={styles.countdownNumber}>{autoSearchCountdown}</span>
-                  <span className={styles.countdownExclamation}>!</span>
+              <div className={styles.countdownBox}>
+                <div className={styles.countdownNumber}>
+                  {autoSearchCountdown}<span className={styles.accentRed}>!</span>
                 </div>
-                <p className={styles.incomingLabel}>INCOMING PEER</p>
-                <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
-                  CANCEL
+                <p className={styles.incomingText}>Peer Found</p>
+                <button onClick={onCancelAutoSearch} className={styles.abortBtn}>
+                  Abort Sync
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center">
+              <div className={styles.syncBox}>
                 <div className={styles.loadingBrand}>OREY!</div>
-                <div className={styles.progressBar}>
-                  <div className={styles.progressFill} />
+                <div className={styles.dotRunner}>
+                  <div className={styles.dot} style={{ animationDelay: '0s' }} />
+                  <div className={styles.dot} style={{ animationDelay: '0.2s' }} />
+                  <div className={styles.dot} style={{ animationDelay: '0.4s' }} />
                 </div>
-                <p className={styles.syncLabel}>SYNCING PEERS</p>
+                <p className={styles.syncText}>Scanning Peer Mesh</p>
               </div>
             )}
           </div>
@@ -188,4 +193,3 @@ const CallScreen = ({
 };
 
 export default CallScreen;
-
