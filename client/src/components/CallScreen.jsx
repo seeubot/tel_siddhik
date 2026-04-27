@@ -2,182 +2,206 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  Zap, PhoneOff, Ghost,
-  Lock, Eye, EyeOff
+  Zap, PhoneOff, Loader, 
+  ShieldCheck, Layers
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
- * OREY! PRO - CLEAN 50/50 SPLIT
- * Logic and structure for the video call interface.
- * Fixed: Added Video Refs to ensure streams are rendered.
+ * Orey! Pro — Call Screen Component
+ * Logic and structure for the peer-to-peer video interface.
  */
 
-const CallScreen = ({ remoteStream, localStream, onNext, onHangup }) => {
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isPrivacyBlurred, setIsPrivacyBlurred] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+const CallScreen = ({
+  partner = null,
+  roomId = "BR-772-XP",
+  localVideoRef,
+  remoteVideoRef,
+  audioEnabled = true,
+  videoEnabled = true,
+  partnerMedia = { video: true, audio: true },
+  searching = false,
+  autoSearchCountdown = null,
+  onToggleAudio = () => {},
+  onToggleVideo = () => {},
+  onSkip = () => {},
+  onLeave = () => {},
+  onCancelAutoSearch = () => {},
+  onFindRandomPeer = () => {},
+}) => {
   const [uiVisible, setUiVisible] = useState(true);
-  const [countdown, setCountdown] = useState(null);
-  
-  const remoteVideoRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const uiTimerRef = useRef(null);
+  const [nextHovered, setNextHovered] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('idle');
+  const mouseMoveTimerRef = useRef(null);
+  const wsRef = useRef(null);
 
-  // Attach streams to video elements when they change
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
+  const isPartnerVideoEnabled = partnerMedia?.video !== false;
+  const isPartnerAudioEnabled = partnerMedia?.audio !== false;
+  const isRemoteConnected = partner && isPartnerVideoEnabled;
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
-
-  const toggleAudio = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => (track.enabled = !isAudioEnabled));
-      setIsAudioEnabled(!isAudioEnabled);
-    }
-  };
-
-  const toggleVideo = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach(track => (track.enabled = !isVideoEnabled));
-      setIsVideoEnabled(!isVideoEnabled);
-    }
-  };
-
-  const togglePrivacyBlur = () => setIsPrivacyBlurred(!isPrivacyBlurred);
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket('wss://your-server.com/signaling');
+        wsRef.current = ws;
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'register', status: 'available' }));
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'peer-found') setConnectionStatus('connecting');
+          if (data.type === 'peer-connected') { 
+            setConnectionStatus('connected'); 
+            setIsConnecting(false); 
+          }
+        };
+        ws.onclose = () => setTimeout(connectWebSocket, 3000);
+      } catch (e) {}
+    };
+    connectWebSocket();
+    return () => wsRef.current?.close();
+  }, []);
 
   const handleNext = useCallback(() => {
-    if (isSearching) return;
-    setIsSearching(true);
-    // Trigger the backend logic provided by user
-    onNext(); 
-    
-    // UI transition logic
-    setTimeout(() => setCountdown(3), 1000);
-  }, [isSearching, onNext]);
-
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown === 0) {
-      setCountdown(null);
-      setIsSearching(false);
-      return;
+    if (isConnecting || connectionStatus === 'connecting') return;
+    setIsConnecting(true);
+    setConnectionStatus('searching');
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'find-random-peer', timestamp: Date.now() }));
     }
-    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
+    onFindRandomPeer?.();
+    setTimeout(() => {
+      setConnectionStatus('connecting');
+      setTimeout(() => {
+        setConnectionStatus('connected');
+        setIsConnecting(false);
+        onSkip?.();
+      }, 1500);
+    }, 3000);
+  }, [isConnecting, connectionStatus, onFindRandomPeer, onSkip]);
 
   useEffect(() => {
-    const showUI = () => {
+    const handleInteraction = () => {
       setUiVisible(true);
-      clearTimeout(uiTimerRef.current);
-      uiTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+      clearTimeout(mouseMoveTimerRef.current);
+      mouseMoveTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
     };
-    window.addEventListener('mousemove', showUI);
-    window.addEventListener('touchstart', showUI);
+    window.addEventListener('mousemove', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
     return () => {
-      window.removeEventListener('mousemove', showUI);
-      window.removeEventListener('touchstart', showUI);
+      window.removeEventListener('mousemove', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
     };
   }, []);
 
   return (
-    <div className={`${styles.container} ${!uiVisible ? styles.uiHidden : ''}`}>
+    <div className={styles.container}>
+      <div className={styles.grainOverlay} />
       
-      <main className={styles.mainGrid}>
-        {/* REMOTE PEER */}
-        <section className={`${styles.videoSection} ${isSearching ? styles.searchingPeer : ''}`}>
-          <video 
-            ref={remoteVideoRef}
-            className={styles.videoStream} 
-            autoPlay 
-            playsInline 
-          />
-          
-          {(!remoteStream || isSearching) && (
-            <div className={styles.placeholderLogo}>
-              <h1 className={styles.brandText}>Orey!</h1>
-            </div>
-          )}
-        </section>
+      {/* REMOTE FEED */}
+      <div className={`${styles.remotePanel} ${searching ? styles.searchingBlur : ''}`}>
+        <video
+          ref={remoteVideoRef}
+          className={styles.videoStream}
+          autoPlay playsInline
+          style={{ display: isRemoteConnected ? 'block' : 'none' }}
+        />
+        {!isRemoteConnected && (
+          <div className={styles.brandingCenter}>
+            <div className={styles.brandTextMain}>OREY!</div>
+          </div>
+        )}
+        {partner && !isPartnerAudioEnabled && (
+          <div className="absolute top-6 left-6 z-40 p-2.5 bg-red-500/10 backdrop-blur-xl rounded-2xl border border-red-500/20 text-red-500">
+            <MicOff size={16} />
+          </div>
+        )}
+      </div>
 
-        {/* LOCAL USER */}
-        <section className={styles.videoSectionLocal}>
-          <video 
-            ref={localVideoRef}
-            className={`${styles.videoStream} ${styles.mirrored} ${!isVideoEnabled ? styles.videoOff : ''} ${isPrivacyBlurred ? styles.privacyBlur : ''}`} 
-            autoPlay 
-            playsInline 
-            muted 
-          />
+      {/* LOCAL FEED */}
+      <div className={styles.localPanel}>
+        <video
+          ref={localVideoRef}
+          className={`${styles.videoStream} ${styles.mirrored} ${isBlurred ? styles.blurred : ''}`}
+          autoPlay playsInline muted
+          style={{ display: videoEnabled ? 'block' : 'none' }}
+        />
+        {!videoEnabled && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]">
+            <VideoOff size={48} className="text-white/5" />
+          </div>
+        )}
+      </div>
 
-          {isPrivacyBlurred && isVideoEnabled && (
-            <div className={styles.blurIndicator}>
-               <Ghost size={64} className={styles.ghostIcon} />
-            </div>
-          )}
+      {/* FLOATING CONTROL ISLAND */}
+      <div className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}>
+        <div className={styles.statusBadge}>
+          <div className={`${styles.statusDot} ${isRemoteConnected ? styles.dotActive : ''}`} />
+          <span className={styles.statusText}>
+            {isRemoteConnected ? `Live Session • ${roomId}` : 'Mesh Offline'}
+          </span>
+        </div>
 
-          {!isVideoEnabled && (
-            <div className={styles.blackout}>
-               <VideoOff size={32} className={styles.fadedIcon} />
-            </div>
-          )}
-        </section>
-      </main>
-
-      {/* BOTTOM CONTROL DOCK */}
-      <div className={`${styles.controlDock} ${uiVisible ? styles.dockVisible : styles.dockHidden}`}>
-        <div className={styles.dockWrapper}>
-          <div className={styles.mainPill}>
-            <div className={styles.actionGroupLeft}>
-              <button onClick={toggleVideo} className={`${styles.iconBtn} ${!isVideoEnabled ? styles.btnDanger : ''}`}>
-                {isVideoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-              </button>
-              <button onClick={toggleAudio} className={`${styles.iconBtn} ${!isAudioEnabled ? styles.btnDanger : ''}`}>
-                {isAudioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
-              </button>
-            </div>
-
-            <button onClick={handleNext} disabled={isSearching} className={styles.nextBtn}>
-              <span className={styles.nextText}>{isSearching ? 'Sync' : 'Next'}</span>
-              <Zap size={16} fill="currentColor" />
+        <div className={styles.controlIsland}>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={onToggleVideo}
+              className={`${styles.btnRound} ${!videoEnabled ? styles.btnDanger : ''}`}
+            >
+              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
             </button>
-
-            <div className={styles.actionGroupRight}>
-              <button onClick={togglePrivacyBlur} className={`${styles.iconBtn} ${isPrivacyBlurred ? styles.btnActive : ''}`}>
-                {isPrivacyBlurred ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-              <button onClick={onHangup} className={`${styles.iconBtn} ${styles.btnHangup}`}>
-                <PhoneOff size={20} />
-              </button>
-            </div>
+            <button 
+              onClick={onToggleAudio}
+              className={`${styles.btnRound} ${!audioEnabled ? styles.btnDanger : ''}`}
+            >
+              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+            </button>
           </div>
 
-          <div className={styles.securityNote}>
-            <Lock size={10} className={styles.greenText} />
-            <span className={styles.noteText}>E2E SECURE MESH</span>
+          <button 
+            onClick={handleNext} 
+            disabled={isConnecting}
+            onMouseEnter={() => setNextHovered(true)}
+            onMouseLeave={() => setNextHovered(false)}
+            className={styles.btnNext}
+          >
+            {isConnecting ? (
+              <Loader size={16} className="animate-spin" />
+            ) : (
+              <Zap size={16} className={nextHovered ? "fill-current" : ""} />
+            )}
+            <span>{isConnecting ? 'Wait' : 'Next'}</span>
+          </button>
+
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => setIsBlurred(!isBlurred)}
+              className={`${styles.btnRound} ${isBlurred ? "bg-white/10 text-white" : ""}`}
+            >
+              <Layers size={18} />
+            </button>
+            <button onClick={onLeave} className={`${styles.btnRound} ${styles.btnDanger}`}>
+              <PhoneOff size={18} />
+            </button>
           </div>
         </div>
       </div>
 
-      {isSearching && (
-        <div className={styles.syncOverlay}>
-          <div className={styles.syncContent}>
-            {countdown !== null ? (
-              <div className={styles.countdownValue}>{countdown}</div>
+      {/* OVERLAYS */}
+      {(searching || autoSearchCountdown !== null) && (
+        <div className={styles.fullOverlay}>
+          <div className="w-full flex flex-col items-center">
+            {autoSearchCountdown !== null ? (
+              <>
+                <div className={styles.countdownText}>{autoSearchCountdown}</div>
+                <p className="text-[10px] font-black tracking-[1em] text-[#ff2d55] uppercase mb-12">Handshake Init</p>
+                <button onClick={onCancelAutoSearch} className={styles.abortBtn}>Abort</button>
+              </>
             ) : (
-              <div className={styles.loadingSpinner}>
-                <div className={styles.spinnerCircle} />
-                <h2 className={styles.loadingText}>SWITCHING</h2>
-              </div>
+              <>
+                <div className="text-3xl font-black italic text-white/5 tracking-[0.5em] mb-8">SCANNING</div>
+                <Loader size={32} className="text-[#ff2d55] animate-spin" />
+              </>
             )}
           </div>
         </div>
