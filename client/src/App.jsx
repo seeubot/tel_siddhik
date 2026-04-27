@@ -1,30 +1,47 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getSocket } from './lib/socket';
 import { useWebRTC } from './hooks/useWebRTC';
+import { useDeviceIdentity } from './hooks/useDeviceIdentity';
+import { useReport } from './hooks/useReport';
 import Lobby from './components/Lobby';
 import CallScreen from './components/CallScreen';
+import BanScreen from './components/BanScreen';
+import ReportModal from './components/ReportModal';
 import { ShareRequestModal, RevealModal } from './components/Modals';
 import Toast from './components/Toast';
 
 export default function App() {
   const socketRef = useRef(null);
 
-  const [screen, setScreen] = useState('lobby'); // 'lobby' | 'call'
+  // ── App State ──────────────────────────────────────────────────────────────
+  const [screen, setScreen] = useState('lobby'); // 'lobby' | 'call' | 'banned' | 'loading'
   const [userName, setUserName] = useState('');
   const [oreyId, setOreyId] = useState('');
   const [oreyIdExpiry, setOreyIdExpiry] = useState(null);
   const [roomId, setRoomId] = useState('');
-  const [partner, setPartner] = useState(null); // { socketId, userName, oreyId }
+  const [partner, setPartner] = useState(null); // { socketId, userName, oreyId, deviceId }
   const [searching, setSearching] = useState(false);
   const [autoSearchCountdown, setAutoSearchCountdown] = useState(null);
   const [autoSearchDelay, setAutoSearchDelay] = useState(null);
 
   const [shareRequest, setShareRequest] = useState(null); // { fromId, fromName }
   const [revealData, setRevealData] = useState(null);     // { oreyId, userName }
+  const [reportModal, setReportModal] = useState(false);   // Show/hide report modal
 
   const [toast, setToast] = useState(null);
 
   const webrtc = useWebRTC(socketRef);
+
+  // ── NEW: Device Identity & Ban State ───────────────────────────────────────
+  const { 
+    deviceId, 
+    isBanned, 
+    banInfo, 
+    isLoading: deviceLoading 
+  } = useDeviceIdentity(socketRef);
+
+  // ── NEW: Report Hook ───────────────────────────────────────────────────────
+  const { reportUser, isReporting } = useReport(deviceId);
 
   // ── Toast helper ───────────────────────────────────────────────────────────
 
@@ -32,9 +49,24 @@ export default function App() {
     setToast({ message, type, id: Date.now() });
   }, []);
 
+  // ── NEW: Set screen based on ban status ────────────────────────────────────
+  
+  useEffect(() => {
+    if (deviceLoading) {
+      setScreen('loading');
+    } else if (isBanned) {
+      setScreen('banned');
+    } else if (screen === 'loading' || screen === 'banned') {
+      setScreen('lobby');
+    }
+  }, [deviceLoading, isBanned, screen]);
+
   // ── Fetch Orey-ID on mount ─────────────────────────────────────────────────
 
   useEffect(() => {
+    // Only fetch if not banned
+    if (isBanned) return;
+    
     fetch('/generate-orey-id')
       .then((r) => r.json())
       .then(({ oreyId, expiresAt }) => {
@@ -42,7 +74,7 @@ export default function App() {
         setOreyIdExpiry(expiresAt);
       })
       .catch(() => showToast('Could not generate Orey-ID', 'error'));
-  }, [showToast]);
+  }, [showToast, isBanned]);
 
   // ── Socket setup ───────────────────────────────────────────────────────────
 
@@ -51,11 +83,48 @@ export default function App() {
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      // ── NEW: Register device ID on connection ──
+      if (deviceId) {
+        socket.emit('register-device', { deviceId });
+      }
+      
       if (oreyId) {
         socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
       }
     });
 
+    // ── NEW: Ban-related socket events ──
+    socket.on('device-banned', (banInfo) => {
+      showToast('Your device has been banned', 'error');
+      setScreen('banned');
+    });
+
+    socket.on('device-registered', ({ deviceId: registeredId }) => {
+      console.log('Device registered with server:', registeredId?.substring(0, 12) + '...');
+    });
+
+    socket.on('device-error', ({ error }) => {
+      showToast(error, 'error');
+    });
+
+    socket.on('warning', ({ reason, message }) => {
+      showToast(message || `Warning: ${reason}`, 'warning');
+    });
+
+    // ── NEW: Report socket events ──
+    socket.on('report-submitted', ({ success, autoBanned }) => {
+      if (autoBanned) {
+        showToast('User has been automatically banned due to multiple reports', 'warning');
+      } else {
+        showToast('Report submitted successfully', 'info');
+      }
+    });
+
+    socket.on('report-error', ({ error }) => {
+      showToast(error, 'error');
+    });
+
+    // ── Existing socket events ──
     socket.on('orey-id-registered', ({ oreyId: id, expiresAt }) => {
       setOreyId(id);
       setOreyIdExpiry(expiresAt);
@@ -73,7 +142,10 @@ export default function App() {
       setRoomId(rid);
       setSearching(false);
       if (peers && peers.length > 0) {
-        setPartner(peers[0]);
+        setPartner({
+          ...peers[0],
+          deviceId: peers[0].deviceId || null  // Capture partner's device ID
+        });
       }
       setScreen('call');
       webrtc.startLocal();
@@ -87,7 +159,7 @@ export default function App() {
     });
 
     socket.on('user-joined', ({ socketId, userName: pName }) => {
-      setPartner({ socketId, userName: pName, oreyId: null });
+      setPartner((prev) => ({ ...prev, socketId, userName: pName }));
     });
 
     socket.on('offer', async ({ offer, fromId, fromName }) => {
@@ -126,6 +198,7 @@ export default function App() {
       setScreen('lobby');
       setPartner(null);
       setRoomId('');
+      setReportModal(false);
       webrtc.stopLocal();
       webrtc.closePeer();
     });
@@ -133,6 +206,7 @@ export default function App() {
     socket.on('skip-confirmed', () => {
       webrtc.closePeer();
       setPartner(null);
+      setReportModal(false);
       setSearching(true);
     });
 
@@ -157,9 +231,9 @@ export default function App() {
     return () => {
       socket.removeAllListeners();
     };
-  }, [oreyId, userName, webrtc, showToast]);
+  }, [oreyId, userName, deviceId, webrtc, showToast]);
 
-  // ── Register Orey-ID when it's available ──────────────────────────────────
+  // ── Register Orey-ID & Device when available ──────────────────────────────
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -167,6 +241,15 @@ export default function App() {
       socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
     }
   }, [oreyId, userName]);
+
+  // ── NEW: Register device ID when it changes ───────────────────────────────
+  
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (socket?.connected && deviceId) {
+      socket.emit('register-device', { deviceId });
+    }
+  }, [deviceId]);
 
   // ── Auto-search countdown ─────────────────────────────────────────────────
 
@@ -181,13 +264,12 @@ export default function App() {
   }, [autoSearchCountdown]);
 
   // ── WebRTC: make offer when both in room ──────────────────────────────────
-  // Caller is whoever joined as the "first" peer received via user-joined
+
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
     const handleUserJoined = ({ socketId }) => {
-      // We are the one already in the room → we make the offer
       webrtc.makeOffer(socketId);
     };
 
@@ -195,16 +277,14 @@ export default function App() {
     return () => socket.off('user-joined', handleUserJoined);
   }, [webrtc]);
 
-  // Auto-offer when auto-matched (server sends room-joined with peers already populated)
+  // Auto-offer when auto-matched
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
     const handleRoomJoined = ({ peers, autoMatched }) => {
       if (autoMatched && peers && peers.length > 0) {
-        // Small delay to ensure both sides have set up listeners
         setTimeout(() => {
-          // Only one side makes the offer — lower socket ID wins
           if (socket.id < peers[0].socketId) {
             webrtc.makeOffer(peers[0].socketId);
           }
@@ -262,8 +342,97 @@ export default function App() {
     setShareRequest(null);
   };
 
+  // ── NEW: Report Actions ────────────────────────────────────────────────────
+
+  const handleOpenReport = () => {
+    setReportModal(true);
+  };
+
+  const handleCloseReport = () => {
+    setReportModal(false);
+  };
+
+  const handleSubmitReport = async (reason, description) => {
+    if (!partner) {
+      showToast('No partner to report', 'error');
+      return;
+    }
+
+    try {
+      // Try socket-based report first (faster)
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('report-user', {
+          reportedDeviceId: partner.deviceId || partner.socketId, // Fallback to socketId
+          reportedUserId: partner.oreyId || null,
+          reason,
+          description
+        });
+      } else {
+        // Fallback to REST API
+        const response = await fetch('/api/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'oryx_2024_secure_key_change_this'
+          },
+          body: JSON.stringify({
+            reporterDeviceId: deviceId,
+            reportedDeviceId: partner.deviceId || partner.socketId,
+            reportedUserId: partner.oreyId || null,
+            reason,
+            description
+          })
+        });
+
+        const result = await response.json();
+        if (result.autoBanned) {
+          showToast('User has been automatically banned', 'warning');
+        } else {
+          showToast('Report submitted successfully', 'info');
+        }
+      }
+
+      setReportModal(false);
+    } catch (error) {
+      showToast('Failed to submit report', 'error');
+    }
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Loading screen
+  if (screen === 'loading') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000',
+        color: '#FF2D55',
+        fontSize: '1.5rem',
+        fontWeight: 'bold'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          Initializing...
+        </div>
+      </div>
+    );
+  }
+
+  // Ban screen
+  if (screen === 'banned') {
+    return (
+      <BanScreen
+        reason={banInfo?.reason || 'Your device has been banned due to violations of our terms of service.'}
+        expiresAt={banInfo?.expiresAt || null}
+        permanent={!banInfo?.expiresAt}
+      />
+    );
+  }
+
+  // Normal app
   return (
     <>
       {screen === 'lobby' && (
@@ -297,8 +466,18 @@ export default function App() {
           onLeave={handleLeave}
           onShareId={handleShareId}
           onCancelAutoSearch={cancelAutoSearch}
+          onReport={handleOpenReport}           // NEW: Report button handler
         />
       )}
+
+      {/* NEW: Report Modal */}
+      <ReportModal
+        isOpen={reportModal}
+        onClose={handleCloseReport}
+        onSubmit={handleSubmitReport}
+        reportedUserName={partner?.userName || 'Unknown User'}
+        isReporting={isReporting}
+      />
 
       {shareRequest && (
         <ShareRequestModal
