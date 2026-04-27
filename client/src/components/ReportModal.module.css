@@ -12,8 +12,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
@@ -30,8 +34,14 @@
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .header {
@@ -40,7 +50,10 @@
   gap: 0.75rem;
 }
 
-.icon { color: #ef4444; flex-shrink: 0; }
+.icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
 
 .header h2 {
   flex: 1;
@@ -71,7 +84,9 @@
   margin: 0;
 }
 
-.subtitle strong { color: rgba(255, 255, 255, 0.7); }
+.subtitle strong {
+  color: rgba(255, 255, 255, 0.7);
+}
 
 .reasons {
   display: flex;
@@ -117,8 +132,13 @@
   transition: border-color 0.2s;
 }
 
-.textarea:focus { border-color: rgba(255, 255, 255, 0.2); }
-.textarea::placeholder { color: rgba(255, 255, 255, 0.2); }
+.textarea:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.textarea::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
 
 .submitBtn {
   width: 100%;
@@ -133,8 +153,14 @@
   transition: all 0.2s;
 }
 
-.submitBtn:hover:not(:disabled) { background: #dc2626; }
-.submitBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.submitBtn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.submitBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 
 .disclaimer {
   font-size: 0.65rem;
