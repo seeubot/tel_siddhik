@@ -64,11 +64,6 @@
   transform: scaleX(-1);
 }
 
-.localBlurred {
-  filter: blur(60px);
-  transform: scaleX(-1) scale(1.25);
-}
-
 .placeholder {
   position: absolute;
   inset: 0;
@@ -104,25 +99,13 @@
   animation: bounce 1.4s infinite ease-in-out;
 }
 
-.dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes bounce {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
-  }
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 .cameraOffOverlay {
@@ -166,6 +149,77 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* ─── NEW: Partner Info Bar ─────────────────────────────── */
+.partnerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+  backdrop-filter: blur(20px);
+  max-width: 320px;
+  width: 100%;
+}
+
+.partnerInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.partnerAvatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.partnerName {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reportBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reportBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.reportBtn:active {
+  transform: scale(0.95);
+}
+
+/* ─── Control Wrapper ───────────────────────────────────── */
 .controlWrapper {
   position: fixed;
   bottom: 1.5rem;
@@ -176,7 +230,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   transition: all 0.5s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
@@ -214,12 +268,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .statusText {
@@ -313,6 +363,16 @@
   color: #ffffff;
 }
 
+/* ─── NEW: Report Button Style ──────────────────────────── */
+.btnReport {
+  color: rgba(239, 68, 68, 0.6);
+}
+
+.btnReport:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
 .btnDanger {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
@@ -373,12 +433,8 @@
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .zapIcon {
@@ -405,14 +461,8 @@
 }
 
 @keyframes fadeInZoom {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .countdownText {
