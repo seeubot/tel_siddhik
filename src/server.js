@@ -49,6 +49,10 @@ const AUTO_SEARCH_DELAY_MS = 5000;
 const API_KEY = process.env.API_KEY || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
 
+// ─── Ban System Configuration ─────────────────────────────────────────────────
+const AUTO_BAN_THRESHOLD = 3;        // Number of reports needed for auto-ban
+const DEFAULT_BAN_DURATION_HOURS = 720; // 30 days default ban
+
 const VIDEO_QUALITY = {
   low: { maxBitrate: 150000, scaleResolutionDownBy: 4, maxFramerate: 15 },
   medium: { maxBitrate: 500000, scaleResolutionDownBy: 2, maxFramerate: 24 },
@@ -69,6 +73,12 @@ const oreyIds = new Map();
 const rooms = new Map();
 const randomQueue = [];
 const autoSearchTimers = new Map();
+
+// ─── NEW: Report & Ban State ──────────────────────────────────────────────────
+const bannedDevices = new Map();      // deviceId -> banInfo
+const reports = new Map();            // reportId -> reportInfo
+const userReportCount = new Map();    // deviceId -> number of reports received
+const reporterHistory = new Map();    // reporterId -> Set of reportedIds (prevent duplicate reports)
 
 let notifications = [
   {
@@ -209,11 +219,13 @@ function attemptMatch(newSocketId) {
 
   const selfData = { 
     userName: selfSocket.data.userName || 'Anonymous', 
-    oreyId: selfSocket.data.oreyId || null 
+    oreyId: selfSocket.data.oreyId || null,
+    deviceId: selfSocket.data.deviceId || null      // NEW: Include device ID
   };
   const partnerData = { 
     userName: partnerSocket.data.userName || 'Anonymous', 
-    oreyId: partnerSocket.data.oreyId || null 
+    oreyId: partnerSocket.data.oreyId || null,
+    deviceId: partnerSocket.data.deviceId || null    // NEW: Include device ID
   };
 
   rooms.get(roomId).set(selfId, selfData);
@@ -248,6 +260,54 @@ function attemptMatch(newSocketId) {
   });
 }
 
+// ─── NEW: Ban/Report Helpers ──────────────────────────────────────────────────
+
+/**
+ * Check if a device is currently banned
+ * Returns banInfo if banned, null if not
+ */
+function isDeviceBanned(deviceId) {
+  if (!deviceId) return null;
+  
+  const banInfo = bannedDevices.get(deviceId);
+  if (!banInfo) return null;
+  
+  // Check if temporary ban has expired
+  if (banInfo.expiresAt && Date.now() > banInfo.expiresAt) {
+    bannedDevices.delete(deviceId);
+    console.log(`✅ Ban expired for device: ${deviceId.substring(0, 12)}...`);
+    return null;
+  }
+  
+  return banInfo;
+}
+
+/**
+ * Apply ban to a device and disconnect all their sockets
+ */
+function banDeviceAndDisconnect(deviceId, banInfo) {
+  bannedDevices.set(deviceId, banInfo);
+  
+  // Disconnect all sockets belonging to this device
+  const socketsToDisconnect = [];
+  for (const [socketId, socket] of io.sockets.sockets) {
+    if (socket.data.deviceId === deviceId) {
+      socketsToDisconnect.push(socketId);
+    }
+  }
+  
+  for (const socketId of socketsToDisconnect) {
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.emit('device-banned', banInfo);
+      socket.disconnect(true);
+    }
+  }
+  
+  console.log(`🚫 Banned device: ${deviceId.substring(0, 12)}... - ${socketsToDisconnect.length} sockets disconnected`);
+  return socketsToDisconnect.length;
+}
+
 // ─── Auth Middleware ─────────────────────────────────────────────────────────
 
 const verifyApiKey = (req, res, next) => {
@@ -272,6 +332,8 @@ app.get('/health', (_req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeConnections: io.engine.clientsCount,
+    bannedDevices: bannedDevices.size,       // NEW
+    totalReports: reports.size,              // NEW
     memory: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
@@ -350,6 +412,182 @@ app.get('/api/config', (req, res) => {
       help: "https://orey.app/help"
     },
     maintenance: appConfig.maintenance
+  });
+});
+
+// ─── NEW: Device & Report API Endpoints ──────────────────────────────────────
+
+/**
+ * POST /api/device/register
+ * Register a device ID with the server
+ * Body: { deviceId: string, platform?: string }
+ */
+app.post('/api/device/register', verifyApiKey, (req, res) => {
+  const { deviceId, platform } = req.body;
+  
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
+  }
+  
+  // Check if device is banned
+  const banInfo = isDeviceBanned(deviceId);
+  if (banInfo) {
+    return res.status(403).json({
+      error: 'Device is banned',
+      banned: true,
+      reason: banInfo.reason,
+      timestamp: banInfo.timestamp,
+      expiresAt: banInfo.expiresAt || null,
+      durationHours: banInfo.durationHours || null,
+      permanent: !banInfo.expiresAt
+    });
+  }
+  
+  console.log(`📱 Device registered: ${deviceId.substring(0, 12)}... (${platform || 'unknown'})`);
+  
+  res.json({
+    success: true,
+    deviceId,
+    registered: true,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * POST /api/device/check-ban
+ * Check if a device is banned
+ * Body: { deviceId: string }
+ */
+app.post('/api/device/check-ban', verifyApiKey, (req, res) => {
+  const { deviceId } = req.body;
+  
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
+  }
+  
+  const banInfo = isDeviceBanned(deviceId);
+  
+  if (banInfo) {
+    return res.status(403).json({
+      banned: true,
+      ...banInfo
+    });
+  }
+  
+  res.json({ banned: false });
+});
+
+/**
+ * POST /api/report
+ * Report a user for misbehavior
+ * Body: { reporterDeviceId, reportedDeviceId, reportedUserId?, reason, description?, evidence? }
+ */
+app.post('/api/report', verifyApiKey, (req, res) => {
+  const { 
+    reporterDeviceId,    // Device ID of person filing report
+    reportedDeviceId,    // Device ID of person being reported
+    reportedUserId,      // Optional: Orey ID of person being reported
+    reason,              // Reason for report
+    description,         // Optional: Additional details
+    evidence             // Optional: Evidence (screenshot URL, etc.)
+  } = req.body;
+
+  // Validation
+  if (!reportedDeviceId || !reason) {
+    return res.status(400).json({ 
+      error: 'reportedDeviceId and reason are required',
+      received: { reportedDeviceId, reason }
+    });
+  }
+  
+  if (!reporterDeviceId) {
+    return res.status(400).json({ error: 'reporterDeviceId is required' });
+  }
+  
+  // Prevent self-reporting
+  if (reporterDeviceId === reportedDeviceId) {
+    return res.status(400).json({ error: 'Cannot report yourself' });
+  }
+  
+  // Prevent duplicate reports from same reporter
+  const reportedByReporter = reporterHistory.get(reporterDeviceId) || new Set();
+  if (reportedByReporter.has(reportedDeviceId)) {
+    return res.status(400).json({ 
+      error: 'You have already reported this user',
+      alreadyReported: true
+    });
+  }
+  
+  // Create the report
+  const reportId = generateRoomId();
+  const report = {
+    id: reportId,
+    reporterDeviceId,
+    reportedDeviceId,
+    reportedUserId: reportedUserId || null,
+    reason,
+    description: description || '',
+    evidence: evidence || null,
+    timestamp: new Date().toISOString(),
+    status: 'pending',
+    reviewedBy: null,
+    reviewNotes: '',
+    reviewedAt: null,
+    autoBanned: false
+  };
+
+  reports.set(reportId, report);
+  
+  // Track reporter history
+  reportedByReporter.add(reportedDeviceId);
+  reporterHistory.set(reporterDeviceId, reportedByReporter);
+  
+  // Increment report count for the reported user
+  const currentCount = (userReportCount.get(reportedDeviceId) || 0) + 1;
+  userReportCount.set(reportedDeviceId, currentCount);
+
+  console.log(`🚨 Report #${reportId}: Device ${reportedDeviceId.substring(0, 12)}... reported for "${reason}"`);
+  console.log(`   Reporter: ${reporterDeviceId.substring(0, 12)}...`);
+  console.log(`   Total reports against this device: ${currentCount}`);
+
+  // Check if auto-ban threshold reached
+  let autoBanned = false;
+  let banInfo = null;
+  
+  if (currentCount >= AUTO_BAN_THRESHOLD) {
+    banInfo = {
+      reason: `Auto-banned: ${currentCount} reports received | Latest: ${reason}`,
+      timestamp: new Date().toISOString(),
+      expiresAt: Date.now() + (DEFAULT_BAN_DURATION_HOURS * 3600000),
+      durationHours: DEFAULT_BAN_DURATION_HOURS,
+      source: 'auto',
+      reportIds: []
+    };
+    
+    // Collect all report IDs for this device
+    for (const [rId, r] of reports.entries()) {
+      if (r.reportedDeviceId === reportedDeviceId) {
+        banInfo.reportIds.push(rId);
+        r.status = 'auto_banned';
+        r.autoBanned = true;
+      }
+    }
+    
+    report.status = 'auto_banned';
+    report.autoBanned = true;
+    
+    banDeviceAndDisconnect(reportedDeviceId, banInfo);
+    autoBanned = true;
+    
+    console.log(`🤖 AUTO-BANNED: ${reportedDeviceId.substring(0, 12)}... (${currentCount} reports)`);
+  }
+
+  res.json({
+    success: true,
+    reportId,
+    reportCount: currentCount,
+    autoBanned,
+    banInfo: banInfo || null
   });
 });
 
@@ -467,20 +705,236 @@ app.put('/admin/video-quality', verifyAdminKey, (req, res) => {
   res.json({ success: true, videoQuality: appConfig.videoQuality });
 });
 
+// ─── NEW: Admin Report Management Endpoints ──────────────────────────────────
+
+/**
+ * GET /admin/reports
+ * Get all reports (with optional status filter)
+ * Query: ?status=pending|reviewed|banned|dismissed|auto_banned
+ */
+app.get('/admin/reports', verifyAdminKey, (req, res) => {
+  const status = req.query.status;
+  const allReports = [];
+  
+  for (const [id, report] of reports.entries()) {
+    if (status && report.status !== status) continue;
+    allReports.push({ id, ...report });
+  }
+  
+  // Sort by newest first
+  allReports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
+  res.json({
+    reports: allReports,
+    total: allReports.length,
+    pending: [...reports.values()].filter(r => r.status === 'pending').length,
+    autoBanned: [...reports.values()].filter(r => r.status === 'auto_banned').length,
+    activeBans: bannedDevices.size
+  });
+});
+
+/**
+ * POST /admin/reports/:reportId/action
+ * Take action on a specific report
+ * Body: { action: 'ban'|'dismiss'|'warn', banDuration?: number, notes?: string }
+ */
+app.post('/admin/reports/:reportId/action', verifyAdminKey, (req, res) => {
+  const { reportId } = req.params;
+  const { action, banDuration, notes } = req.body;
+  
+  const report = reports.get(reportId);
+  if (!report) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+  
+  if (report.status !== 'pending') {
+    return res.status(400).json({ error: `Report already ${report.status}` });
+  }
+  
+  report.reviewedAt = new Date().toISOString();
+  report.reviewNotes = notes || '';
+  
+  switch (action) {
+    case 'ban': {
+      const duration = banDuration || DEFAULT_BAN_DURATION_HOURS;
+      const banInfo = {
+        reason: report.reason,
+        description: report.description,
+        timestamp: new Date().toISOString(),
+        expiresAt: duration > 0 ? Date.now() + (duration * 3600000) : null,
+        durationHours: duration > 0 ? duration : null,
+        permanent: duration === 0,
+        source: 'admin',
+        reportIds: [reportId],
+        reviewedBy: 'admin',
+        reviewNotes: notes || ''
+      };
+      
+      banDeviceAndDisconnect(report.reportedDeviceId, banInfo);
+      report.status = 'banned';
+      
+      console.log(`👨‍⚖️ Admin banned device: ${report.reportedDeviceId.substring(0, 12)}...`);
+      break;
+    }
+    
+    case 'dismiss': {
+      report.status = 'dismissed';
+      console.log(`✅ Report dismissed: ${reportId}`);
+      break;
+    }
+    
+    case 'warn': {
+      report.status = 'warned';
+      // Could send warning notification to user
+      for (const [socketId, socket] of io.sockets.sockets) {
+        if (socket.data.deviceId === report.reportedDeviceId) {
+          socket.emit('warning', {
+            reason: report.reason,
+            message: 'You have received a warning. Further violations may result in a ban.'
+          });
+        }
+      }
+      console.log(`⚠️ Warning sent to device: ${report.reportedDeviceId.substring(0, 12)}...`);
+      break;
+    }
+    
+    default:
+      return res.status(400).json({ error: 'Invalid action. Use: ban, dismiss, or warn' });
+  }
+  
+  res.json({ success: true, report });
+});
+
+// ─── NEW: Admin Ban Management Endpoints ─────────────────────────────────────
+
+/**
+ * POST /admin/ban-device
+ * Manually ban a device
+ * Body: { deviceId, reason, durationHours? }
+ */
+app.post('/admin/ban-device', verifyAdminKey, (req, res) => {
+  const { deviceId, reason, durationHours } = req.body;
+  
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
+  }
+  
+  // Check if already banned
+  const existingBan = isDeviceBanned(deviceId);
+  if (existingBan) {
+    return res.status(400).json({ 
+      error: 'Device is already banned',
+      existingBan
+    });
+  }
+  
+  const banInfo = {
+    reason: reason || 'Violation of terms of service',
+    timestamp: new Date().toISOString(),
+    expiresAt: durationHours ? Date.now() + (durationHours * 3600000) : null,
+    durationHours: durationHours || null,
+    permanent: !durationHours,
+    source: 'manual',
+    reviewedBy: 'admin'
+  };
+  
+  const disconnected = banDeviceAndDisconnect(deviceId, banInfo);
+  
+  console.log(`🚫 Manual ban: ${deviceId.substring(0, 12)}... - ${disconnected} sockets disconnected`);
+  
+  res.json({ 
+    success: true, 
+    deviceId: deviceId.substring(0, 12) + '...',
+    banInfo,
+    socketsDisconnected: disconnected
+  });
+});
+
+/**
+ * DELETE /admin/ban-device/:deviceId
+ * Unban a device
+ */
+app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
+  const { deviceId } = req.params;
+  
+  if (!bannedDevices.has(deviceId)) {
+    return res.status(404).json({ error: 'Device is not banned' });
+  }
+  
+  bannedDevices.delete(deviceId);
+  
+  // Also clear report count so they start fresh
+  userReportCount.delete(deviceId);
+  
+  console.log(`✅ Device unbanned: ${deviceId.substring(0, 12)}...`);
+  
+  res.json({ success: true, message: 'Device has been unbanned' });
+});
+
+/**
+ * GET /admin/banned-devices
+ * Get list of all banned devices
+ */
+app.get('/admin/banned-devices', verifyAdminKey, (_req, res) => {
+  const list = [];
+  
+  for (const [deviceId, info] of bannedDevices.entries()) {
+    list.push({
+      deviceId: deviceId.substring(0, 12) + '...',
+      reason: info.reason,
+      timestamp: info.timestamp,
+      expiresAt: info.expiresAt || null,
+      permanent: !info.expiresAt,
+      isExpired: info.expiresAt ? Date.now() > info.expiresAt : false,
+      source: info.source || 'manual'
+    });
+  }
+  
+  // Clean expired bans
+  for (const item of list) {
+    if (item.isExpired && item.expiresAt) {
+      for (const [deviceId, info] of bannedDevices.entries()) {
+        if (info.expiresAt === item.expiresAt) {
+          bannedDevices.delete(deviceId);
+        }
+      }
+    }
+  }
+  
+  res.json({ 
+    bannedDevices: list.filter(b => !b.isExpired), 
+    total: list.filter(b => !b.isExpired).length 
+  });
+});
+
+// ─── NEW: Admin Stats (Updated) ──────────────────────────────────────────────
+
 app.get('/admin/stats', verifyAdminKey, (_req, res) => {
+  // Clean expired bans first
+  for (const [deviceId, info] of bannedDevices.entries()) {
+    if (info.expiresAt && Date.now() > info.expiresAt) {
+      bannedDevices.delete(deviceId);
+    }
+  }
+  
   res.json({
     activeConnections: io.engine.clientsCount,
     totalOreyIds: oreyIds.size,
     activeRooms: rooms.size,
     queueLength: randomQueue.length,
     totalNotifications: notifications.length,
+    // Ban stats
+    bannedDevices: bannedDevices.size,
+    totalReports: reports.size,
+    pendingReports: [...reports.values()].filter(r => r.status === 'pending').length,
+    autoBannedCount: [...reports.values()].filter(r => r.status === 'auto_banned').length,
+    // System
     uptime: process.uptime(),
     memoryMB: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
 
 // ─── Admin Panel Routes (NO AUTH REQUIRED for the page itself) ────────────────
-// IMPORTANT: These must be BEFORE the static file serving and catch-all route
 
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
@@ -493,22 +947,17 @@ app.get('/admin.html', (_req, res) => {
 // ─── Static Files & SPA ─────────────────────────────────────────────────────
 
 if (process.env.NODE_ENV === 'production') {
-  // Serve static files from public directory
   app.use(express.static(path.join(__dirname, '..', 'public'), {
-    index: false // Don't auto-serve index.html
+    index: false
   }));
   
-  // Catch-all for React SPA - but skip API and Admin routes
   app.get('*', (req, res) => {
-    // Don't interfere with API or admin routes
     if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
       return res.status(404).json({ error: 'Not found' });
     }
-    // Don't serve admin page as SPA
     if (req.path === '/admin' || req.path === '/admin.html') {
       return res.status(404).json({ error: 'Not found' });
     }
-    // Serve React app for all other routes
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 }
@@ -528,6 +977,125 @@ io.on('connection', (socket) => {
   if (appConfig.maintenance.enabled) {
     socket.emit('maintenance-mode', appConfig.maintenance);
   }
+
+  // ─── NEW: Device Registration Socket Event ──────────────────────────────────
+  
+  socket.on('register-device', ({ deviceId }) => {
+    if (!deviceId) {
+      socket.emit('device-error', { error: 'Device ID required' });
+      return;
+    }
+    
+    // Check if device is banned
+    const banInfo = isDeviceBanned(deviceId);
+    if (banInfo) {
+      socket.emit('device-banned', banInfo);
+      socket.disconnect(true);
+      return;
+    }
+    
+    socket.data.deviceId = deviceId;
+    console.log(`🔗 Socket ${socket.id} linked to device ${deviceId.substring(0, 12)}...`);
+    
+    socket.emit('device-registered', { 
+      deviceId,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // ─── NEW: Report Socket Event (alternative to REST for in-call reporting) ──
+  
+  socket.on('report-user', ({ reportedDeviceId, reportedUserId, reason, description }) => {
+    const reporterDeviceId = socket.data.deviceId;
+    
+    if (!reporterDeviceId) {
+      socket.emit('report-error', { error: 'Your device is not registered' });
+      return;
+    }
+    
+    if (!reportedDeviceId || !reason) {
+      socket.emit('report-error', { error: 'reportedDeviceId and reason required' });
+      return;
+    }
+    
+    // Prevent self-report
+    if (reporterDeviceId === reportedDeviceId) {
+      socket.emit('report-error', { error: 'Cannot report yourself' });
+      return;
+    }
+    
+    // Prevent duplicate reports
+    const reportedByReporter = reporterHistory.get(reporterDeviceId) || new Set();
+    if (reportedByReporter.has(reportedDeviceId)) {
+      socket.emit('report-error', { error: 'Already reported this user' });
+      return;
+    }
+    
+    const reportId = generateRoomId();
+    const report = {
+      id: reportId,
+      reporterDeviceId,
+      reportedDeviceId,
+      reportedUserId: reportedUserId || null,
+      reason,
+      description: description || '',
+      evidence: null,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+      reviewedBy: null,
+      reviewNotes: '',
+      reviewedAt: null,
+      autoBanned: false
+    };
+
+    reports.set(reportId, report);
+    
+    reportedByReporter.add(reportedDeviceId);
+    reporterHistory.set(reporterDeviceId, reportedByReporter);
+    
+    const currentCount = (userReportCount.get(reportedDeviceId) || 0) + 1;
+    userReportCount.set(reportedDeviceId, currentCount);
+
+    console.log(`🚨 Socket Report #${reportId}: ${reportedDeviceId.substring(0, 12)}... for "${reason}"`);
+
+    // Auto-ban check
+    let autoBanned = false;
+    let banInfo = null;
+    
+    if (currentCount >= AUTO_BAN_THRESHOLD) {
+      banInfo = {
+        reason: `Auto-banned: ${currentCount} reports received | Latest: ${reason}`,
+        timestamp: new Date().toISOString(),
+        expiresAt: Date.now() + (DEFAULT_BAN_DURATION_HOURS * 3600000),
+        durationHours: DEFAULT_BAN_DURATION_HOURS,
+        source: 'auto',
+        reportIds: []
+      };
+      
+      for (const [rId, r] of reports.entries()) {
+        if (r.reportedDeviceId === reportedDeviceId) {
+          banInfo.reportIds.push(rId);
+          r.status = 'auto_banned';
+          r.autoBanned = true;
+        }
+      }
+      
+      report.status = 'auto_banned';
+      report.autoBanned = true;
+      
+      banDeviceAndDisconnect(reportedDeviceId, banInfo);
+      autoBanned = true;
+    }
+    
+    socket.emit('report-submitted', {
+      success: true,
+      reportId,
+      reportCount: currentCount,
+      autoBanned
+    });
+  });
+
+  // ─── Existing Socket Events ─────────────────────────────────────────────────
 
   socket.on('register-orey-id', ({ oreyId, userName }) => {
     cleanExpiredOreyIds();
@@ -578,8 +1146,16 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     targetSocket.join(roomId);
 
-    const callerData = { userName: socket.data.userName || 'Anonymous', oreyId: socket.data.oreyId || null };
-    const calleeData = { userName: entry.userName, oreyId: targetOreyId };
+    const callerData = { 
+      userName: socket.data.userName || 'Anonymous', 
+      oreyId: socket.data.oreyId || null,
+      deviceId: socket.data.deviceId || null      // NEW
+    };
+    const calleeData = { 
+      userName: entry.userName, 
+      oreyId: targetOreyId,
+      deviceId: targetSocket.data.deviceId || null  // NEW
+    };
 
     rooms.get(roomId).set(socket.id, callerData);
     rooms.get(roomId).set(entry.socketId, calleeData);
@@ -595,6 +1171,8 @@ io.on('connection', (socket) => {
     targetSocket.emit('incoming-call', { fromName: callerData.userName, fromOreyId: callerData.oreyId });
   });
 
+  // ... (All remaining existing socket events stay exactly the same) ...
+  
   socket.on('join-random', () => {
     cancelAutoSearch(socket.id);
     removeFromQueue(socket.id);
@@ -619,7 +1197,11 @@ io.on('connection', (socket) => {
       return;
     }
     socket.join(roomId);
-    r.set(socket.id, { userName: socket.data.userName, oreyId: socket.data.oreyId || null });
+    r.set(socket.id, { 
+      userName: socket.data.userName, 
+      oreyId: socket.data.oreyId || null,
+      deviceId: socket.data.deviceId || null      // NEW
+    });
     const peers = [...r.entries()]
       .filter(([id]) => id !== socket.id)
       .map(([socketId, data]) => ({ socketId, ...data }));
@@ -800,11 +1382,13 @@ server.listen(PORT, () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🚀 Orey Server Running');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📍 URL:        http://localhost:${PORT}`);
-  console.log(`👥 Socket.IO:  Active`);
-  console.log(`📹 Quality:    ${Object.keys(VIDEO_QUALITY).join(', ')}`);
-  console.log(`🔑 API Key:    ${API_KEY.substring(0, 8)}...`);
-  console.log(`🛡️ Admin Key:  ${ADMIN_KEY.substring(0, 8)}...`);
-  console.log(`🖥️  Admin Page: http://localhost:${PORT}/admin`);
+  console.log(`📍 URL:            http://localhost:${PORT}`);
+  console.log(`👥 Socket.IO:      Active`);
+  console.log(`📹 Quality:        ${Object.keys(VIDEO_QUALITY).join(', ')}`);
+  console.log(`🔑 API Key:        ${API_KEY.substring(0, 8)}...`);
+  console.log(`🛡️ Admin Key:      ${ADMIN_KEY.substring(0, 8)}...`);
+  console.log(`🖥️  Admin Page:     http://localhost:${PORT}/admin`);
+  console.log(`🚫 Auto-Ban After: ${AUTO_BAN_THRESHOLD} reports`);
+  console.log(`⏰ Ban Duration:   ${DEFAULT_BAN_DURATION_HOURS}h (${DEFAULT_BAN_DURATION_HOURS/24} days)`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
