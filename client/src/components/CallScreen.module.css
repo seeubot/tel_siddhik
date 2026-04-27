@@ -1,4 +1,310 @@
-/* Additional CSS for Enhanced Control Bar */
+/* ============================================
+   OREY! PRO - COMPLETE CALL SCREEN STYLES
+   ============================================ */
+
+.container {
+  position: fixed;
+  inset: 0;
+  background-color: #020202;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column; /* Mobile: Top/Bottom */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 1024px) {
+  .container {
+    flex-direction: row; /* Desktop: Side-by-side */
+  }
+}
+
+.uiHidden {
+  cursor: none;
+}
+
+/* Grain Texture Overlay */
+.grainOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.2;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+}
+
+/* Panel Layout */
+.panel {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  transition: all 1s ease;
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    height: 100%;
+  }
+  .localPanel {
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (max-width: 1023px) {
+  .localPanel {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+}
+
+.remotePanel { background-color: #050508; }
+.localPanel { background-color: #08080a; }
+
+.searchingBlur {
+  filter: blur(40px) scale(1.1);
+  opacity: 0.5;
+}
+
+/* Video Streams */
+.videoStream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mirrored {
+  transform: scaleX(-1);
+}
+
+/* Branding Center */
+.brandingCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.brandTextMain {
+  font-size: clamp(4rem, 15vw, 10rem);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  color: #fff;
+  opacity: 0.03;
+  text-transform: uppercase;
+  animation: floatBrand 6s infinite ease-in-out;
+  user-select: none;
+}
+
+@keyframes floatBrand {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.03; }
+  50% { transform: translateY(-10px) scale(1.03); opacity: 0.05; }
+}
+
+.statusLabel, .cameraOffText {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.6em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.1);
+  margin-top: -10px;
+}
+
+/* Tags & Indicators */
+.roomTag, .previewTag {
+  position: absolute;
+  z-index: 30;
+  transition: all 0.7s ease;
+}
+
+.roomTag { top: 1.5rem; left: 1.5rem; }
+.previewTag { bottom: 1.5rem; left: 1.5rem; }
+
+@media (min-width: 1024px) {
+  .previewTag { bottom: auto; top: 1.5rem; }
+}
+
+.tagContent {
+  background: rgba(20, 20, 20, 0.45);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.monoText { 
+  font-family: monospace; 
+  font-size: 10px; 
+  color: rgba(255, 255, 255, 0.3); 
+  letter-spacing: 0.2em; 
+}
+
+.tagLabel { 
+  font-size: 10px; 
+  font-weight: 900; 
+  color: rgba(255, 255, 255, 0.5); 
+  text-transform: uppercase; 
+  letter-spacing: 0.2em; 
+}
+
+.statusDot { 
+  width: 6px; 
+  height: 6px; 
+  background: rgba(255, 255, 255, 0.2); 
+  border-radius: 50%; 
+  transition: all 0.3s ease;
+}
+
+/* Preview Dot Active State */
+.dotActive {
+  background: rgba(0, 255, 100, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 100, 0.3);
+  animation: dotBreath 2s infinite;
+}
+
+@keyframes dotBreath {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Mute Indicator */
+.muteIndicator {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 40;
+  padding: 0.75rem;
+  background: rgba(255, 45, 85, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 45, 85, 0.3);
+  color: #FF2D55;
+  animation: pulse 2s infinite;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.muteLabel {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #FF2D55;
+  animation: fadeInOut 2s infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+/* Remote Mute Badge */
+.remoteMuteBadge {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 40;
+  padding: 0.5rem;
+  background: rgba(255, 45, 85, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 45, 85, 0.3);
+  color: #FF2D55;
+}
+
+/* ============================================
+   ENHANCED CONTROL BAR
+   ============================================ */
+
+.controlWrapper {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.7s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+.uiHidden .controlWrapper {
+  transform: translate(-50%, 150%) scale(0.9);
+  opacity: 0;
+}
+
+/* Premium Glass Pill */
+.omniPill {
+  background: rgba(12, 12, 14, 0.75);
+  backdrop-filter: blur(60px) saturate(3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+  position: relative;
+  overflow: visible;
+}
+
+/* Glass Edge Highlight */
+.omniPill::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 999px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05)
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.omniPill:hover::before {
+  opacity: 1;
+}
+
+.omniPill:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 40px rgba(255, 45, 85, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Button Groups */
+.btnGroup { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.15rem;
+}
 
 /* Button Divider */
 .btnDivider {
@@ -6,6 +312,65 @@
   height: 1.5rem;
   background: rgba(255, 255, 255, 0.06);
   margin: 0 0.1rem;
+}
+
+/* Action Buttons */
+.actionBtn {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.35);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+/* Hover Ring Effect */
+.actionBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.actionBtn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.05);
+}
+
+.actionBtn:hover::before {
+  opacity: 1;
+}
+
+.actionBtn:active {
+  transform: scale(0.95);
+  transition: transform 0.1s;
+}
+
+/* Alert/Active State */
+.btnAlert { 
+  color: rgba(255, 45, 85, 0.7) !important;
+  background: rgba(255, 45, 85, 0.08);
+}
+
+.btnAlert:hover {
+  color: #FF2D55 !important;
+  background: rgba(255, 45, 85, 0.15);
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.2);
 }
 
 /* Button Glow Effect */
@@ -24,7 +389,99 @@
   50% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Enhanced Zap Icon */
+/* Premium NEXT Button */
+.nextBtn {
+  height: 3rem;
+  padding: 0 2rem;
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f0f0f0 100%
+  );
+  color: #000;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.5em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Shimmer Effect */
+.nextBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.nextBtn:hover::before {
+  left: 100%;
+}
+
+.nextBtn:hover {
+  background: linear-gradient(
+    135deg,
+    #FF2D55 0%,
+    #ff1a4a 100%
+  );
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 8px 30px rgba(255, 45, 85, 0.4),
+    0 0 0 1px rgba(255, 45, 85, 0.3),
+    0 0 60px rgba(255, 45, 85, 0.15);
+}
+
+.nextBtn:active {
+  transform: translateY(0) scale(0.98);
+  transition: transform 0.1s;
+}
+
+.nextText { 
+  transform: translateX(4px); 
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 900;
+}
+
+.nextBtn:hover .nextText { 
+  transform: translateX(0);
+  letter-spacing: 0.6em;
+}
+
+/* Zap Icon */
+.zapIcon {
+  opacity: 0;
+  transform: scale(0) rotate(-90deg);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #fff;
+}
+
+.nextBtn:hover .zapIcon {
+  opacity: 1;
+  transform: scale(1.2) rotate(0deg);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+}
+
 .zapActive {
   animation: zapBounce 0.6s ease-in-out;
 }
@@ -43,35 +500,73 @@
   opacity: 0;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+  pointer-events: none;
 }
 
 .sparkleLeft {
   top: 50%;
-  left: -8px;
+  left: -6px;
   transform: translateY(-50%) scale(0);
   animation: sparkleFloatLeft 0.8s ease-out forwards;
 }
 
 .sparkleRight {
   top: 50%;
-  right: -6px;
+  right: -4px;
   transform: translateY(-50%) scale(0);
   animation: sparkleFloatRight 0.8s ease-out forwards;
 }
 
 @keyframes sparkleFloatLeft {
-  0% { opacity: 0; transform: translateY(-50%) scale(0) rotate(0deg); }
-  50% { opacity: 1; transform: translateY(-50%) scale(1.2) rotate(45deg); }
-  100% { opacity: 0; transform: translateY(-50%) scale(0) rotate(90deg) translateX(-20px); }
+  0% { 
+    opacity: 0; 
+    transform: translateY(-50%) scale(0) rotate(0deg); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translateY(-50%) scale(1.2) rotate(45deg); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateY(-50%) scale(0) rotate(90deg) translateX(-20px); 
+  }
 }
 
 @keyframes sparkleFloatRight {
-  0% { opacity: 0; transform: translateY(-50%) scale(0) rotate(0deg); }
-  50% { opacity: 1; transform: translateY(-50%) scale(1.2) rotate(-45deg); }
-  100% { opacity: 0; transform: translateY(-50%) scale(0) rotate(-90deg) translateX(20px); }
+  0% { 
+    opacity: 0; 
+    transform: translateY(-50%) scale(0) rotate(0deg); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translateY(-50%) scale(1.2) rotate(-45deg); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateY(-50%) scale(0) rotate(-90deg) translateX(20px); 
+  }
 }
 
-/* Shield Icon Animation */
+/* Footer Security Note */
+.footerNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.12;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.5em;
+  color: #fff;
+  text-transform: uppercase;
+  transition: opacity 0.3s;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.footerNote:hover {
+  opacity: 0.25;
+}
+
 .shieldIcon {
   transition: all 0.3s;
 }
@@ -81,49 +576,32 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Preview Dot Active State */
-.dotActive {
-  background: rgba(0, 255, 100, 0.6);
-  box-shadow: 0 0 8px rgba(0, 255, 100, 0.3);
-  animation: dotBreath 2s infinite;
+/* ============================================
+   FULLSCREEN OVERLAYS
+   ============================================ */
+
+.fullOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.96);
+  backdrop-filter: blur(40px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes dotBreath {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+.overlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Mute Label Enhancement */
-.muteLabel {
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: #FF2D55;
-  margin-left: 0.5rem;
-  animation: fadeInOut 2s infinite;
+/* Countdown */
+.countdownBox {
+  text-align: center;
 }
 
-@keyframes fadeInOut {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-/* Remote Mute Badge */
-.remoteMuteBadge {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 40;
-  padding: 0.5rem;
-  background: rgba(255, 45, 85, 0.15);
-  backdrop-filter: blur(10px);
-  border-radius: 50%;
-  border: 1px solid rgba(255, 45, 85, 0.3);
-  color: #FF2D55;
-}
-
-/* Countdown Ring Enhancement */
 .countdownRing {
   position: relative;
   display: inline-block;
@@ -141,4 +619,139 @@
 @keyframes ringPulse {
   0%, 100% { transform: scale(1); opacity: 0.2; }
   50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.countdownNumber {
+  font-size: clamp(8rem, 25vw, 12rem);
+  font-weight: 900;
+  font-style: italic;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.accentRed { color: #FF2D55; }
+
+.incomingText { 
+  font-size: 10px; 
+  font-weight: 900; 
+  letter-spacing: 1em; 
+  color: #FF2D55; 
+  text-transform: uppercase; 
+  text-align: center; 
+  margin: 1rem 0 3rem; 
+}
+
+.abortBtn {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.abortBtn:hover { 
+  border-color: rgba(255, 255, 255, 0.2); 
+  color: #fff; 
+}
+
+/* Searching Animation */
+.syncBox {
+  text-align: center;
+}
+
+.loadingBrand { 
+  font-size: 2rem; 
+  font-weight: 900; 
+  font-style: italic; 
+  letter-spacing: 0.5em; 
+  color: rgba(255, 255, 255, 0.05); 
+  margin-bottom: 2rem; 
+}
+
+.dotRunner { 
+  display: flex; 
+  gap: 0.5rem; 
+  justify-content: center;
+}
+
+.dot { 
+  width: 6px; 
+  height: 6px; 
+  background: #FF2D55; 
+  border-radius: 50%; 
+  animation: pulseRing 1.5s infinite; 
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.8); opacity: 0.3; }
+  50% { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.3; }
+}
+
+.syncText { 
+  font-size: 8px; 
+  font-weight: 900; 
+  letter-spacing: 0.8em; 
+  color: rgba(255, 255, 255, 0.1); 
+  text-transform: uppercase; 
+  margin-top: 2rem; 
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .omniPill {
+    padding: 0.4rem;
+    gap: 0.25rem;
+  }
+  
+  .actionBtn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  
+  .nextBtn {
+    height: 2.75rem;
+    padding: 0 1.5rem;
+  }
+  
+  .muteIndicator {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .controlWrapper {
+    bottom: 1.5rem;
+  }
+  
+  .omniPill {
+    padding: 0.35rem;
+    gap: 0.15rem;
+  }
+  
+  .actionBtn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .nextBtn {
+    height: 2.5rem;
+    padding: 0 1.25rem;
+    font-size: 9px;
+  }
+  
+  .btnDivider {
+    height: 1.25rem;
+  }
 }
