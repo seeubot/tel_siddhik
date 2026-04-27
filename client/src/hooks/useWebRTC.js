@@ -9,19 +9,22 @@ export function useWebRTC(socket) {
   const pendingCandidatesRef = useRef([]);
   const remoteDescSetRef = useRef(false);
 
+  // FIX 1: Dedicated ref for targetId instead of attaching to pcRef
+  const targetIdRef = useRef(null);
+
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [partnerMedia, setPartnerMedia] = useState({ audio: true, video: true });
   const [callActive, setCallActive] = useState(false);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  function createPC() {
+  // FIX 2: Wrap createPC in useCallback so it has a stable reference
+  // and always reads the latest socket ref via closure
+  const createPC = useCallback(() => {
     const pc = new RTCPeerConnection(ICE);
 
     pc.onicecandidate = (e) => {
       if (e.candidate && socket.current) {
-        const targetId = pcRef._targetId;
+        const targetId = targetIdRef.current;
         if (targetId) {
           socket.current.emit('ice-candidate', { targetId, candidate: e.candidate });
         }
@@ -46,7 +49,7 @@ export function useWebRTC(socket) {
     };
 
     return pc;
-  }
+  }, [socket]);
 
   // ── Start local stream ─────────────────────────────────────────────────────
 
@@ -82,6 +85,7 @@ export function useWebRTC(socket) {
       pcRef.current.close();
       pcRef.current = null;
     }
+    targetIdRef.current = null;
     pendingCandidatesRef.current = [];
     remoteDescSetRef.current = false;
     setCallActive(false);
@@ -89,14 +93,14 @@ export function useWebRTC(socket) {
 
   // ── Flush queued ICE candidates ────────────────────────────────────────────
 
-  async function flushCandidates() {
+  const flushCandidates = useCallback(async () => {
     const pc = pcRef.current;
     if (!pc) return;
     for (const c of pendingCandidatesRef.current) {
       try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (_) {}
     }
     pendingCandidatesRef.current = [];
-  }
+  }, []);
 
   // ── Make offer (caller side) ───────────────────────────────────────────────
 
@@ -104,7 +108,8 @@ export function useWebRTC(socket) {
     closePeer();
     const pc = createPC();
     pcRef.current = pc;
-    pcRef._targetId = targetId;
+    // FIX 1: Store targetId in its own dedicated ref
+    targetIdRef.current = targetId;
 
     const stream = localStreamRef.current || (await startLocal());
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
@@ -112,7 +117,7 @@ export function useWebRTC(socket) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.current?.emit('offer', { targetId, offer });
-  }, [closePeer, startLocal, socket]);
+  }, [closePeer, createPC, startLocal, socket]);
 
   // ── Handle incoming offer (callee side) ───────────────────────────────────
 
@@ -120,7 +125,8 @@ export function useWebRTC(socket) {
     closePeer();
     const pc = createPC();
     pcRef.current = pc;
-    pcRef._targetId = fromId;
+    // FIX 1: Store targetId in its own dedicated ref
+    targetIdRef.current = fromId;
 
     const stream = localStreamRef.current || (await startLocal());
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
@@ -132,7 +138,7 @@ export function useWebRTC(socket) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.current?.emit('answer', { targetId: fromId, answer });
-  }, [closePeer, startLocal, socket]);
+  }, [closePeer, createPC, startLocal, flushCandidates, socket]);
 
   // ── Handle incoming answer ────────────────────────────────────────────────
 
@@ -142,7 +148,7 @@ export function useWebRTC(socket) {
     await pc.setRemoteDescription(new RTCSessionDescription(answer));
     remoteDescSetRef.current = true;
     await flushCandidates();
-  }, []);
+  }, [flushCandidates]);
 
   // ── Handle ICE candidate ──────────────────────────────────────────────────
 
@@ -156,6 +162,9 @@ export function useWebRTC(socket) {
 
   // ── Media toggles ─────────────────────────────────────────────────────────
 
+  // FIX 3: Read the other track's live enabled state from the stream itself
+  // instead of closing over the React state, eliminating the stale closure risk
+
   const toggleAudio = useCallback((roomId) => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -163,8 +172,9 @@ export function useWebRTC(socket) {
     if (!track) return;
     track.enabled = !track.enabled;
     setAudioEnabled(track.enabled);
-    socket.current?.emit('media-state', { roomId, audioEnabled: track.enabled, videoEnabled });
-  }, [socket, videoEnabled]);
+    const liveVideoEnabled = stream.getVideoTracks()[0]?.enabled ?? true;
+    socket.current?.emit('media-state', { roomId, audioEnabled: track.enabled, videoEnabled: liveVideoEnabled });
+  }, [socket]);
 
   const toggleVideo = useCallback((roomId) => {
     const stream = localStreamRef.current;
@@ -173,8 +183,9 @@ export function useWebRTC(socket) {
     if (!track) return;
     track.enabled = !track.enabled;
     setVideoEnabled(track.enabled);
-    socket.current?.emit('media-state', { roomId, audioEnabled, videoEnabled: track.enabled });
-  }, [socket, audioEnabled]);
+    const liveAudioEnabled = stream.getAudioTracks()[0]?.enabled ?? true;
+    socket.current?.emit('media-state', { roomId, audioEnabled: liveAudioEnabled, videoEnabled: track.enabled });
+  }, [socket]);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
 
