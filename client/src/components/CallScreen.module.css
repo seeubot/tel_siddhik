@@ -8,9 +8,7 @@
   user-select: none;
 }
 
-.uiHidden {
-  cursor: none;
-}
+.uiHidden { cursor: none; }
 
 .mainGrid {
   display: flex;
@@ -20,9 +18,7 @@
 }
 
 @media (min-width: 1024px) {
-  .mainGrid {
-    flex-direction: row;
-  }
+  .mainGrid { flex-direction: row; }
 }
 
 .videoSection {
@@ -51,12 +47,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: all 0.5s ease;
 }
 
-.mirrored {
-  transform: scaleX(-1);
-}
+.mirrored { transform: scaleX(-1); }
 
 .searchingPeer {
   opacity: 0.3;
@@ -64,13 +57,9 @@
   transform: scale(1.1);
 }
 
-.videoOff {
-  opacity: 0;
-}
+.videoOff { opacity: 0; }
 
-.privacyBlur {
-  filter: blur(80px) scale(1.1) brightness(0.75);
-}
+.privacyBlur { filter: blur(80px) scale(1.1) brightness(0.75); }
 
 .placeholderLogo {
   position: absolute;
@@ -78,7 +67,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
 }
 
 .brandText {
@@ -100,10 +88,7 @@
   z-index: 10;
 }
 
-.ghostIcon {
-  color: white;
-  opacity: 0.1;
-}
+.ghostIcon { color: white; opacity: 0.1; }
 
 .blackout {
   position: absolute;
@@ -114,11 +99,8 @@
   background: #0a0a0a;
 }
 
-.fadedIcon {
-  opacity: 0.1;
-}
+.fadedIcon { opacity: 0.1; }
 
-/* Control Dock */
 .controlDock {
   position: fixed;
   bottom: 0;
@@ -130,15 +112,8 @@
   transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dockVisible {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.dockHidden {
-  transform: translateY(100%);
-  opacity: 0;
-}
+.dockVisible { transform: translateY(0); opacity: 1; }
+.dockHidden { transform: translateY(100%); opacity: 0; }
 
 .dockWrapper {
   max-width: 32rem;
@@ -160,17 +135,15 @@
   backdrop-filter: blur(40px);
   border-radius: 2.5rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .actionGroupLeft, .actionGroupRight {
   display: flex;
   flex: 1;
-  gap: 0.25rem;
 }
 
-.actionGroupLeft { justify-content: flex-start; }
-.actionGroupRight { justify-content: flex-end; }
+.actionGroupLeft { justify-content: flex-start; gap: 0.25rem; }
+.actionGroupRight { justify-content: flex-end; gap: 0.25rem; }
 
 .iconBtn {
   flex: 1;
@@ -184,35 +157,13 @@
   border: none;
   color: #a1a1aa;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.iconBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-}
-
-.btnDanger {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.btnActive {
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.1);
-}
-
-.btnHangup {
-  color: #71717a;
-}
-
-.btnHangup:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-}
+.btnDanger { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.btnActive { color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+.btnHangup:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 
 .nextBtn {
-  position: relative;
   flex: 2;
   min-width: 100px;
   height: 3.5rem;
@@ -225,21 +176,6 @@
   justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  overflow: hidden;
-}
-
-.nextBtn:hover {
-  transform: scale(1.02);
-}
-
-.nextBtn:active {
-  transform: scale(0.95);
-}
-
-.nextBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .nextText {
@@ -249,24 +185,10 @@
   letter-spacing: 0.3em;
 }
 
-.securityNote {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  opacity: 0.2;
-}
-
+.securityNote { display: flex; align-items: center; gap: 0.5rem; opacity: 0.2; }
 .greenText { color: #22c55e; }
+.noteText { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; color: white; }
 
-.noteText {
-  font-size: 8px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.4em;
-  color: white;
-}
-
-/* Overlays */
 .syncOverlay {
   position: fixed;
   inset: 0;
@@ -282,17 +204,10 @@
   font-weight: 900;
   font-style: italic;
   color: white;
-  line-height: 1;
-  letter-spacing: -0.05em;
   animation: scaleIn 0.3s ease-out;
 }
 
-.loadingSpinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
+.loadingSpinner { display: flex; flex-direction: column; align-items: center; }
 .spinnerCircle {
   width: 4rem;
   height: 4rem;
@@ -306,16 +221,11 @@
   margin-top: 2rem;
   font-size: 10px;
   font-weight: 900;
-  font-style: italic;
   letter-spacing: 1em;
   color: rgba(255, 255, 255, 0.3);
-  text-transform: uppercase;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes scaleIn {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
