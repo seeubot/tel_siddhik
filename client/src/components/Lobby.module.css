@@ -1,5 +1,3 @@
-/* ─── Root & Background ──────────────────────────────────────────────────── */
-
 .root {
   min-height: 100vh;
   background-color: #000000;
@@ -33,7 +31,7 @@
 }
 
 @keyframes scanlineAnim {
-  0%   { transform: translateY(-100vh); }
+  0% { transform: translateY(-100vh); }
   100% { transform: translateY(100vh); }
 }
 
@@ -48,8 +46,6 @@
   pointer-events: none;
 }
 
-/* ─── Containers ─────────────────────────────────────────────────────────── */
-
 .container {
   width: 100%;
   max-width: 440px;
@@ -61,24 +57,9 @@
   gap: 20px;
 }
 
-/* Auth gate uses a narrower, centred card layout */
-.authContainer {
-  width: 100%;
-  max-width: 380px;
-  padding: 24px;
-  position: relative;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  align-items: center;
-}
-
-/* ─── Header / Brand ─────────────────────────────────────────────────────── */
-
 .header {
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 16px;
 }
 
 .logo {
@@ -109,8 +90,6 @@
   text-transform: uppercase;
 }
 
-/* ─── Generic Card ───────────────────────────────────────────────────────── */
-
 .card {
   background: rgba(20, 20, 20, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -127,198 +106,40 @@
   border-color: rgba(255, 45, 85, 0.3);
 }
 
-/* ─── Auth Gate Card ─────────────────────────────────────────────────────── */
-
-.authCard {
-  width: 100%;
-  background: rgba(20, 20, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 28px;
-  padding: 32px 28px;
-  backdrop-filter: blur(24px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  transition: border-color 0.3s;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-}
-
-.authCard:hover {
-  border-color: rgba(255, 45, 85, 0.25);
-}
-
-.authIconRow {
+.label {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.authTitle {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.02em;
-}
-
-.authSubtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
-  line-height: 1.6;
-  text-align: center;
-  margin: 0;
-  max-width: 260px;
-}
-
-.googleBtnWrap {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  min-height: 44px;
-  align-items: center;
-}
-
-/* The GIS library injects its own iframe button inside this div */
-.googleBtnInner {
-  display: flex;
-  justify-content: center;
-}
-
-.authLoadingRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 100px;
-}
-
-.authError {
-  font-size: 12px;
-  color: #FF2D55;
-  text-align: center;
-  margin: 0;
-  padding: 10px 16px;
-  background: rgba(255, 45, 85, 0.08);
-  border: 1px solid rgba(255, 45, 85, 0.2);
-  border-radius: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.authHint {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.2);
-  text-align: center;
-  margin: 0;
-}
-
-/* ─── Profile Card (replaces name input in main lobby) ───────────────────── */
-
-.profileRow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.avatarWrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 45, 85, 0.5);
-  display: block;
-  object-fit: cover;
-}
-
-.avatarFallback {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 45, 85, 0.2);
-  border: 2px solid rgba(255, 45, 85, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: #FF2D55;
-}
-
-.onlineDot {
-  position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 12px;
-  height: 12px;
-  background: #22c55e;
-  border-radius: 50%;
-  border: 2px solid #000;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
-}
-
-.profileInfo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.profileName {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profileEmail {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.verifiedBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
+  gap: 8px;
+  font-size: 10px;
   font-weight: 700;
-  color: #22c55e;
+  color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
 }
 
-.signOutBtn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 8px;
-  color: rgba(255, 255, 255, 0.35);
-  cursor: pointer;
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: #ffffff;
+  font-size: 1rem;
+  outline: none;
   transition: all 0.2s;
-  flex-shrink: 0;
 }
 
-.signOutBtn:hover {
-  background: rgba(255, 45, 85, 0.15);
-  border-color: rgba(255, 45, 85, 0.3);
-  color: #FF2D55;
+.input:focus {
+  border-color: #FF2D55;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* ─── Orey-ID Box ────────────────────────────────────────────────────────── */
+.input.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
 
 .idBox {
   background: rgba(255, 45, 85, 0.05);
@@ -341,7 +162,6 @@
   font-weight: 900;
   color: #FF2D55;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
 
 .expiry {
@@ -385,50 +205,6 @@
   font-size: 9px;
   color: rgba(255, 255, 255, 0.25);
   margin: 0;
-}
-
-/* ─── Labels & Inputs ────────────────────────────────────────────────────── */
-
-.label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-bottom: 8px;
-}
-
-.input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px 16px;
-  color: #ffffff;
-  font-size: 1rem;
-  outline: none;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  border-color: #FF2D55;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.input.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-/* ─── Action Buttons ─────────────────────────────────────────────────────── */
-
-.actions {
-  /* wrapper kept for spacing consistency */
 }
 
 .discoverBtn {
@@ -520,8 +296,6 @@
   cursor: not-allowed;
 }
 
-/* ─── Footer ─────────────────────────────────────────────────────────────── */
-
 .footer {
   text-align: center;
   font-size: 9px;
@@ -534,8 +308,6 @@
 .footerMuted {
   opacity: 0.5;
 }
-
-/* ─── Shared Utilities ───────────────────────────────────────────────────── */
 
 .accentText {
   color: #FF2D55;
