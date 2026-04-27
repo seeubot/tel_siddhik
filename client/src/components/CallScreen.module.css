@@ -8,14 +8,14 @@
   background-color: #020202;
   overflow: hidden;
   display: flex;
-  flex-direction: column; /* Mobile: Top/Bottom */
+  flex-direction: column;
   font-family: ui-sans-serif, system-ui, sans-serif;
   transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (min-width: 1024px) {
   .container {
-    flex-direction: row; /* Desktop: Side-by-side */
+    flex-direction: row;
   }
 }
 
@@ -23,7 +23,13 @@
   cursor: none;
 }
 
-/* Grain Texture Overlay */
+.uiHidden .controlWrapper {
+  transform: translate(-50%, 150%) scale(0.9);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Grain Texture */
 .grainOverlay {
   position: absolute;
   inset: 0;
@@ -34,7 +40,7 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='150' height='150' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
 }
 
-/* Panel Layout */
+/* Panels */
 .panel {
   position: relative;
   flex: 1;
@@ -43,18 +49,12 @@
 }
 
 @media (min-width: 1024px) {
-  .panel {
-    height: 100%;
-  }
-  .localPanel {
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
-  }
+  .panel { height: 100%; }
+  .localPanel { border-left: 1px solid rgba(255, 255, 255, 0.05); }
 }
 
 @media (max-width: 1023px) {
-  .localPanel {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
+  .localPanel { border-top: 1px solid rgba(255, 255, 255, 0.05); }
 }
 
 .remotePanel { background-color: #050508; }
@@ -65,18 +65,16 @@
   opacity: 0.5;
 }
 
-/* Video Streams */
+/* Video */
 .videoStream {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.mirrored {
-  transform: scaleX(-1);
-}
+.mirrored { transform: scaleX(-1); }
 
-/* Branding Center */
+/* Branding */
 .brandingCenter {
   position: absolute;
   inset: 0;
@@ -113,14 +111,15 @@
   margin-top: -10px;
 }
 
-/* Tags & Indicators */
-.roomTag, .previewTag {
+/* Tags */
+.roomTag, .previewTag, .userTag {
   position: absolute;
   z-index: 30;
   transition: all 0.7s ease;
 }
 
 .roomTag { top: 1.5rem; left: 1.5rem; }
+.userTag { top: 1.5rem; right: 1.5rem; }
 .previewTag { bottom: 1.5rem; left: 1.5rem; }
 
 @media (min-width: 1024px) {
@@ -139,10 +138,11 @@
 }
 
 .monoText { 
-  font-family: monospace; 
+  font-family: 'SF Mono', 'Fira Code', monospace; 
   font-size: 10px; 
-  color: rgba(255, 255, 255, 0.3); 
-  letter-spacing: 0.2em; 
+  color: rgba(255, 255, 255, 0.4); 
+  letter-spacing: 0.1em;
+  font-weight: 500;
 }
 
 .tagLabel { 
@@ -161,10 +161,9 @@
   transition: all 0.3s ease;
 }
 
-/* Preview Dot Active State */
 .dotActive {
-  background: rgba(0, 255, 100, 0.6);
-  box-shadow: 0 0 8px rgba(0, 255, 100, 0.3);
+  background: rgba(0, 255, 100, 0.8);
+  box-shadow: 0 0 8px rgba(0, 255, 100, 0.4);
   animation: dotBreath 2s infinite;
 }
 
@@ -173,59 +172,62 @@
   50% { opacity: 1; }
 }
 
-/* Mute Indicator */
-.muteIndicator {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 40;
-  padding: 0.75rem;
-  background: rgba(255, 45, 85, 0.15);
-  backdrop-filter: blur(10px);
+/* Location Icon */
+.locationIcon {
+  color: rgba(255, 255, 255, 0.3);
+  width: 10px;
+  height: 10px;
+}
+
+/* GPS Live Dot */
+.gpsDot {
+  width: 4px;
+  height: 4px;
+  background: #00ff64;
   border-radius: 50%;
-  border: 1px solid rgba(255, 45, 85, 0.3);
-  color: #FF2D55;
-  animation: pulse 2s infinite;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  animation: gpsBlink 1s infinite;
+  margin-left: 2px;
 }
 
-.muteLabel {
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: #FF2D55;
-  animation: fadeInOut 2s infinite;
-}
-
-@keyframes fadeInOut {
-  0%, 100% { opacity: 0.7; }
+@keyframes gpsBlink {
+  0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
 
-@keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.1); }
+/* ============================================
+   REDESIGNED MUTE INDICATOR
+   ============================================ */
+
+.muteOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 45, 85, 0.6);
+  animation: muteFadeIn 0.3s ease-out;
 }
 
-/* Remote Mute Badge */
-.remoteMuteBadge {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 40;
-  padding: 0.5rem;
-  background: rgba(255, 45, 85, 0.15);
-  backdrop-filter: blur(10px);
-  border-radius: 50%;
-  border: 1px solid rgba(255, 45, 85, 0.3);
-  color: #FF2D55;
+.muteOverlay svg {
+  filter: drop-shadow(0 0 15px rgba(255, 45, 85, 0.3));
+}
+
+@keyframes muteFadeIn {
+  from { 
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to { 
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
 }
 
 /* ============================================
-   ENHANCED CONTROL BAR
+   MOUSE-AWARE CONTROL BAR
    ============================================ */
 
 .controlWrapper {
@@ -238,12 +240,12 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  transition: all 0.7s cubic-bezier(0.2, 1, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
+  opacity: 1;
 }
 
-.uiHidden .controlWrapper {
-  transform: translate(-50%, 150%) scale(0.9);
-  opacity: 0;
+.controlVisible {
+  opacity: 1;
 }
 
 /* Premium Glass Pill */
@@ -262,10 +264,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
   position: relative;
-  overflow: visible;
 }
 
-/* Glass Edge Highlight */
 .omniPill::before {
   content: '';
   position: absolute;
@@ -286,10 +286,7 @@
   transition: opacity 0.4s;
 }
 
-.omniPill:hover::before {
-  opacity: 1;
-}
-
+.omniPill:hover::before { opacity: 1; }
 .omniPill:hover {
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 
@@ -306,7 +303,6 @@
   gap: 0.15rem;
 }
 
-/* Button Divider */
 .btnDivider {
   width: 1px;
   height: 1.5rem;
@@ -331,7 +327,6 @@
   outline: none;
 }
 
-/* Hover Ring Effect */
 .actionBtn::before {
   content: '';
   position: absolute;
@@ -352,16 +347,13 @@
   transform: scale(1.05);
 }
 
-.actionBtn:hover::before {
-  opacity: 1;
-}
-
+.actionBtn:hover::before { opacity: 1; }
 .actionBtn:active {
   transform: scale(0.95);
   transition: transform 0.1s;
 }
 
-/* Alert/Active State */
+/* Alert State */
 .btnAlert { 
   color: rgba(255, 45, 85, 0.7) !important;
   background: rgba(255, 45, 85, 0.08);
@@ -373,7 +365,6 @@
   box-shadow: 0 0 20px rgba(255, 45, 85, 0.2);
 }
 
-/* Button Glow Effect */
 .btnGlow {
   position: absolute;
   inset: -2px;
@@ -389,15 +380,11 @@
   50% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Premium NEXT Button */
+/* NEXT Button */
 .nextBtn {
   height: 3rem;
   padding: 0 2rem;
-  background: linear-gradient(
-    135deg,
-    #ffffff 0%,
-    #f0f0f0 100%
-  );
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
   color: #000;
   border-radius: 999px;
   font-weight: 900;
@@ -417,7 +404,6 @@
     0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Shimmer Effect */
 .nextBtn::before {
   content: '';
   position: absolute;
@@ -434,16 +420,9 @@
   transition: left 0.5s;
 }
 
-.nextBtn:hover::before {
-  left: 100%;
-}
-
+.nextBtn:hover::before { left: 100%; }
 .nextBtn:hover {
-  background: linear-gradient(
-    135deg,
-    #FF2D55 0%,
-    #ff1a4a 100%
-  );
+  background: linear-gradient(135deg, #FF2D55 0%, #ff1a4a 100%);
   color: #fff;
   transform: translateY(-1px);
   box-shadow: 
@@ -468,7 +447,6 @@
   letter-spacing: 0.6em;
 }
 
-/* Zap Icon */
 .zapIcon {
   opacity: 0;
   transform: scale(0) rotate(-90deg);
@@ -492,88 +470,34 @@
   60% { transform: scale(1.3) rotate(5deg); }
 }
 
-/* Sparkle Effects */
-.sparkleLeft,
-.sparkleRight {
-  position: absolute;
-  color: #FFD700;
-  opacity: 0;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
-  pointer-events: none;
-}
-
-.sparkleLeft {
-  top: 50%;
-  left: -6px;
-  transform: translateY(-50%) scale(0);
-  animation: sparkleFloatLeft 0.8s ease-out forwards;
-}
-
-.sparkleRight {
-  top: 50%;
-  right: -4px;
-  transform: translateY(-50%) scale(0);
-  animation: sparkleFloatRight 0.8s ease-out forwards;
-}
-
-@keyframes sparkleFloatLeft {
-  0% { 
-    opacity: 0; 
-    transform: translateY(-50%) scale(0) rotate(0deg); 
-  }
-  50% { 
-    opacity: 1; 
-    transform: translateY(-50%) scale(1.2) rotate(45deg); 
-  }
-  100% { 
-    opacity: 0; 
-    transform: translateY(-50%) scale(0) rotate(90deg) translateX(-20px); 
-  }
-}
-
-@keyframes sparkleFloatRight {
-  0% { 
-    opacity: 0; 
-    transform: translateY(-50%) scale(0) rotate(0deg); 
-  }
-  50% { 
-    opacity: 1; 
-    transform: translateY(-50%) scale(1.2) rotate(-45deg); 
-  }
-  100% { 
-    opacity: 0; 
-    transform: translateY(-50%) scale(0) rotate(-90deg) translateX(20px); 
-  }
-}
-
-/* Footer Security Note */
+/* Footer with Live Location */
 .footerNote {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  opacity: 0.12;
+  gap: 0.4rem;
+  opacity: 0.15;
   font-size: 7px;
   font-weight: 900;
-  letter-spacing: 0.5em;
+  letter-spacing: 0.3em;
   color: #fff;
   text-transform: uppercase;
   transition: opacity 0.3s;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
 }
 
-.footerNote:hover {
-  opacity: 0.25;
+.footerNote:hover { opacity: 0.3; }
+
+.navIcon {
+  color: rgba(0, 255, 100, 0.6);
 }
 
-.shieldIcon {
-  transition: all 0.3s;
-}
-
-.footerNote:hover .shieldIcon {
-  transform: scale(1.2);
-  color: rgba(255, 255, 255, 0.5);
+.footerNote .dot {
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
 }
 
 /* ============================================
@@ -597,10 +521,7 @@
   align-items: center;
 }
 
-/* Countdown */
-.countdownBox {
-  text-align: center;
-}
+.countdownBox { text-align: center; }
 
 .countdownRing {
   position: relative;
@@ -662,10 +583,7 @@
   color: #fff; 
 }
 
-/* Searching Animation */
-.syncBox {
-  text-align: center;
-}
+.syncBox { text-align: center; }
 
 .loadingBrand { 
   font-size: 2rem; 
@@ -706,7 +624,7 @@
 }
 
 /* ============================================
-   RESPONSIVE ADJUSTMENTS
+   RESPONSIVE
    ============================================ */
 
 @media (max-width: 768px) {
@@ -724,16 +642,10 @@
     height: 2.75rem;
     padding: 0 1.5rem;
   }
-  
-  .muteIndicator {
-    padding: 0.5rem;
-  }
 }
 
 @media (max-width: 480px) {
-  .controlWrapper {
-    bottom: 1.5rem;
-  }
+  .controlWrapper { bottom: 1.5rem; }
   
   .omniPill {
     padding: 0.35rem;
@@ -751,7 +663,5 @@
     font-size: 9px;
   }
   
-  .btnDivider {
-    height: 1.25rem;
-  }
+  .btnDivider { height: 1.25rem; }
 }
