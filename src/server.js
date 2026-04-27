@@ -4,29 +4,16 @@ const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-
-// ─── Trust Proxy for Koyeb ──────────────────────────────────────────────────
-app.set('trust proxy', 1);
+const server = http.createServer(app);
 
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:", "wss:"],
-      fontSrc: ["'self'", "https:", "data:"],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 const apiLimiter = rateLimit({
@@ -38,9 +25,6 @@ app.use('/api/', apiLimiter);
 app.use('/admin/', apiLimiter);
 
 app.use(express.json());
-
-// ─── Create HTTP Server ─────────────────────────────────────────────────────
-const server = http.createServer(app);
 
 // ─── Socket.IO Setup ────────────────────────────────────────────────────────
 const io = new Server(server, {
@@ -284,7 +268,7 @@ app.get('/health', (_req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeConnections: io.engine.clientsCount,
-    memory: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)
+    memory: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
 
@@ -306,7 +290,7 @@ app.get('/api/get-key-hash', (_req, res) => {
   res.json({ hash: hash.substring(0, 32) });
 });
 
-// ─── App API Endpoints ──────────────────────────────────────────────────────
+// ─── App API Endpoints (Require API Key) ────────────────────────────────────
 
 app.get('/api/version', (req, res) => {
   const platform = req.query.platform || 'android';
@@ -365,7 +349,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// ─── Admin API Endpoints (Require Admin Key) ────────────────────────────────
+// ─── Admin Endpoints (Require Admin Key) ────────────────────────────────────
 
 app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
   res.json({ 
@@ -487,47 +471,41 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
     queueLength: randomQueue.length,
     totalNotifications: notifications.length,
     uptime: process.uptime(),
-    memoryMB: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)
+    memoryMB: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
 
-// ─── Admin Panel Routes ─────────────────────────────────────────────────────
-
-const publicDir = path.join(__dirname, '..', 'public');
-
-// Check if admin.html exists on startup
-if (fs.existsSync(path.join(publicDir, 'admin.html'))) {
-  console.log('✅ admin.html found');
-} else {
-  console.log('❌ admin.html NOT found in:', publicDir);
-}
+// ─── Admin Panel Routes (NO AUTH REQUIRED for the page itself) ────────────────
+// IMPORTANT: These must be BEFORE the static file serving and catch-all route
 
 app.get('/admin', (_req, res) => {
-  const adminFile = path.join(publicDir, 'admin.html');
-  res.sendFile(adminFile, (err) => {
-    if (err) {
-      console.error('Error serving admin:', err.message);
-      res.status(404).send('Admin page not found');
-    }
-  });
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
 app.get('/admin.html', (_req, res) => {
-  res.redirect('/admin');
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
 // ─── Static Files & SPA ─────────────────────────────────────────────────────
 
-app.use(express.static(publicDir, { index: false }));
-
 if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/') || 
-        req.path.startsWith('/admin') || 
-        req.path === '/admin.html') {
-      return next();
+  // Serve static files from public directory
+  app.use(express.static(path.join(__dirname, '..', 'public'), {
+    index: false // Don't auto-serve index.html
+  }));
+  
+  // Catch-all for React SPA - but skip API and Admin routes
+  app.get('*', (req, res) => {
+    // Don't interfere with API or admin routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
+      return res.status(404).json({ error: 'Not found' });
     }
-    res.sendFile(path.join(publicDir, 'index.html'));
+    // Don't serve admin page as SPA
+    if (req.path === '/admin' || req.path === '/admin.html') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    // Serve React app for all other routes
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 }
 
@@ -536,11 +514,13 @@ if (process.env.NODE_ENV === 'production') {
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id} (Total: ${io.engine.clientsCount})`);
 
+  // Send config on connect
   socket.emit('video-quality-config', {
     quality: appConfig.videoQuality,
     servers: ICE_SERVERS
   });
 
+  // Check for active maintenance
   if (appConfig.maintenance.enabled) {
     socket.emit('maintenance-mode', appConfig.maintenance);
   }
@@ -817,14 +797,10 @@ server.listen(PORT, () => {
   console.log('🚀 Orey Server Running');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📍 URL:        http://localhost:${PORT}`);
-  console.log(`🖥️  Admin:      http://localhost:${PORT}/admin`);
   console.log(`👥 Socket.IO:  Active`);
   console.log(`📹 Quality:    ${Object.keys(VIDEO_QUALITY).join(', ')}`);
   console.log(`🔑 API Key:    ${API_KEY.substring(0, 8)}...`);
-  console.log(`🛡️  Admin Key: ${ADMIN_KEY.substring(0, 8)}...`);
-  console.log(`📁 Public Dir: ${publicDir}`);
-  if (fs.existsSync(publicDir)) {
-    console.log(`📄 Files:      ${fs.readdirSync(publicDir).join(', ')}`);
-  }
+  console.log(`🛡️ Admin Key:  ${ADMIN_KEY.substring(0, 8)}...`);
+  console.log(`🖥️  Admin Page: http://localhost:${PORT}/admin`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
