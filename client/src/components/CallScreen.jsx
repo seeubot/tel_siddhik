@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
   Zap, PhoneOff, Loader, 
-  Layers, Shield, Activity
+  Flag, Shield, Activity
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -27,10 +27,10 @@ const CallScreen = ({
   onLeave = () => {},
   onCancelAutoSearch = () => {},
   onFindRandomPeer = () => {},
+  onReport = () => {},  // NEW: Report handler
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isBlurred, setIsBlurred] = useState(false);
   const mouseMoveTimerRef = useRef(null);
 
   const isRemoteConnected = !!partner && (partnerMedia?.video !== false);
@@ -90,7 +90,7 @@ const CallScreen = ({
       <div className={styles.localView}>
         <video
           ref={localVideoRef}
-          className={`${styles.videoBase} ${isBlurred ? styles.localBlurred : styles.mirrored}`}
+          className={`${styles.videoBase} ${styles.mirrored}`}
           autoPlay 
           playsInline 
           muted
@@ -116,6 +116,28 @@ const CallScreen = ({
       {/* CONTROL INTERFACE */}
       <div className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}>
         
+        {/* Partner Info Bar */}
+        {partner && (
+          <div className={styles.partnerBar}>
+            <div className={styles.partnerInfo}>
+              <div className={styles.partnerAvatar}>
+                {(partner.userName || '?').charAt(0).toUpperCase()}
+              </div>
+              <span className={styles.partnerName}>
+                {partner.userName || 'Anonymous'}
+              </span>
+            </div>
+            <button 
+              onClick={onReport} 
+              className={styles.reportBtn}
+              title="Report User"
+            >
+              <Flag size={14} />
+              <span>Report</span>
+            </button>
+          </div>
+        )}
+
         <div className={styles.statusPill}>
           <div className={`${styles.statusDot} ${isRemoteConnected ? styles.statusConnected : styles.statusSearching}`} />
           <span className={styles.statusText}>
@@ -142,7 +164,7 @@ const CallScreen = ({
             </button>
           </div>
 
-          {/* Next Button */}
+          {/* Next / Skip Button */}
           <button
             onClick={handleNextClick}
             disabled={isConnecting}
@@ -158,11 +180,13 @@ const CallScreen = ({
 
           {/* Utility Controls */}
           <div className={styles.controlsRight}>
+            {/* Report button in main island too (mobile-friendly) */}
             <button 
-              onClick={() => setIsBlurred(!isBlurred)}
-              className={`${styles.controlBtn} ${isBlurred ? styles.btnActive : styles.btnUtility}`}
+              onClick={onReport}
+              className={`${styles.controlBtn} ${styles.btnReport}`}
+              title="Report User"
             >
-              <Layers size={19} strokeWidth={2.5} />
+              <Flag size={19} />
             </button>
             <button 
               onClick={onLeave}
