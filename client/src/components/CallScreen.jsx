@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  UserPlus, Zap, MapPin, Navigation,
-  ShieldCheck
+  UserPlus, Zap, PhoneOff,
+  ShieldCheck, Circle
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -10,7 +10,7 @@ import styles from './CallScreen.module.css';
  * Orey! Pro — Responsive Call Interface
  * - Mobile: Top/Bottom split
  * - Desktop: Side-by-Side split
- * - Features: Live GPS location, Mouse-aware controls, Improved UI
+ * - Features: Proper mute indicators, Streamlined controls, Peer status
  */
 
 const CallScreen = ({
@@ -32,58 +32,22 @@ const CallScreen = ({
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [nextHovered, setNextHovered] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
-  const [locationString, setLocationString] = useState('TG');
   const uiTimerRef = useRef(null);
   const mouseMoveTimerRef = useRef(null);
   const containerRef = useRef(null);
 
   const isPartnerVideoEnabled = partnerMedia?.video !== false;
+  const isPartnerAudioEnabled = partnerMedia?.audio !== false;
   const isRemoteConnected = partner && isPartnerVideoEnabled;
-
-  // Get live GPS location
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      console.log('Geolocation not supported');
-      return;
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        setUserLocation({ latitude, longitude, accuracy });
-        
-        // Convert coordinates to short location code
-        const latCode = Math.abs(latitude).toFixed(1);
-        const lonCode = Math.abs(longitude).toFixed(1);
-        const latDir = latitude >= 0 ? 'N' : 'S';
-        const lonDir = longitude >= 0 ? 'E' : 'W';
-        setLocationString(`${latCode}${latDir}·${lonCode}${lonDir}`);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        // Fallback to IP-based location or default
-        setLocationString('AP');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
 
   // Mouse movement handler to show UI
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = () => {
       setUiVisible(true);
       
       clearTimeout(mouseMoveTimerRef.current);
       clearTimeout(uiTimerRef.current);
       
-      // Hide UI after 4 seconds of no mouse movement
       mouseMoveTimerRef.current = setTimeout(() => {
         setUiVisible(false);
       }, 4000);
@@ -102,7 +66,6 @@ const CallScreen = ({
       container.addEventListener('mouseleave', handleMouseLeave);
     }
 
-    // Initial hide timer
     uiTimerRef.current = setTimeout(() => setUiVisible(false), 6000);
 
     return () => {
@@ -142,25 +105,31 @@ const CallScreen = ({
           </div>
         )}
 
-        {/* Location-based Room Tag */}
+        {/* Remote User Status Indicators */}
+        {partner && (
+          <>
+            <div className={styles.remoteTag}>
+              <div className={styles.tagContent}>
+                <div className={`${styles.statusDot} ${isPartnerVideoEnabled ? styles.dotActive : ''}`} />
+                <span className={styles.tagLabel}>Peer</span>
+              </div>
+            </div>
+
+            {/* Show muted indicator for partner */}
+            {!isPartnerAudioEnabled && (
+              <div className={styles.peerMuteIndicator}>
+                <MicOff size={14} strokeWidth={2} />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Room ID Tag */}
         <div className={styles.roomTag}>
           <div className={styles.tagContent}>
-            <MapPin size={10} className={styles.locationIcon} />
-            <span className={styles.monoText}>{locationString}</span>
-            {userLocation && (
-              <span className={styles.gpsDot} />
-            )}
+            <span className={styles.monoText}>{roomId}</span>
           </div>
         </div>
-
-        {/* Remote User Tag */}
-        {partner && (
-          <div className={styles.userTag}>
-            <div className={styles.tagContent}>
-              <span className={styles.tagLabel}>YOU</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* LOCAL STREAM */}
@@ -174,13 +143,6 @@ const CallScreen = ({
           style={{ display: videoEnabled ? 'block' : 'none' }}
         />
 
-        {/* Local Mute Indicator - Redesigned as icon overlay */}
-        {!audioEnabled && (
-          <div className={styles.muteOverlay}>
-            <MicOff size={24} strokeWidth={1.5} />
-          </div>
-        )}
-
         {!videoEnabled && (
           <div className={styles.brandingCenter}>
             <div className={styles.brandTextMain}>OREY!</div>
@@ -188,42 +150,50 @@ const CallScreen = ({
           </div>
         )}
 
-        {/* "YOU" Tag instead of Preview */}
-        <div className={styles.previewTag}>
+        {/* Local "YOU" Tag */}
+        <div className={styles.localTag}>
           <div className={styles.tagContent}>
             <div className={`${styles.statusDot} ${videoEnabled ? styles.dotActive : ''}`} />
-            <span className={styles.tagLabel}>YOU</span>
+            <span className={styles.tagLabel}>You</span>
           </div>
         </div>
+
+        {/* Local Mute Indicator - Corner badge */}
+        {!audioEnabled && (
+          <div className={styles.localMuteBadge}>
+            <MicOff size={14} strokeWidth={2} />
+          </div>
+        )}
       </div>
 
-      {/* ENHANCED CONTROL BAR - No 3 dots, Mouse-aware */}
+      {/* REDESIGNED CONTROL BAR */}
       <div className={`${styles.controlWrapper} ${uiVisible ? styles.controlVisible : ''}`}>
-        <div className={styles.omniPill}>
-          {/* Left - Media Controls */}
-          <div className={styles.btnGroup}>
-            <button 
-              onClick={onToggleVideo}
-              className={`${styles.actionBtn} ${!videoEnabled ? styles.btnAlert : ''}`}
-              aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-            >
-              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-              {!videoEnabled && <span className={styles.btnGlow} />}
-            </button>
-            
-            <div className={styles.btnDivider} />
-            
-            <button 
-              onClick={onToggleAudio}
-              className={`${styles.actionBtn} ${!audioEnabled ? styles.btnAlert : ''}`}
-              aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-            >
-              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-              {!audioEnabled && <span className={styles.btnGlow} />}
-            </button>
-          </div>
+        <div className={styles.controlBar}>
+          {/* Camera Toggle */}
+          <button 
+            onClick={onToggleVideo}
+            className={`${styles.controlBtn} ${!videoEnabled ? styles.controlOff : ''}`}
+            aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+          >
+            <div className={styles.btnInner}>
+              {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+            </div>
+            <span className={styles.btnLabel}>Camera</span>
+          </button>
 
-          {/* Center - NEXT Button */}
+          {/* Mic Toggle */}
+          <button 
+            onClick={onToggleAudio}
+            className={`${styles.controlBtn} ${!audioEnabled ? styles.controlOff : ''}`}
+            aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+          >
+            <div className={styles.btnInner}>
+              {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
+            </div>
+            <span className={styles.btnLabel}>Mic</span>
+          </button>
+
+          {/* NEXT Button - Center */}
           <button 
             onClick={onSkip} 
             className={styles.nextBtn}
@@ -232,31 +202,42 @@ const CallScreen = ({
           >
             <span className={styles.nextText}>NEXT</span>
             <Zap 
-              size={12} 
-              fill="currentColor" 
+              size={14} 
               className={`${styles.zapIcon} ${nextHovered ? styles.zapActive : ''}`}
             />
           </button>
 
-          {/* Right - Single Action Button */}
-          <div className={styles.btnGroup}>
-            <button 
-              onClick={onShareId} 
-              className={styles.actionBtn}
-              aria-label="Share room ID"
-            >
-              <UserPlus size={18} />
-            </button>
-          </div>
+          {/* Invite Button */}
+          <button 
+            onClick={onShareId} 
+            className={styles.controlBtn}
+            aria-label="Invite peer"
+          >
+            <div className={styles.btnInner}>
+              <UserPlus size={20} />
+            </div>
+            <span className={styles.btnLabel}>Invite</span>
+          </button>
+
+          {/* Leave Button */}
+          <button 
+            onClick={onLeave} 
+            className={`${styles.controlBtn} ${styles.leaveBtn}`}
+            aria-label="Leave call"
+          >
+            <div className={styles.btnInner}>
+              <PhoneOff size={20} />
+            </div>
+            <span className={styles.btnLabel}>Leave</span>
+          </button>
         </div>
         
-        {/* Footer with Live Location */}
-        <div className={styles.footerNote}>
-          <Navigation size={10} className={styles.navIcon} />
-          <span>{locationString}</span>
-          <span className={styles.dot} />
+        {/* Security Badge */}
+        <div className={styles.securityBadge}>
           <ShieldCheck size={10} />
-          <span>Encrypted</span>
+          <span>E2E Encrypted</span>
+          <Circle size={4} fill="currentColor" />
+          <span>{roomId}</span>
         </div>
       </div>
 
