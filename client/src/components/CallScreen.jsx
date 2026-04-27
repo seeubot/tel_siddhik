@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  UserPlus, Zap, MoreHorizontal, 
-  ShieldCheck, Sparkles
+  UserPlus, Zap, MapPin, Navigation,
+  ShieldCheck
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -10,8 +10,7 @@ import styles from './CallScreen.module.css';
  * Orey! Pro — Responsive Call Interface
  * - Mobile: Top/Bottom split
  * - Desktop: Side-by-Side split
- * - Features: Rebuilt branding & Mute indicators
- * - Enhanced Control Bar: Premium glass-morphism with micro-interactions
+ * - Features: Live GPS location, Mouse-aware controls, Improved UI
  */
 
 const CallScreen = ({
@@ -33,38 +32,98 @@ const CallScreen = ({
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [nextHovered, setNextHovered] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationString, setLocationString] = useState('TG');
   const uiTimerRef = useRef(null);
+  const mouseMoveTimerRef = useRef(null);
+  const containerRef = useRef(null);
 
   const isPartnerVideoEnabled = partnerMedia?.video !== false;
   const isRemoteConnected = partner && isPartnerVideoEnabled;
 
-  const resetUiTimer = useCallback(() => {
-    clearTimeout(uiTimerRef.current);
-    uiTimerRef.current = setTimeout(() => setUiVisible(false), 6000);
+  // Get live GPS location
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.log('Geolocation not supported');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        setUserLocation({ latitude, longitude, accuracy });
+        
+        // Convert coordinates to short location code
+        const latCode = Math.abs(latitude).toFixed(1);
+        const lonCode = Math.abs(longitude).toFixed(1);
+        const latDir = latitude >= 0 ? 'N' : 'S';
+        const lonDir = longitude >= 0 ? 'E' : 'W';
+        setLocationString(`${latCode}${latDir}·${lonCode}${lonDir}`);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        // Fallback to IP-based location or default
+        setLocationString('AP');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  // Mouse movement handler to show UI
   useEffect(() => {
-    resetUiTimer();
-    return () => clearTimeout(uiTimerRef.current);
-  }, [resetUiTimer]);
+    const handleMouseMove = (e) => {
+      setUiVisible(true);
+      
+      clearTimeout(mouseMoveTimerRef.current);
+      clearTimeout(uiTimerRef.current);
+      
+      // Hide UI after 4 seconds of no mouse movement
+      mouseMoveTimerRef.current = setTimeout(() => {
+        setUiVisible(false);
+      }, 4000);
+    };
 
-  const handleRootClick = useCallback((e) => {
-    if (e.target.closest('button')) return;
-    setUiVisible((prev) => {
-      if (!prev) resetUiTimer();
-      return !prev;
-    });
-  }, [resetUiTimer]);
+    const handleMouseLeave = () => {
+      clearTimeout(mouseMoveTimerRef.current);
+      mouseMoveTimerRef.current = setTimeout(() => {
+        setUiVisible(false);
+      }, 2000);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('mousemove', handleMouseMove);
+      container.addEventListener('mouseleave', handleMouseLeave);
+    }
+
+    // Initial hide timer
+    uiTimerRef.current = setTimeout(() => setUiVisible(false), 6000);
+
+    return () => {
+      if (container) {
+        container.removeEventListener('mousemove', handleMouseMove);
+        container.removeEventListener('mouseleave', handleMouseLeave);
+      }
+      clearTimeout(mouseMoveTimerRef.current);
+      clearTimeout(uiTimerRef.current);
+    };
+  }, []);
 
   return (
     <div 
+      ref={containerRef}
       className={`${styles.container} ${!uiVisible ? styles.uiHidden : ''}`}
-      onClick={handleRootClick}
     >
       {/* Texture Overlay */}
       <div className={styles.grainOverlay} />
       
-      {/* REMOTE STREAM (Top on Mobile / Left on Desktop) */}
+      {/* REMOTE STREAM */}
       <div className={`${styles.panel} ${styles.remotePanel} ${searching ? styles.searchingBlur : ''}`}>
         <video
           ref={remoteVideoRef}
@@ -83,21 +142,28 @@ const CallScreen = ({
           </div>
         )}
 
+        {/* Location-based Room Tag */}
         <div className={styles.roomTag}>
-           <div className={styles.tagContent}>
-              <span className={styles.monoText}>{roomId}</span>
-           </div>
+          <div className={styles.tagContent}>
+            <MapPin size={10} className={styles.locationIcon} />
+            <span className={styles.monoText}>{locationString}</span>
+            {userLocation && (
+              <span className={styles.gpsDot} />
+            )}
+          </div>
         </div>
 
-        {/* Remote Mute Indicator */}
-        {partner && !partnerMedia?.audio && (
-          <div className={styles.remoteMuteBadge}>
-            <MicOff size={12} />
+        {/* Remote User Tag */}
+        {partner && (
+          <div className={styles.userTag}>
+            <div className={styles.tagContent}>
+              <span className={styles.tagLabel}>YOU</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* LOCAL STREAM (Bottom on Mobile / Right on Desktop) */}
+      {/* LOCAL STREAM */}
       <div className={`${styles.panel} ${styles.localPanel}`}>
         <video
           ref={localVideoRef}
@@ -108,39 +174,38 @@ const CallScreen = ({
           style={{ display: videoEnabled ? 'block' : 'none' }}
         />
 
-        {/* Local Mute Indicator */}
+        {/* Local Mute Indicator - Redesigned as icon overlay */}
         {!audioEnabled && (
-          <div className={styles.muteIndicator}>
-            <MicOff size={16} />
-            <span className={styles.muteLabel}>MUTED</span>
+          <div className={styles.muteOverlay}>
+            <MicOff size={24} strokeWidth={1.5} />
           </div>
         )}
 
         {!videoEnabled && (
           <div className={styles.brandingCenter}>
-             <div className={`${styles.brandTextMain} opacity-5`}>OREY!</div>
-             <p className={styles.cameraOffText}>Camera Off</p>
+            <div className={styles.brandTextMain}>OREY!</div>
+            <p className={styles.cameraOffText}>Camera Off</p>
           </div>
         )}
 
+        {/* "YOU" Tag instead of Preview */}
         <div className={styles.previewTag}>
           <div className={styles.tagContent}>
-              <div className={`${styles.statusDot} ${videoEnabled ? styles.dotActive : ''}`} />
-              <span className={styles.tagLabel}>Preview</span>
+            <div className={`${styles.statusDot} ${videoEnabled ? styles.dotActive : ''}`} />
+            <span className={styles.tagLabel}>YOU</span>
           </div>
         </div>
       </div>
 
-      {/* ENHANCED OMNI-PILL CONTROL BAR */}
-      <div className={styles.controlWrapper}>
+      {/* ENHANCED CONTROL BAR - No 3 dots, Mouse-aware */}
+      <div className={`${styles.controlWrapper} ${uiVisible ? styles.controlVisible : ''}`}>
         <div className={styles.omniPill}>
-          {/* Left Button Group - Media Controls */}
+          {/* Left - Media Controls */}
           <div className={styles.btnGroup}>
             <button 
               onClick={onToggleVideo}
               className={`${styles.actionBtn} ${!videoEnabled ? styles.btnAlert : ''}`}
               aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              title={videoEnabled ? 'Camera On' : 'Camera Off'}
             >
               {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
               {!videoEnabled && <span className={styles.btnGlow} />}
@@ -152,7 +217,6 @@ const CallScreen = ({
               onClick={onToggleAudio}
               className={`${styles.actionBtn} ${!audioEnabled ? styles.btnAlert : ''}`}
               aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-              title={audioEnabled ? 'Mic On' : 'Mic Off'}
             >
               {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
               {!audioEnabled && <span className={styles.btnGlow} />}
@@ -172,43 +236,33 @@ const CallScreen = ({
               fill="currentColor" 
               className={`${styles.zapIcon} ${nextHovered ? styles.zapActive : ''}`}
             />
-            {nextHovered && <Sparkles size={10} className={styles.sparkleLeft} />}
-            {nextHovered && <Sparkles size={8} className={styles.sparkleRight} />}
           </button>
 
-          {/* Right Button Group - Actions */}
+          {/* Right - Single Action Button */}
           <div className={styles.btnGroup}>
             <button 
               onClick={onShareId} 
               className={styles.actionBtn}
               aria-label="Share room ID"
-              title="Invite"
             >
               <UserPlus size={18} />
-            </button>
-            
-            <div className={styles.btnDivider} />
-            
-            <button 
-              className={styles.actionBtn}
-              aria-label="More options"
-              title="More"
-            >
-              <MoreHorizontal size={18} />
             </button>
           </div>
         </div>
         
-        {/* Footer Security Note */}
+        {/* Footer with Live Location */}
         <div className={styles.footerNote}>
-          <ShieldCheck size={10} className={styles.shieldIcon} />
-          <span>Encrypted Peer Node</span>
+          <Navigation size={10} className={styles.navIcon} />
+          <span>{locationString}</span>
+          <span className={styles.dot} />
+          <ShieldCheck size={10} />
+          <span>Encrypted</span>
         </div>
       </div>
 
       {/* SEARCHING OVERLAYS */}
       {(searching || autoSearchCountdown !== null) && (
-        <div className={styles.fullOverlay} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.fullOverlay}>
           <div className={styles.overlayContent}>
             {autoSearchCountdown !== null ? (
               <div className={styles.countdownBox}>
