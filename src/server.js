@@ -10,6 +10,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const server = http.createServer(app);
 
+// Trust the first proxy (Koyeb load balancer) so express-rate-limit
+// can correctly identify clients via X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false,
