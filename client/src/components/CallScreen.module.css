@@ -24,7 +24,7 @@
 }
 
 .uiHidden .controlWrapper {
-  transform: translate(-50%, 150%) scale(0.9);
+  transform: translateY(calc(100% + 2rem));
   opacity: 0;
   pointer-events: none;
 }
@@ -83,6 +83,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .brandTextMain {
@@ -112,18 +113,18 @@
 }
 
 /* Tags */
-.roomTag, .previewTag, .userTag {
+.roomTag, .localTag, .remoteTag {
   position: absolute;
   z-index: 30;
   transition: all 0.7s ease;
 }
 
 .roomTag { top: 1.5rem; left: 1.5rem; }
-.userTag { top: 1.5rem; right: 1.5rem; }
-.previewTag { bottom: 1.5rem; left: 1.5rem; }
+.remoteTag { bottom: 1.5rem; right: 1.5rem; }
+.localTag { bottom: 1.5rem; left: 1.5rem; }
 
 @media (min-width: 1024px) {
-  .previewTag { bottom: auto; top: 1.5rem; }
+  .localTag { bottom: auto; top: 1.5rem; }
 }
 
 .tagContent {
@@ -147,10 +148,10 @@
 
 .tagLabel { 
   font-size: 10px; 
-  font-weight: 900; 
-  color: rgba(255, 255, 255, 0.5); 
+  font-weight: 700; 
+  color: rgba(255, 255, 255, 0.55); 
   text-transform: uppercase; 
-  letter-spacing: 0.2em; 
+  letter-spacing: 0.15em; 
 }
 
 .statusDot { 
@@ -172,62 +173,63 @@
   50% { opacity: 1; }
 }
 
-/* Location Icon */
-.locationIcon {
-  color: rgba(255, 255, 255, 0.3);
-  width: 10px;
-  height: 10px;
-}
-
-/* GPS Live Dot */
-.gpsDot {
-  width: 4px;
-  height: 4px;
-  background: #00ff64;
-  border-radius: 50%;
-  animation: gpsBlink 1s infinite;
-  margin-left: 2px;
-}
-
-@keyframes gpsBlink {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
 /* ============================================
-   REDESIGNED MUTE INDICATOR
+   MUTE INDICATORS - Corner Badges
    ============================================ */
 
-.muteOverlay {
+/* Local Mute Badge */
+.localMuteBadge {
   position: absolute;
-  inset: 0;
+  top: 1.5rem;
+  right: 1.5rem;
   z-index: 40;
+  width: 2.25rem;
+  height: 2.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  color: rgba(255, 45, 85, 0.6);
-  animation: muteFadeIn 0.3s ease-out;
+  background: rgba(255, 45, 85, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 45, 85, 0.3);
+  color: #FF2D55;
+  animation: mutePulse 2s infinite;
+  box-shadow: 0 0 15px rgba(255, 45, 85, 0.2);
 }
 
-.muteOverlay svg {
-  filter: drop-shadow(0 0 15px rgba(255, 45, 85, 0.3));
+/* Peer Mute Badge */
+.peerMuteIndicator {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  z-index: 40;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 45, 85, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 45, 85, 0.3);
+  color: #FF2D55;
+  animation: mutePulse 2s infinite;
+  box-shadow: 0 0 15px rgba(255, 45, 85, 0.2);
 }
 
-@keyframes muteFadeIn {
-  from { 
-    opacity: 0;
-    backdrop-filter: blur(0px);
+@keyframes mutePulse {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(255, 45, 85, 0.2);
+    transform: scale(1); 
   }
-  to { 
-    opacity: 1;
-    backdrop-filter: blur(8px);
+  50% { 
+    box-shadow: 0 0 25px rgba(255, 45, 85, 0.4);
+    transform: scale(1.05); 
   }
 }
 
 /* ============================================
-   MOUSE-AWARE CONTROL BAR
+   REDESIGNED CONTROL BAR
    ============================================ */
 
 .controlWrapper {
@@ -239,265 +241,227 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
-  opacity: 1;
+  gap: 0.75rem;
+  transition: all 0.5s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
-.controlVisible {
-  opacity: 1;
-}
-
-/* Premium Glass Pill */
-.omniPill {
-  background: rgba(12, 12, 14, 0.75);
-  backdrop-filter: blur(60px) saturate(3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.5rem;
-  border-radius: 999px;
+.controlBar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  background: rgba(18, 18, 20, 0.8);
+  backdrop-filter: blur(40px) saturate(2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.5rem;
+  border-radius: 1.25rem;
   box-shadow: 
-    0 30px 60px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(255, 255, 255, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.2, 1, 0.2, 1);
-  position: relative;
+    0 20px 50px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-.omniPill::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 999px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1),
-    transparent 40%,
-    transparent 60%,
-    rgba(255, 255, 255, 0.05)
-  );
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.4s;
-}
-
-.omniPill:hover::before { opacity: 1; }
-.omniPill:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 
-    0 30px 60px rgba(0, 0, 0, 0.95),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 0 40px rgba(255, 45, 85, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-/* Button Groups */
-.btnGroup { 
-  display: flex; 
-  align-items: center; 
-  gap: 0.15rem;
-}
-
-.btnDivider {
-  width: 1px;
-  height: 1.5rem;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 0 0.1rem;
-}
-
-/* Action Buttons */
-.actionBtn {
-  width: 3rem;
-  height: 3rem;
+/* Control Buttons */
+.controlBtn {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.35);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
   background: transparent;
-  cursor: pointer;
   border: none;
-  outline: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 4rem;
+  position: relative;
 }
 
-.actionBtn::before {
+.controlBtn::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 255, 255, 0.08) 0%,
-    transparent 70%
-  );
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
   opacity: 0;
   transition: opacity 0.3s;
 }
 
-.actionBtn:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.06);
-  transform: scale(1.05);
+.controlBtn:hover {
+  color: rgba(255, 255, 255, 0.95);
 }
 
-.actionBtn:hover::before { opacity: 1; }
-.actionBtn:active {
+.controlBtn:hover::before {
+  opacity: 1;
+}
+
+.controlBtn:active {
   transform: scale(0.95);
-  transition: transform 0.1s;
 }
 
-/* Alert State */
-.btnAlert { 
-  color: rgba(255, 45, 85, 0.7) !important;
-  background: rgba(255, 45, 85, 0.08);
-}
-
-.btnAlert:hover {
-  color: #FF2D55 !important;
-  background: rgba(255, 45, 85, 0.15);
-  box-shadow: 0 0 20px rgba(255, 45, 85, 0.2);
-}
-
-.btnGlow {
-  position: absolute;
-  inset: -2px;
+.btnInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
-  background: transparent;
-  box-shadow: 0 0 15px rgba(255, 45, 85, 0.4);
-  animation: glowPulse 2s infinite;
-  pointer-events: none;
+  background: rgba(255, 255, 255, 0.06);
+  transition: all 0.3s;
 }
 
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.1); }
+.controlBtn:hover .btnInner {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btnLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.controlBtn:hover .btnLabel {
+  opacity: 1;
+}
+
+/* Off State */
+.controlOff {
+  color: rgba(255, 45, 85, 0.8) !important;
+}
+
+.controlOff .btnInner {
+  background: rgba(255, 45, 85, 0.15);
+  box-shadow: 0 0 15px rgba(255, 45, 85, 0.15);
+}
+
+.controlOff:hover {
+  color: #FF2D55 !important;
+}
+
+.controlOff:hover .btnInner {
+  background: rgba(255, 45, 85, 0.25);
+  box-shadow: 0 0 25px rgba(255, 45, 85, 0.25);
+}
+
+/* Leave Button */
+.leaveBtn:hover {
+  color: #FF2D55 !important;
+}
+
+.leaveBtn:hover .btnInner {
+  background: rgba(255, 45, 85, 0.2);
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.2);
 }
 
 /* NEXT Button */
 .nextBtn {
-  height: 3rem;
-  padding: 0 2rem;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
-  color: #000;
-  border-radius: 999px;
-  font-weight: 900;
-  font-size: 10px;
-  letter-spacing: 0.5em;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
+  height: 3rem;
+  padding: 0 1.5rem;
+  margin: 0 0.25rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  color: #000;
+  border-radius: 1rem;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.4em;
   border: none;
-  outline: none;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 
     0 4px 15px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
 }
 
-.nextBtn::before {
+.nextBtn::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
   );
-  transition: left 0.5s;
+  transform: translateX(-100%);
+  transition: transform 0.6s;
 }
 
-.nextBtn:hover::before { left: 100%; }
+.nextBtn:hover::after {
+  transform: translateX(100%);
+}
+
 .nextBtn:hover {
-  background: linear-gradient(135deg, #FF2D55 0%, #ff1a4a 100%);
+  background: linear-gradient(135deg, #FF2D55 0%, #ff1744 100%);
   color: #fff;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 
     0 8px 30px rgba(255, 45, 85, 0.4),
-    0 0 0 1px rgba(255, 45, 85, 0.3),
-    0 0 60px rgba(255, 45, 85, 0.15);
+    0 0 60px rgba(255, 45, 85, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .nextBtn:active {
-  transform: translateY(0) scale(0.98);
-  transition: transform 0.1s;
+  transform: translateY(0) scale(0.97);
 }
 
 .nextText { 
-  transform: translateX(4px); 
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 900;
+  transition: all 0.3s;
 }
 
-.nextBtn:hover .nextText { 
-  transform: translateX(0);
-  letter-spacing: 0.6em;
+.nextBtn:hover .nextText {
+  letter-spacing: 0.5em;
 }
 
 .zapIcon {
   opacity: 0;
   transform: scale(0) rotate(-90deg);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #fff;
 }
 
 .nextBtn:hover .zapIcon {
   opacity: 1;
   transform: scale(1.2) rotate(0deg);
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
 }
 
 .zapActive {
-  animation: zapBounce 0.6s ease-in-out;
+  animation: zapPulse 0.5s ease-in-out;
+  fill: currentColor;
 }
 
-@keyframes zapBounce {
-  0%, 100% { transform: scale(1.2) rotate(0deg); }
-  30% { transform: scale(1.5) rotate(-10deg); }
-  60% { transform: scale(1.3) rotate(5deg); }
+@keyframes zapPulse {
+  0%, 100% { transform: scale(1.2); }
+  50% { transform: scale(1.4) rotate(10deg); }
 }
 
-/* Footer with Live Location */
-.footerNote {
+/* Security Badge */
+.securityBadge {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  opacity: 0.15;
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.15);
   text-transform: uppercase;
-  transition: opacity 0.3s;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all 0.3s;
 }
 
-.footerNote:hover { opacity: 0.3; }
-
-.navIcon {
-  color: rgba(0, 255, 100, 0.6);
-}
-
-.footerNote .dot {
-  width: 3px;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
+.securityBadge:hover {
+  color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================
@@ -628,40 +592,55 @@
    ============================================ */
 
 @media (max-width: 768px) {
-  .omniPill {
-    padding: 0.4rem;
+  .controlBar {
     gap: 0.25rem;
+    padding: 0.4rem;
   }
   
-  .actionBtn {
-    width: 2.75rem;
-    height: 2.75rem;
+  .controlBtn {
+    padding: 0.4rem 0.5rem;
+    min-width: 3.5rem;
+  }
+  
+  .btnInner {
+    width: 2.25rem;
+    height: 2.25rem;
   }
   
   .nextBtn {
     height: 2.75rem;
-    padding: 0 1.5rem;
+    padding: 0 1.25rem;
   }
 }
 
 @media (max-width: 480px) {
   .controlWrapper { bottom: 1.5rem; }
   
-  .omniPill {
-    padding: 0.35rem;
+  .controlBar {
     gap: 0.15rem;
+    padding: 0.35rem;
+    border-radius: 1rem;
   }
   
-  .actionBtn {
-    width: 2.5rem;
-    height: 2.5rem;
+  .controlBtn {
+    padding: 0.35rem 0.4rem;
+    min-width: 3rem;
+    border-radius: 0.65rem;
+  }
+  
+  .btnInner {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .btnLabel {
+    font-size: 7px;
   }
   
   .nextBtn {
     height: 2.5rem;
-    padding: 0 1.25rem;
+    padding: 0 1rem;
     font-size: 9px;
+    border-radius: 0.75rem;
   }
-  
-  .btnDivider { height: 1.25rem; }
 }
