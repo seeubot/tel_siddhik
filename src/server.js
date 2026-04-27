@@ -6,7 +6,6 @@ const path = require('path');
 const crypto = require('crypto');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const jwt = require('jsonwebtoken'); // npm install jsonwebtoken
 
 const app = express();
 const server = http.createServer(app);
@@ -47,22 +46,14 @@ const PORT = process.env.PORT || 3000;
 const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_SEARCH_DELAY_MS = 5000;
 
-const API_KEY   = process.env.API_KEY   || 'oryx_2024_secure_key_change_this';
+const API_KEY = process.env.API_KEY || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
 
-// ─── Google Auth Configuration ──────────────────────────────────────────────
-// Set these in your Koyeb dashboard → Environment Variables:
-//   GOOGLE_CLIENT_ID_WEB  → Your Web OAuth 2.0 Client ID from Google Cloud Console
-//   JWT_SECRET            → Long random string  (run: openssl rand -hex 32)
-const GOOGLE_CLIENT_ID_WEB = process.env.GOOGLE_CLIENT_ID_WEB || '';
-const JWT_SECRET           = process.env.JWT_SECRET           || 'change_this_secret_in_production';
-const JWT_EXPIRY           = '7d';
-
 const VIDEO_QUALITY = {
-  low:    { maxBitrate: 150000,  scaleResolutionDownBy: 4, maxFramerate: 15 },
-  medium: { maxBitrate: 500000,  scaleResolutionDownBy: 2, maxFramerate: 24 },
-  high:   { maxBitrate: 1500000, scaleResolutionDownBy: 1, maxFramerate: 30 },
-  hd:     { maxBitrate: 4000000, scaleResolutionDownBy: 1, maxFramerate: 30 },
+  low: { maxBitrate: 150000, scaleResolutionDownBy: 4, maxFramerate: 15 },
+  medium: { maxBitrate: 500000, scaleResolutionDownBy: 2, maxFramerate: 24 },
+  high: { maxBitrate: 1500000, scaleResolutionDownBy: 1, maxFramerate: 30 },
+  hd: { maxBitrate: 4000000, scaleResolutionDownBy: 1, maxFramerate: 30 },
 };
 
 const ICE_SERVERS = [
@@ -201,14 +192,14 @@ function attemptMatch(newSocketId) {
 
   const [selfId, partnerId] = [randomQueue[idxSelf], randomQueue[partnerIdx]];
   const highIdx = Math.max(idxSelf, partnerIdx);
-  const lowIdx  = Math.min(idxSelf, partnerIdx);
+  const lowIdx = Math.min(idxSelf, partnerIdx);
   randomQueue.splice(highIdx, 1);
   randomQueue.splice(lowIdx, 1);
 
   const roomId = generateRoomId();
   rooms.set(roomId, new Map());
 
-  const selfSocket    = io.sockets.sockets.get(selfId);
+  const selfSocket = io.sockets.sockets.get(selfId);
   const partnerSocket = io.sockets.sockets.get(partnerId);
 
   if (!selfSocket || !partnerSocket) return;
@@ -216,47 +207,45 @@ function attemptMatch(newSocketId) {
   selfSocket.join(roomId);
   partnerSocket.join(roomId);
 
-  const selfData    = { userName: selfSocket.data.userName    || 'Anonymous', oreyId: selfSocket.data.oreyId    || null };
-  const partnerData = { userName: partnerSocket.data.userName || 'Anonymous', oreyId: partnerSocket.data.oreyId || null };
+  const selfData = { 
+    userName: selfSocket.data.userName || 'Anonymous', 
+    oreyId: selfSocket.data.oreyId || null 
+  };
+  const partnerData = { 
+    userName: partnerSocket.data.userName || 'Anonymous', 
+    oreyId: partnerSocket.data.oreyId || null 
+  };
 
-  rooms.get(roomId).set(selfId,    selfData);
+  rooms.get(roomId).set(selfId, selfData);
   rooms.get(roomId).set(partnerId, partnerData);
 
   const qualityConfig = appConfig.videoQuality;
-  const roomData = { roomId, videoQuality: qualityConfig, iceServers: ICE_SERVERS, autoMatched: true };
+  const roomData = { 
+    roomId, 
+    videoQuality: qualityConfig,
+    iceServers: ICE_SERVERS,
+    autoMatched: true 
+  };
 
-  selfSocket.emit('room-joined',    { ...roomData, peers: [{ socketId: partnerId, ...partnerData }] });
-  partnerSocket.emit('room-joined', { ...roomData, peers: [{ socketId: selfId,    ...selfData    }] });
+  selfSocket.emit('room-joined', { 
+    ...roomData,
+    peers: [{ socketId: partnerId, ...partnerData }]
+  });
+  partnerSocket.emit('room-joined', { 
+    ...roomData,
+    peers: [{ socketId: selfId, ...selfData }]
+  });
 
-  selfSocket.emit('incoming-call',    { fromName: partnerData.userName, fromOreyId: partnerData.oreyId, autoMatched: true });
-  partnerSocket.emit('incoming-call', { fromName: selfData.userName,    fromOreyId: selfData.oreyId,    autoMatched: true });
-}
-
-// ─── Google ID Token Verifier ────────────────────────────────────────────────
-// Verifies the Google credential directly with Google's tokeninfo endpoint.
-// No Firebase SDK required.
-
-async function verifyGoogleIdToken(idToken) {
-  const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new Error('Google token verification failed');
-  }
-
-  const payload = await res.json();
-
-  // Validate the token was issued for YOUR web client
-  if (GOOGLE_CLIENT_ID_WEB && payload.aud !== GOOGLE_CLIENT_ID_WEB) {
-    throw new Error('Token audience mismatch — wrong client ID');
-  }
-
-  // Guard against expired tokens (Google checks this too, belt-and-suspenders)
-  if (payload.exp && Date.now() / 1000 > Number(payload.exp)) {
-    throw new Error('Google token has expired');
-  }
-
-  return payload; // { sub, email, name, picture, email_verified, ... }
+  selfSocket.emit('incoming-call', { 
+    fromName: partnerData.userName, 
+    fromOreyId: partnerData.oreyId, 
+    autoMatched: true 
+  });
+  partnerSocket.emit('incoming-call', { 
+    fromName: selfData.userName, 
+    fromOreyId: selfData.oreyId, 
+    autoMatched: true 
+  });
 }
 
 // ─── Auth Middleware ─────────────────────────────────────────────────────────
@@ -278,8 +267,8 @@ const verifyAdminKey = (req, res, next) => {
 // ─── Public REST Endpoints ──────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeConnections: io.engine.clientsCount,
@@ -305,50 +294,15 @@ app.get('/api/get-key-hash', (_req, res) => {
   res.json({ hash: hash.substring(0, 32) });
 });
 
-// ─── Google Auth Endpoint ───────────────────────────────────────────────────
-// POST /api/auth/google
-// Body: { idToken: string }   ← the credential from Google Identity Services
-// Returns: { sessionToken, user: { name, email, picture, googleId } }
-
-app.post('/api/auth/google', async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken || typeof idToken !== 'string') {
-    return res.status(400).json({ error: 'idToken is required' });
-  }
-
-  try {
-    const payload = await verifyGoogleIdToken(idToken);
-
-    const user = {
-      googleId : payload.sub,
-      name     : payload.name             || 'Anonymous',
-      email    : payload.email            || '',
-      picture  : payload.picture          || '',
-    };
-
-    // Sign a session JWT — the frontend sends this back on every socket connect
-    const sessionToken = jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-
-    console.log(`[AUTH] ✅ Google sign-in: ${user.email}`);
-
-    return res.json({ sessionToken, user });
-
-  } catch (err) {
-    console.error('[AUTH] ❌ Google verification error:', err.message);
-    return res.status(401).json({ error: err.message || 'Authentication failed' });
-  }
-});
-
 // ─── App API Endpoints (Require API Key) ────────────────────────────────────
 
 app.get('/api/version', (req, res) => {
   const platform = req.query.platform || 'android';
   const clientVersion = parseInt(req.query.version) || 0;
-
+  
   const platformConfig = appConfig[platform];
   if (!platformConfig) return res.status(400).json({ error: 'Invalid platform' });
-
+  
   if (clientVersion < platformConfig.versionCode) {
     res.json({ updateAvailable: true, ...platformConfig });
   } else {
@@ -358,9 +312,9 @@ app.get('/api/version', (req, res) => {
 
 app.get('/api/notifications', (req, res) => {
   const lastId = parseInt(req.query.after_id) || 0;
-
+  
   let filtered = notifications.filter(n => n.id > lastId);
-
+  
   const now = new Date();
   filtered = filtered.filter(n => {
     if (n.expiresIn) {
@@ -370,7 +324,7 @@ app.get('/api/notifications', (req, res) => {
     }
     return true;
   });
-
+  
   res.json({
     notifications: filtered,
     total: notifications.length,
@@ -381,7 +335,7 @@ app.get('/api/notifications', (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const clientVersion = parseInt(req.query.version) || 0;
-
+  
   res.json({
     features: {
       videoCall: true,
@@ -402,8 +356,8 @@ app.get('/api/config', (req, res) => {
 // ─── Admin Endpoints (Require Admin Key) ────────────────────────────────────
 
 app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
-  res.json({
-    notifications,
+  res.json({ 
+    notifications, 
     total: notifications.length,
     active: notifications.filter(n => {
       if (n.expiresIn) {
@@ -418,15 +372,15 @@ app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
 
 app.post('/admin/notifications', verifyAdminKey, (req, res) => {
   const { title, message, type, priority, actionUrl, icon, expiresIn } = req.body;
-
+  
   if (!title || !message) {
     return res.status(400).json({ error: 'Title and message are required' });
   }
-
-  const newId = notifications.length > 0
-    ? Math.max(...notifications.map(n => n.id)) + 1
+  
+  const newId = notifications.length > 0 
+    ? Math.max(...notifications.map(n => n.id)) + 1 
     : 1;
-
+    
   const newNotification = {
     id: newId,
     title,
@@ -439,14 +393,15 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
     isRead: false,
     expiresIn: expiresIn || 30
   };
-
+  
   notifications.push(newNotification);
+  
   io.emit('new-notification', newNotification);
-
+  
   console.log(`📢 Notification sent: "${title}" to ${io.engine.clientsCount} clients`);
-
-  res.json({
-    success: true,
+  
+  res.json({ 
+    success: true, 
     notification: newNotification,
     activeClients: io.engine.clientsCount
   });
@@ -455,60 +410,60 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
 app.delete('/admin/notifications/:id', verifyAdminKey, (req, res) => {
   const id = parseInt(req.params.id);
   const index = notifications.findIndex(n => n.id === id);
-
+  
   if (index === -1) return res.status(404).json({ error: 'Notification not found' });
-
+  
   const deleted = notifications.splice(index, 1)[0];
   res.json({ success: true, deleted });
 });
 
 app.put('/api/version', verifyAdminKey, (req, res) => {
   const { platform, versionCode, versionName, updateType, updateMessage, downloadUrl, whatsNew } = req.body;
-
+  
   if (!platform || !versionCode) {
     return res.status(400).json({ error: 'Platform and versionCode required' });
   }
-
+  
   if (!appConfig[platform]) appConfig[platform] = {};
-
-  Object.assign(appConfig[platform], {
-    versionCode,
+  
+  Object.assign(appConfig[platform], { 
+    versionCode, 
     versionName: versionName || `v${versionCode}`,
     updateType: updateType || 'flexible',
     updateMessage: updateMessage || 'New update available!',
     downloadUrl: downloadUrl || appConfig[platform].downloadUrl
   });
-
+  
   if (whatsNew) appConfig[platform].whatsNew = whatsNew;
-
+  
   io.emit('update-available', appConfig[platform]);
-
+  
   res.json({ success: true, config: appConfig[platform] });
 });
 
 app.post('/admin/maintenance', verifyAdminKey, (req, res) => {
   const { enabled, message } = req.body;
-  appConfig.maintenance = {
-    enabled: enabled || false,
-    message: message || ''
+  appConfig.maintenance = { 
+    enabled: enabled || false, 
+    message: message || '' 
   };
-
+  
   io.emit('maintenance-mode', appConfig.maintenance);
-
+  
   console.log(`🔧 Maintenance ${enabled ? 'ENABLED' : 'DISABLED'}`);
-
+  
   res.json({ success: true, maintenance: appConfig.maintenance });
 });
 
 app.put('/admin/video-quality', verifyAdminKey, (req, res) => {
   const { default: def, autoAdjust, maxBitrate } = req.body;
-
+  
   if (def && VIDEO_QUALITY[def]) appConfig.videoQuality.default = def;
   if (autoAdjust !== undefined) appConfig.videoQuality.autoAdjust = autoAdjust;
   if (maxBitrate) appConfig.videoQuality.maxBitrate = maxBitrate;
-
+  
   io.emit('video-quality-update', appConfig.videoQuality);
-
+  
   res.json({ success: true, videoQuality: appConfig.videoQuality });
 });
 
@@ -524,7 +479,8 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
   });
 });
 
-// ─── Admin Panel Routes ───────────────────────────────────────────────────────
+// ─── Admin Panel Routes (NO AUTH REQUIRED for the page itself) ────────────────
+// IMPORTANT: These must be BEFORE the static file serving and catch-all route
 
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
@@ -537,50 +493,30 @@ app.get('/admin.html', (_req, res) => {
 // ─── Static Files & SPA ─────────────────────────────────────────────────────
 
 if (process.env.NODE_ENV === 'production') {
+  // Serve static files from public directory
   app.use(express.static(path.join(__dirname, '..', 'public'), {
-    index: false
+    index: false // Don't auto-serve index.html
   }));
-
+  
+  // Catch-all for React SPA - but skip API and Admin routes
   app.get('*', (req, res) => {
+    // Don't interfere with API or admin routes
     if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
       return res.status(404).json({ error: 'Not found' });
     }
+    // Don't serve admin page as SPA
     if (req.path === '/admin' || req.path === '/admin.html') {
       return res.status(404).json({ error: 'Not found' });
     }
+    // Serve React app for all other routes
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });
 }
 
-// ─── Socket.IO Auth Middleware ───────────────────────────────────────────────
-// Runs before every socket connection is accepted.
-// The frontend must pass:  io(URL, { auth: { sessionToken: '...' } })
-
-io.use((socket, next) => {
-  const token = socket.handshake.auth?.sessionToken
-              || socket.handshake.headers?.authorization?.replace('Bearer ', '');
-
-  if (!token) {
-    return next(new Error('AUTH_REQUIRED'));
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    // Attach Google-verified identity to the socket — available in all handlers
-    socket.data.googleId  = decoded.googleId;
-    socket.data.userName  = decoded.name;
-    socket.data.email     = decoded.email;
-    socket.data.picture   = decoded.picture;
-    next();
-  } catch (err) {
-    return next(new Error('AUTH_INVALID'));
-  }
-});
-
 // ─── Socket.IO Events ───────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
-  console.log(`[+] Connected: ${socket.id} | ${socket.data.email} (Total: ${io.engine.clientsCount})`);
+  console.log(`[+] Connected: ${socket.id} (Total: ${io.engine.clientsCount})`);
 
   // Send config on connect
   socket.emit('video-quality-config', {
@@ -593,9 +529,7 @@ io.on('connection', (socket) => {
     socket.emit('maintenance-mode', appConfig.maintenance);
   }
 
-  socket.on('register-orey-id', ({ oreyId }) => {
-    // userName is no longer accepted from the client —
-    // it is always taken from the verified Google JWT (socket.data.userName)
+  socket.on('register-orey-id', ({ oreyId, userName }) => {
     cleanExpiredOreyIds();
     const entry = oreyIds.get(oreyId);
     if (!entry) {
@@ -608,8 +542,9 @@ io.on('connection', (socket) => {
       return;
     }
     entry.socketId = socket.id;
-    entry.userName = socket.data.userName; // always from Google
+    entry.userName = userName || 'Anonymous';
     socket.data.oreyId = oreyId;
+    socket.data.userName = userName || 'Anonymous';
     socket.emit('orey-id-registered', { oreyId, expiresAt: entry.expiresAt });
   });
 
@@ -646,13 +581,17 @@ io.on('connection', (socket) => {
     const callerData = { userName: socket.data.userName || 'Anonymous', oreyId: socket.data.oreyId || null };
     const calleeData = { userName: entry.userName, oreyId: targetOreyId };
 
-    rooms.get(roomId).set(socket.id,      callerData);
+    rooms.get(roomId).set(socket.id, callerData);
     rooms.get(roomId).set(entry.socketId, calleeData);
 
-    const roomData = { roomId, videoQuality: appConfig.videoQuality, iceServers: ICE_SERVERS };
+    const roomData = { 
+      roomId, 
+      videoQuality: appConfig.videoQuality,
+      iceServers: ICE_SERVERS 
+    };
 
-    socket.emit('room-joined',       { ...roomData, peers: [{ socketId: entry.socketId, ...calleeData }] });
-    targetSocket.emit('room-joined', { ...roomData, peers: [{ socketId: socket.id,      ...callerData }] });
+    socket.emit('room-joined', { ...roomData, peers: [{ socketId: entry.socketId, ...calleeData }] });
+    targetSocket.emit('room-joined', { ...roomData, peers: [{ socketId: socket.id, ...callerData }] });
     targetSocket.emit('incoming-call', { fromName: callerData.userName, fromOreyId: callerData.oreyId });
   });
 
@@ -670,8 +609,8 @@ io.on('connection', (socket) => {
     socket.emit('random-cancelled');
   });
 
-  socket.on('join-room', ({ roomId }) => {
-    // userName comes from JWT — client no longer sends it
+  socket.on('join-room', ({ roomId, userName }) => {
+    socket.data.userName = userName || 'Anonymous';
     const room = rooms.get(roomId);
     if (!room) rooms.set(roomId, new Map());
     const r = rooms.get(roomId);
@@ -684,9 +623,9 @@ io.on('connection', (socket) => {
     const peers = [...r.entries()]
       .filter(([id]) => id !== socket.id)
       .map(([socketId, data]) => ({ socketId, ...data }));
-
-    socket.emit('room-joined', {
-      roomId,
+    
+    socket.emit('room-joined', { 
+      roomId, 
       peers,
       videoQuality: appConfig.videoQuality,
       iceServers: ICE_SERVERS
@@ -696,19 +635,19 @@ io.on('connection', (socket) => {
 
   socket.on('request-quality-change', ({ roomId, quality }) => {
     if (VIDEO_QUALITY[quality]) {
-      socket.to(roomId).emit('quality-change-requested', {
-        fromId: socket.id,
-        quality,
-        config: VIDEO_QUALITY[quality]
+      socket.to(roomId).emit('quality-change-requested', { 
+        fromId: socket.id, 
+        quality, 
+        config: VIDEO_QUALITY[quality] 
       });
     }
   });
 
   socket.on('accept-quality-change', ({ roomId, quality }) => {
     if (VIDEO_QUALITY[quality]) {
-      socket.to(roomId).emit('quality-change-accepted', {
-        quality,
-        config: VIDEO_QUALITY[quality]
+      socket.to(roomId).emit('quality-change-accepted', { 
+        quality, 
+        config: VIDEO_QUALITY[quality] 
       });
     }
   });
@@ -726,10 +665,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('media-state', ({ roomId, audioEnabled, videoEnabled }) => {
-    socket.to(roomId).emit('peer-media-state', {
-      socketId: socket.id,
-      audioEnabled,
-      videoEnabled
+    socket.to(roomId).emit('peer-media-state', { 
+      socketId: socket.id, 
+      audioEnabled, 
+      videoEnabled 
     });
   });
 
@@ -742,10 +681,10 @@ io.on('connection', (socket) => {
         if (partnerSocket) {
           room.delete(pid);
           partnerSocket.leave(roomId);
-          partnerSocket.emit('partner-left', {
-            socketId: socket.id,
-            userName: socket.data.userName,
-            reason: 'skip'
+          partnerSocket.emit('partner-left', { 
+            socketId: socket.id, 
+            userName: socket.data.userName, 
+            reason: 'skip' 
           });
           scheduleAutoSearch(partnerSocket);
         }
@@ -768,10 +707,10 @@ io.on('connection', (socket) => {
       partnerIds.forEach(pid => {
         const partnerSocket = io.sockets.sockets.get(pid);
         if (partnerSocket) {
-          partnerSocket.emit('partner-left', {
-            socketId: socket.id,
-            userName: socket.data.userName,
-            reason: 'left'
+          partnerSocket.emit('partner-left', { 
+            socketId: socket.id, 
+            userName: socket.data.userName, 
+            reason: 'left' 
           });
           scheduleAutoSearch(partnerSocket);
         }
@@ -793,24 +732,24 @@ io.on('connection', (socket) => {
     if (!room) return;
     const partnerIds = [...room.keys()].filter(id => id !== socket.id);
     partnerIds.forEach(pid => {
-      io.to(pid).emit('share-id-request', {
-        fromId: socket.id,
-        fromName: socket.data.userName
+      io.to(pid).emit('share-id-request', { 
+        fromId: socket.id, 
+        fromName: socket.data.userName 
       });
     });
   });
 
   socket.on('share-id-accept', ({ roomId, targetId }) => {
     const myOreyId = socket.data.oreyId || null;
-    io.to(targetId).emit('share-id-reveal', {
-      oreyId: myOreyId,
-      userName: socket.data.userName
+    io.to(targetId).emit('share-id-reveal', { 
+      oreyId: myOreyId, 
+      userName: socket.data.userName 
     });
     const targetSocket = io.sockets.sockets.get(targetId);
     if (targetSocket) {
-      socket.emit('share-id-reveal', {
-        oreyId: targetSocket.data.oreyId || null,
-        userName: targetSocket.data.userName
+      socket.emit('share-id-reveal', { 
+        oreyId: targetSocket.data.oreyId || null, 
+        userName: targetSocket.data.userName 
       });
     }
   });
@@ -825,7 +764,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`[-] Disconnected: ${socket.id} | ${socket.data.email} (Total: ${io.engine.clientsCount})`);
+    console.log(`[-] Disconnected: ${socket.id} (Total: ${io.engine.clientsCount})`);
     removeFromQueue(socket.id);
     cancelAutoSearch(socket.id);
 
@@ -842,10 +781,10 @@ io.on('connection', (socket) => {
       for (const [pid] of peers.entries()) {
         const partnerSocket = io.sockets.sockets.get(pid);
         if (partnerSocket) {
-          partnerSocket.emit('partner-left', {
-            socketId: socket.id,
-            userName: socket.data.userName,
-            reason: 'disconnect'
+          partnerSocket.emit('partner-left', { 
+            socketId: socket.id, 
+            userName: socket.data.userName, 
+            reason: 'disconnect' 
           });
           scheduleAutoSearch(partnerSocket);
         }
@@ -862,12 +801,10 @@ server.listen(PORT, () => {
   console.log('🚀 Orey Server Running');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📍 URL:        http://localhost:${PORT}`);
-  console.log(`👥 Socket.IO:  Active (JWT auth enabled)`);
-  console.log(`🔐 Google Auth: ${GOOGLE_CLIENT_ID_WEB ? '✅ Client ID set' : '⚠️  GOOGLE_CLIENT_ID_WEB not set'}`);
-  console.log(`🔑 JWT Secret: ${JWT_SECRET !== 'change_this_secret_in_production' ? '✅ Custom secret set' : '⚠️  Using default secret — set JWT_SECRET env var!'}`);
+  console.log(`👥 Socket.IO:  Active`);
   console.log(`📹 Quality:    ${Object.keys(VIDEO_QUALITY).join(', ')}`);
   console.log(`🔑 API Key:    ${API_KEY.substring(0, 8)}...`);
-  console.log(`🛡️  Admin Key:  ${ADMIN_KEY.substring(0, 8)}...`);
+  console.log(`🛡️ Admin Key:  ${ADMIN_KEY.substring(0, 8)}...`);
   console.log(`🖥️  Admin Page: http://localhost:${PORT}/admin`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
