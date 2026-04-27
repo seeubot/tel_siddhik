@@ -2,171 +2,185 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  UserPlus, Zap,
-  Share2, VolumeX
+  PhoneOff, UserPlus, Zap, X
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
- * OREY! PRO - High Fidelity Call Screen
- * Separated into clean JSX and CSS Module.
+ * Orey! Pro — Responsive Call Interface
+ * Divided into separate JSX and CSS Module.
  */
 
-const CallScreen = () => {
-  const [partner, setPartner] = useState(null);
-  const [searching, setSearching] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(true);
-  const [videoEnabled, setVideoEnabled] = useState(true);
+const CallScreen = ({
+  partner = null,
+  roomId = "000-000",
+  localVideoRef,
+  remoteVideoRef,
+  audioEnabled = true,
+  videoEnabled = true,
+  partnerMedia = { video: true, audio: true },
+  searching = false,
+  autoSearchCountdown = null,
+  onToggleAudio = () => {},
+  onToggleVideo = () => {},
+  onSkip = () => {},
+  onLeave = () => {},
+  onShareId = () => {},
+  onCancelAutoSearch = () => {},
+}) => {
   const [uiVisible, setUiVisible] = useState(true);
-  const [countdown, setCountdown] = useState(null);
-  
   const uiTimerRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+
+  const isPartnerVideoEnabled = partnerMedia?.video !== false;
 
   const resetUiTimer = useCallback(() => {
-    if (uiTimerRef.current) clearTimeout(uiTimerRef.current);
-    uiTimerRef.current = setTimeout(() => setUiVisible(false), 8000);
+    clearTimeout(uiTimerRef.current);
+    uiTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
   }, []);
 
   useEffect(() => {
-    if (uiVisible) resetUiTimer();
+    resetUiTimer();
     return () => clearTimeout(uiTimerRef.current);
-  }, [uiVisible, resetUiTimer, searching]);
+  }, [resetUiTimer]);
 
-  const handleToggleUI = (e) => {
+  const handleRootClick = useCallback((e) => {
     if (e.target.closest('button')) return;
-    setUiVisible(!uiVisible);
-  };
-
-  const handleSkip = () => {
-    setPartner(null);
-    setSearching(true);
-    setCountdown(null);
-    setTimeout(() => {
-      setSearching(false);
-      setCountdown(3);
-    }, 2000);
-  };
-
-  useEffect(() => {
-    if (countdown !== null && countdown > 0) {
-      const t = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(t);
-    } else if (countdown === 0) {
-      setPartner({ id: 'Stranger_' + Math.floor(Math.random() * 9000 + 1000) });
-      setCountdown(null);
-    }
-  }, [countdown]);
-
-  // Start discovery on mount
-  useEffect(() => {
-    handleSkip();
-  }, []);
+    setUiVisible((prev) => {
+      if (!prev) resetUiTimer();
+      return !prev;
+    });
+  }, [resetUiTimer]);
 
   return (
-    <div className={styles.container} onClick={handleToggleUI}>
-      <div className={styles.grainOverlay} />
+    <div 
+      className={`${styles.container} ${uiVisible ? '' : styles.uiHidden}`}
+      onClick={handleRootClick}
+    >
+      {/* Grain overlay */}
+      <div className={styles.grainOverlay} aria-hidden="true" />
 
-      {/* PEER PANEL */}
-      <div className={`${styles.panel} ${searching ? styles.searchingPanel : ''}`}>
-        {partner ? (
-          <video ref={remoteVideoRef} className={styles.video} autoPlay playsInline />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-10 px-4 text-center">
-            <div className="text-[14vw] md:text-[10vw] font-black italic tracking-tighter uppercase mix-blend-difference">OREY!</div>
-            <div className="text-[8px] md:text-[10px] tracking-[0.6em] font-bold uppercase mt-[-10px] text-white">
-              {searching ? 'SCANNING' : 'ESTABLISHING'}
-            </div>
+      {/* STRANGER PANEL */}
+      <div className={`${styles.panel} ${styles.remotePanel} ${searching ? styles.searchingBlur : ''}`}>
+        <video
+          ref={remoteVideoRef}
+          className={styles.videoStream}
+          autoPlay
+          playsInline
+          style={{ display: partner && isPartnerVideoEnabled ? 'block' : 'none' }}
+        />
+
+        {(!partner || !isPartnerVideoEnabled) && (
+          <div className={styles.idleOverlay}>
+            <div className={styles.brandBg}>OREY!</div>
+            <p className={styles.statusText}>
+              {searching ? 'SYNCING...' : 'STREAM IDLE'}
+            </p>
           </div>
         )}
-        
-        <div className={`absolute top-6 left-6 z-20 transition-all duration-700 ${uiVisible ? 'translate-y-0 opacity-100' : '-translate-y-12 opacity-0'}`}>
+
+        <div className={styles.floatingLabelTop}>
           <div className={styles.badge}>
-            <div className={partner ? styles.liveDot : 'w-1.5 h-1.5 rounded-full bg-zinc-700'} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">
-              {partner ? partner.id : 'Awaiting Peer'}
-            </span>
+            <span className={styles.liveDot} />
+            <span className={styles.badgeText}>Stranger</span>
           </div>
         </div>
+
+        <div className={styles.roomInfo}>{roomId}</div>
+        <div className={`${styles.gradient} ${styles.gradientBottom} md:hidden`} />
+        <div className={`${styles.gradient} ${styles.gradientRight} hidden md:block`} />
       </div>
 
-      <div className={styles.divider} />
+      {/* DIVIDER */}
+      <div className={styles.divider} aria-hidden="true" />
 
-      {/* LOCAL PANEL */}
-      <div className={styles.panel}>
-        {videoEnabled ? (
-          <video ref={localVideoRef} className={`${styles.video} ${styles.mirror}`} autoPlay playsInline muted />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-            <VideoOff size={48} className="text-white/5" strokeWidth={1} />
+      {/* YOU PANEL */}
+      <div className={`${styles.panel} ${styles.localPanel}`}>
+        <video
+          ref={localVideoRef}
+          className={`${styles.videoStream} ${styles.mirrored}`}
+          autoPlay
+          playsInline
+          muted
+          style={{ display: videoEnabled ? 'block' : 'none' }}
+        />
+
+        {!videoEnabled && (
+          <div className={styles.idleOverlay}>
+            <VideoOff size={32} strokeWidth={1} className="opacity-20" />
           </div>
         )}
-        
-        <div className={`absolute bottom-6 md:top-6 left-6 z-20 transition-all duration-700 ${uiVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+
+        <div className={styles.floatingLabelBottom}>
           <div className={styles.badge}>
-            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/90">You</span>
-            {!audioEnabled && (
-              <>
-                <div className="w-[1px] h-3 bg-white/10 mx-1" />
-                <VolumeX size={12} className="text-rose-500" />
-              </>
-            )}
+            <span className={styles.staticDot} />
+            <span className={styles.badgeText}>You</span>
           </div>
         </div>
+
+        <div className={`${styles.gradient} ${styles.gradientTop} md:hidden`} />
+        <div className={`${styles.gradient} ${styles.gradientLeft} hidden md:block`} />
       </div>
 
-      {/* --- CONTROL DOCK --- */}
-      <div className={`${styles.dockWrapper} ${uiVisible ? '' : 'translate-y-24 opacity-0'}`}>
-        <div className={styles.dock}>
-          <div className="flex items-center px-2">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-all text-white/30 hover:text-white shrink-0">
-              <Share2 size={18} />
-            </button>
-          </div>
-
-          <div className="w-[1px] h-8 bg-white/10 mx-1" />
-
-          <div className="flex items-center gap-2 px-1">
-            <button 
-              onClick={() => setVideoEnabled(!videoEnabled)}
-              className={`${styles.mediaBtn} ${!videoEnabled ? styles.mediaBtnActive : ''}`}
-            >
-              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-            </button>
-            <button 
-              onClick={() => setAudioEnabled(!audioEnabled)}
-              className={`${styles.mediaBtn} ${!audioEnabled ? styles.mediaBtnActive : ''}`}
-            >
-              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-            </button>
-          </div>
-
-          <button onClick={handleSkip} className={styles.skipBtn}>
-            <span className="font-black text-[11px] tracking-[0.25em] uppercase">Skip</span>
-            <div className={styles.skipIconWrapper}>
-              <Zap size={15} fill="currentColor" />
+      {/* CONTROL DOCK */}
+      <div className={styles.controlDock}>
+        <div className={styles.navGroup}>
+          <button onClick={onLeave} className={styles.iconBtnSecondary} title="Stop Call">
+            <X size={20} strokeWidth={2.5} />
+          </button>
+          
+          <button onClick={onSkip} className={styles.nextBtn}>
+            NEXT
+            <div className={styles.nextIconBox}>
+              <Zap size={14} fill="currentColor" />
             </div>
           </button>
         </div>
-        <div className="opacity-10 text-[8px] font-black tracking-[0.8em] uppercase text-white">Tap Screen to Focus</div>
+
+        <div className={styles.mediaGroup}>
+            <button onClick={onShareId} className={styles.iconBtnSecondary}>
+              <UserPlus size={18} />
+            </button>
+            <div className={styles.vSeparator} />
+            <button
+              onClick={onToggleVideo}
+              className={`${styles.iconBtnMedia} ${!videoEnabled ? styles.btnActive : ''}`}
+            >
+              {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+            </button>
+            <button
+              onClick={onToggleAudio}
+              className={`${styles.iconBtnMedia} ${!audioEnabled ? styles.btnActive : ''}`}
+            >
+              {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
+            </button>
+        </div>
       </div>
 
-      {/* OVERLAYS */}
-      {searching && (
-        <div className={`${styles.overlay} bg-black/95 backdrop-blur-3xl`}>
-          <div className={styles.loadingBar} />
-          <div className="mt-10 text-[9px] font-black tracking-[1em] text-white/20 uppercase animate-pulse">Syncing Connection</div>
-        </div>
-      )}
-
-      {countdown !== null && (
-        <div className={`${styles.overlay} bg-black/90 backdrop-blur-[100px]`}>
-           <div className="text-[30vw] md:text-[15rem] font-black italic tracking-tighter leading-none animate-pulse text-white/10">
-            {countdown}
+      {/* SEARCH OVERLAYS */}
+      {(searching || autoSearchCountdown !== null) && (
+        <div className={styles.fullOverlay} onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center">
+            {autoSearchCountdown !== null ? (
+              <div className="flex flex-col items-center">
+                <div className="flex items-start text-white">
+                  <span className={styles.countdownNumber}>{autoSearchCountdown}</span>
+                  <span className={styles.countdownExclamation}>!</span>
+                </div>
+                <p className={styles.incomingLabel}>INCOMING PEER</p>
+                <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
+                  CANCEL
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className={styles.loadingBrand}>OREY!</div>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill} />
+                </div>
+                <p className={styles.syncLabel}>SYNCING PEERS</p>
+              </div>
+            )}
           </div>
-          <div className="text-rose-500 font-black tracking-[0.6em] uppercase text-[10px] md:text-xs mt-4">Establishing Secure Node</div>
         </div>
       )}
     </div>
