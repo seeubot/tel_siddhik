@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  UserPlus, Zap, PhoneOff,
-  ShieldCheck, Circle
+  Zap, PhoneOff,
+  ShieldCheck, Circle, Loader
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -10,7 +10,7 @@ import styles from './CallScreen.module.css';
  * Orey! Pro — Responsive Call Interface
  * - Mobile: Top/Bottom split
  * - Desktop: Side-by-Side split
- * - Features: Proper mute indicators, Streamlined controls, Peer status
+ * - Features: Random peer matching, Clean minimal UI
  */
 
 const CallScreen = ({
@@ -27,18 +27,132 @@ const CallScreen = ({
   onToggleVideo = () => {},
   onSkip = () => {},
   onLeave = () => {},
-  onShareId = () => {},
   onCancelAutoSearch = () => {},
+  // Backend connection handler
+  onFindRandomPeer = () => {},
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [nextHovered, setNextHovered] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('idle'); // idle, searching, connecting, connected
   const uiTimerRef = useRef(null);
   const mouseMoveTimerRef = useRef(null);
   const containerRef = useRef(null);
+  const wsRef = useRef(null);
 
   const isPartnerVideoEnabled = partnerMedia?.video !== false;
   const isPartnerAudioEnabled = partnerMedia?.audio !== false;
   const isRemoteConnected = partner && isPartnerVideoEnabled;
+
+  // WebSocket connection for random peer matching
+  useEffect(() => {
+    const connectWebSocket = () => {
+      try {
+        // Replace with your actual WebSocket server URL
+        const ws = new WebSocket('wss://your-server.com/signaling');
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          // Register this user as available
+          ws.send(JSON.stringify({
+            type: 'register',
+            status: 'available'
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          
+          switch(data.type) {
+            case 'peer-found':
+              setConnectionStatus('connecting');
+              // Handle peer connection logic here
+              if (onSkip) {
+                onSkip(data.peerId, data.roomId);
+              }
+              break;
+              
+            case 'peer-connected':
+              setConnectionStatus('connected');
+              setIsConnecting(false);
+              break;
+              
+            case 'no-peers-available':
+              setConnectionStatus('idle');
+              setIsConnecting(false);
+              // Optionally show a notification
+              console.log('No peers available, retrying...');
+              setTimeout(() => findRandomPeer(), 2000);
+              break;
+              
+            default:
+              break;
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setIsConnecting(false);
+          setConnectionStatus('idle');
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          // Reconnect after delay
+          setTimeout(connectWebSocket, 3000);
+        };
+      } catch (error) {
+        console.error('Connection failed:', error);
+        setIsConnecting(false);
+        setConnectionStatus('idle');
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  // Find random peer function
+  const findRandomPeer = useCallback(() => {
+    if (isConnecting || connectionStatus === 'connecting') return;
+    
+    setIsConnecting(true);
+    setConnectionStatus('searching');
+    
+    // Send request to backend to find random peer
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'find-random-peer',
+        timestamp: Date.now()
+      }));
+    }
+    
+    // Also trigger the parent handler if available
+    if (onFindRandomPeer) {
+      onFindRandomPeer();
+    }
+    
+    // Fallback: Simulate finding a peer if no backend
+    setTimeout(() => {
+      if (connectionStatus === 'searching') {
+        setConnectionStatus('connecting');
+        // Simulate connection
+        setTimeout(() => {
+          setConnectionStatus('connected');
+          setIsConnecting(false);
+          if (onSkip) {
+            onSkip();
+          }
+        }, 1500);
+      }
+    }, 5000);
+  }, [isConnecting, connectionStatus, onFindRandomPeer, onSkip]);
 
   // Mouse movement handler to show UI
   useEffect(() => {
@@ -100,36 +214,27 @@ const CallScreen = ({
           <div className={styles.brandingCenter}>
             <div className={styles.brandTextMain}>OREY!</div>
             <p className={styles.statusLabel}>
-              {searching ? 'Syncing Mesh' : 'Secure Node'}
+              {searching || isConnecting ? 'Finding Peer...' : 'Waiting for Peer'}
             </p>
           </div>
         )}
 
-        {/* Remote User Status Indicators */}
-        {partner && (
-          <>
-            <div className={styles.remoteTag}>
-              <div className={styles.tagContent}>
-                <div className={`${styles.statusDot} ${isPartnerVideoEnabled ? styles.dotActive : ''}`} />
-                <span className={styles.tagLabel}>Peer</span>
-              </div>
-            </div>
-
-            {/* Show muted indicator for partner */}
-            {!isPartnerAudioEnabled && (
-              <div className={styles.peerMuteIndicator}>
-                <MicOff size={14} strokeWidth={2} />
-              </div>
-            )}
-          </>
+        {/* Peer Mute Indicator */}
+        {partner && !isPartnerAudioEnabled && (
+          <div className={styles.peerMuteIndicator}>
+            <MicOff size={14} strokeWidth={2} />
+          </div>
         )}
 
-        {/* Room ID Tag */}
-        <div className={styles.roomTag}>
-          <div className={styles.tagContent}>
-            <span className={styles.monoText}>{roomId}</span>
+        {/* Connection Status Indicator */}
+        {isConnecting && (
+          <div className={styles.connectionStatus}>
+            <Loader size={16} className={styles.spinningLoader} />
+            <span className={styles.connectingText}>
+              {connectionStatus === 'searching' ? 'Searching for peers...' : 'Connecting...'}
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* LOCAL STREAM */}
@@ -150,15 +255,7 @@ const CallScreen = ({
           </div>
         )}
 
-        {/* Local "YOU" Tag */}
-        <div className={styles.localTag}>
-          <div className={styles.tagContent}>
-            <div className={`${styles.statusDot} ${videoEnabled ? styles.dotActive : ''}`} />
-            <span className={styles.tagLabel}>You</span>
-          </div>
-        </div>
-
-        {/* Local Mute Indicator - Corner badge */}
+        {/* Local Mute Indicator */}
         {!audioEnabled && (
           <div className={styles.localMuteBadge}>
             <MicOff size={14} strokeWidth={2} />
@@ -166,7 +263,7 @@ const CallScreen = ({
         )}
       </div>
 
-      {/* REDESIGNED CONTROL BAR */}
+      {/* CONTROL BAR */}
       <div className={`${styles.controlWrapper} ${uiVisible ? styles.controlVisible : ''}`}>
         <div className={styles.controlBar}>
           {/* Camera Toggle */}
@@ -195,28 +292,28 @@ const CallScreen = ({
 
           {/* NEXT Button - Center */}
           <button 
-            onClick={onSkip} 
-            className={styles.nextBtn}
+            onClick={findRandomPeer} 
+            className={`${styles.nextBtn} ${isConnecting ? styles.connecting : ''}`}
+            disabled={isConnecting}
             onMouseEnter={() => setNextHovered(true)}
             onMouseLeave={() => setNextHovered(false)}
           >
-            <span className={styles.nextText}>NEXT</span>
-            <Zap 
-              size={14} 
-              className={`${styles.zapIcon} ${nextHovered ? styles.zapActive : ''}`}
-            />
-          </button>
-
-          {/* Invite Button */}
-          <button 
-            onClick={onShareId} 
-            className={styles.controlBtn}
-            aria-label="Invite peer"
-          >
-            <div className={styles.btnInner}>
-              <UserPlus size={20} />
-            </div>
-            <span className={styles.btnLabel}>Invite</span>
+            {isConnecting ? (
+              <>
+                <Loader size={14} className={styles.spinningLoader} />
+                <span className={styles.nextText}>
+                  {connectionStatus === 'searching' ? 'SEARCHING' : 'CONNECTING'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className={styles.nextText}>NEXT</span>
+                <Zap 
+                  size={14} 
+                  className={`${styles.zapIcon} ${nextHovered ? styles.zapActive : ''}`}
+                />
+              </>
+            )}
           </button>
 
           {/* Leave Button */}
@@ -236,8 +333,12 @@ const CallScreen = ({
         <div className={styles.securityBadge}>
           <ShieldCheck size={10} />
           <span>E2E Encrypted</span>
-          <Circle size={4} fill="currentColor" />
-          <span>{roomId}</span>
+          {connectionStatus === 'connected' && (
+            <>
+              <Circle size={4} fill="currentColor" />
+              <span>Connected</span>
+            </>
+          )}
         </div>
       </div>
 
