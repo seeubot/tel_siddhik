@@ -10,36 +10,65 @@ import styles from './CallScreen.module.css';
 /**
  * OREY! PRO - CLEAN 50/50 SPLIT
  * Logic and structure for the video call interface.
+ * Fixed: Added Video Refs to ensure streams are rendered.
  */
 
-const CallScreen = () => {
+const CallScreen = ({ remoteStream, localStream, onNext, onHangup }) => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isPrivacyBlurred, setIsPrivacyBlurred] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('idle');
   const [uiVisible, setUiVisible] = useState(true);
   const [countdown, setCountdown] = useState(null);
   
+  const remoteVideoRef = useRef(null);
+  const localVideoRef = useRef(null);
   const uiTimerRef = useRef(null);
 
-  const toggleAudio = () => setIsAudioEnabled(!isAudioEnabled);
-  const toggleVideo = () => setIsVideoEnabled(!isVideoEnabled);
+  // Attach streams to video elements when they change
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  const toggleAudio = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => (track.enabled = !isAudioEnabled));
+      setIsAudioEnabled(!isAudioEnabled);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => (track.enabled = !isVideoEnabled));
+      setIsVideoEnabled(!isVideoEnabled);
+    }
+  };
+
   const togglePrivacyBlur = () => setIsPrivacyBlurred(!isPrivacyBlurred);
 
-  const startNextSearch = useCallback(() => {
+  const handleNext = useCallback(() => {
     if (isSearching) return;
     setIsSearching(true);
-    setConnectionStatus('searching');
-    setTimeout(() => setCountdown(3), 1500);
-  }, [isSearching]);
+    // Trigger the backend logic provided by user
+    onNext(); 
+    
+    // UI transition logic
+    setTimeout(() => setCountdown(3), 1000);
+  }, [isSearching, onNext]);
 
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
       setCountdown(null);
       setIsSearching(false);
-      setConnectionStatus('connected');
       return;
     }
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -63,14 +92,17 @@ const CallScreen = () => {
   return (
     <div className={`${styles.container} ${!uiVisible ? styles.uiHidden : ''}`}>
       
-      {/* 50/50 Adaptive Video Split */}
       <main className={styles.mainGrid}>
-        
         {/* REMOTE PEER */}
         <section className={`${styles.videoSection} ${isSearching ? styles.searchingPeer : ''}`}>
-          <video className={styles.videoStream} autoPlay playsInline />
+          <video 
+            ref={remoteVideoRef}
+            className={styles.videoStream} 
+            autoPlay 
+            playsInline 
+          />
           
-          {!connectionStatus === 'connected' && !isSearching && (
+          {(!remoteStream || isSearching) && (
             <div className={styles.placeholderLogo}>
               <h1 className={styles.brandText}>Orey!</h1>
             </div>
@@ -80,8 +112,11 @@ const CallScreen = () => {
         {/* LOCAL USER */}
         <section className={styles.videoSectionLocal}>
           <video 
+            ref={localVideoRef}
             className={`${styles.videoStream} ${styles.mirrored} ${!isVideoEnabled ? styles.videoOff : ''} ${isPrivacyBlurred ? styles.privacyBlur : ''}`} 
-            autoPlay playsInline muted 
+            autoPlay 
+            playsInline 
+            muted 
           />
 
           {isPrivacyBlurred && isVideoEnabled && (
@@ -101,49 +136,26 @@ const CallScreen = () => {
       {/* BOTTOM CONTROL DOCK */}
       <div className={`${styles.controlDock} ${uiVisible ? styles.dockVisible : styles.dockHidden}`}>
         <div className={styles.dockWrapper}>
-          
           <div className={styles.mainPill}>
-            
-            {/* Media Group */}
             <div className={styles.actionGroupLeft}>
-              <button 
-                onClick={toggleVideo}
-                className={`${styles.iconBtn} ${!isVideoEnabled ? styles.btnDanger : ''}`}
-              >
+              <button onClick={toggleVideo} className={`${styles.iconBtn} ${!isVideoEnabled ? styles.btnDanger : ''}`}>
                 {isVideoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
               </button>
-              <button 
-                onClick={toggleAudio}
-                className={`${styles.iconBtn} ${!isAudioEnabled ? styles.btnDanger : ''}`}
-              >
+              <button onClick={toggleAudio} className={`${styles.iconBtn} ${!isAudioEnabled ? styles.btnDanger : ''}`}>
                 {isAudioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
             </div>
 
-            {/* Primary Action */}
-            <button 
-              onClick={startNextSearch}
-              disabled={isSearching}
-              className={styles.nextBtn}
-            >
-              <span className={styles.nextText}>
-                {isSearching ? 'Sync' : 'Next'}
-              </span>
+            <button onClick={handleNext} disabled={isSearching} className={styles.nextBtn}>
+              <span className={styles.nextText}>{isSearching ? 'Sync' : 'Next'}</span>
               <Zap size={16} fill="currentColor" />
             </button>
 
-            {/* System Group */}
             <div className={styles.actionGroupRight}>
-              <button 
-                onClick={togglePrivacyBlur}
-                className={`${styles.iconBtn} ${isPrivacyBlurred ? styles.btnActive : ''}`}
-              >
+              <button onClick={togglePrivacyBlur} className={`${styles.iconBtn} ${isPrivacyBlurred ? styles.btnActive : ''}`}>
                 {isPrivacyBlurred ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
-              <button 
-                onClick={() => window.location.reload()}
-                className={`${styles.iconBtn} ${styles.btnHangup}`}
-              >
+              <button onClick={onHangup} className={`${styles.iconBtn} ${styles.btnHangup}`}>
                 <PhoneOff size={20} />
               </button>
             </div>
@@ -156,7 +168,6 @@ const CallScreen = () => {
         </div>
       </div>
 
-      {/* SYNC OVERLAY */}
       {isSearching && (
         <div className={styles.syncOverlay}>
           <div className={styles.syncContent}>
