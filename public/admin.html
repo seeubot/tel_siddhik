@@ -23,7 +23,6 @@
             --accent-yellow: #f59e0b;
             --accent-purple: #8b5cf6;
             --border-color: #475569;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
         }
 
         body {
@@ -31,6 +30,8 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
+            margin: 0;
+            padding: 0;
         }
 
         /* Login Screen */
@@ -46,9 +47,9 @@
             background: var(--bg-secondary);
             padding: 2.5rem;
             border-radius: 1rem;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             border: 1px solid var(--border-color);
         }
 
@@ -59,43 +60,52 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-align: center;
         }
 
         .login-box p {
             color: var(--text-secondary);
             margin-bottom: 2rem;
+            text-align: center;
         }
 
-        .input-group {
+        .form-group {
             margin-bottom: 1.5rem;
         }
 
-        .input-group label {
+        .form-group label {
             display: block;
             margin-bottom: 0.5rem;
             color: var(--text-secondary);
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .input-group input {
+        .form-group input {
             width: 100%;
-            padding: 0.75rem 1rem;
+            padding: 0.875rem 1rem;
             background: var(--bg-primary);
-            border: 1px solid var(--border-color);
+            border: 2px solid var(--border-color);
             border-radius: 0.5rem;
             color: var(--text-primary);
             font-size: 1rem;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
+            outline: none;
         }
 
-        .input-group input:focus {
-            outline: none;
+        .form-group input:focus {
             border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 1.5rem;
             border: none;
             border-radius: 0.5rem;
             font-size: 1rem;
@@ -104,65 +114,87 @@
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .btn-primary {
-            background: var(--accent-blue);
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
             color: white;
-            width: 100%;
-            justify-content: center;
         }
 
         .btn-primary:hover {
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
-        .btn-danger {
-            background: var(--accent-red);
-            color: white;
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
-        .btn-danger:hover {
-            background: #dc2626;
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
-        .btn-success {
-            background: var(--accent-green);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
-
-        .btn-warning {
-            background: var(--accent-yellow);
-            color: #0f172a;
-        }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-
-        .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--accent-red);
-            color: var(--accent-red);
-            padding: 0.75rem;
+        .alert {
+            padding: 1rem;
             border-radius: 0.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             font-size: 0.875rem;
             display: none;
+            animation: slideIn 0.3s ease;
         }
 
-        .error-message.show {
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            color: #fca5a5;
             display: block;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-green);
+            color: #6ee7b7;
+            display: block;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--accent-blue);
+            color: #93c5fd;
+            display: block;
+        }
+
+        .hint {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .hint strong {
+            color: var(--accent-blue);
         }
 
         /* Dashboard */
@@ -172,7 +204,7 @@
         }
 
         .dashboard.active {
-            display: block;
+            display: flex;
         }
 
         .sidebar {
@@ -185,6 +217,7 @@
             border-right: 1px solid var(--border-color);
             padding: 1.5rem;
             overflow-y: auto;
+            z-index: 100;
         }
 
         .sidebar-logo {
@@ -195,6 +228,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            cursor: pointer;
         }
 
         .nav-item {
@@ -212,6 +246,7 @@
             background: none;
             width: 100%;
             font-size: 0.95rem;
+            text-align: left;
         }
 
         .nav-item:hover {
@@ -226,11 +261,14 @@
 
         .nav-item .icon {
             font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
         }
 
         .main-content {
             margin-left: 260px;
             padding: 2rem;
+            flex: 1;
         }
 
         .top-bar {
@@ -244,6 +282,7 @@
 
         .top-bar h2 {
             font-size: 1.75rem;
+            margin: 0;
         }
 
         .stats-grid {
@@ -258,6 +297,11 @@
             padding: 1.5rem;
             border-radius: 0.75rem;
             border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
         }
 
         .stat-card .stat-value {
@@ -293,6 +337,7 @@
         }
 
         .card h3 {
+            margin-top: 0;
             margin-bottom: 1rem;
             font-size: 1.25rem;
         }
@@ -312,7 +357,7 @@
             border-bottom: 2px solid var(--border-color);
             color: var(--text-secondary);
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -339,88 +384,47 @@
         .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
         .badge-expired { background: rgba(100, 116, 139, 0.2); color: var(--text-secondary); }
 
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            width: auto;
+            display: inline-flex;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: var(--accent-yellow);
+            color: #0f172a;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
         .action-buttons {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-secondary);
-            padding: 2rem;
-            border-radius: 1rem;
-            border: 1px solid var(--border-color);
-            width: 90%;
-            max-width: 500px;
-        }
-
-        .modal-content h3 {
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
-
-        textarea {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            color: var(--text-primary);
-            font-family: inherit;
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-        }
-
-        select {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state {
+        .loading, .empty-state {
             text-align: center;
             padding: 3rem;
             color: var(--text-secondary);
@@ -431,25 +435,36 @@
             margin-bottom: 1rem;
         }
 
-        .refresh-btn {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: all 0.2s;
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
         }
 
-        .refresh-btn:hover {
-            background: var(--border-color);
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        code {
+            background: var(--bg-primary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--accent-blue);
         }
 
         @media (max-width: 768px) {
+            .dashboard.active {
+                flex-direction: column;
+            }
+            
             .sidebar {
-                width: 100%;
                 position: relative;
+                width: 100%;
                 height: auto;
                 padding: 1rem;
             }
@@ -470,62 +485,66 @@
     <div class="login-container" id="loginScreen">
         <div class="login-box">
             <h1>🛡️ Orey Admin</h1>
-            <p>Enter your admin key to access the dashboard</p>
+            <p>Enter your admin credentials to continue</p>
             
-            <div class="error-message" id="loginError">
-                Invalid admin key. Please try again.
+            <div id="loginAlert" class="alert"></div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="adminKey">🔑 Admin Key</label>
+                    <input 
+                        type="password" 
+                        id="adminKey" 
+                        placeholder="Enter your admin key..."
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiUrl">🌐 Server URL</label>
+                    <input 
+                        type="text" 
+                        id="apiUrl" 
+                        placeholder="http://localhost:3000"
+                        value=""
+                        required
+                    >
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="loginButton">
+                    <span id="loginButtonText">🔐 Access Dashboard</span>
+                    <span id="loginSpinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div class="hint">
+                <strong>💡 Quick Start:</strong><br>
+                Default key: <code>admin_secret_change_this</code><br>
+                Your server is likely at this same address
             </div>
-            
-            <div class="input-group">
-                <label for="adminKey">Admin Key</label>
-                <input 
-                    type="password" 
-                    id="adminKey" 
-                    placeholder="Enter your admin key..."
-                    autocomplete="off"
-                >
-            </div>
-            
-            <div class="input-group">
-                <label for="apiUrl">Server URL</label>
-                <input 
-                    type="text" 
-                    id="apiUrl" 
-                    placeholder="http://localhost:3000"
-                    value=""
-                >
-            </div>
-            
-            <button class="btn btn-primary" onclick="login()">
-                🔐 Access Dashboard
-            </button>
-            
-            <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
-                Default key: admin_secret_change_this
-            </p>
         </div>
     </div>
 
     <!-- Dashboard -->
     <div class="dashboard" id="dashboard">
-        <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-logo">🛡️ Orey Admin</div>
+            <div class="sidebar-logo" onclick="showSection('overview')">🛡️ Orey Admin</div>
             
             <nav>
-                <button class="nav-item active" onclick="showSection('overview')">
+                <button class="nav-item active" data-section="overview" onclick="showSection('overview')">
                     <span class="icon">📊</span> Overview
                 </button>
-                <button class="nav-item" onclick="showSection('reports')">
+                <button class="nav-item" data-section="reports" onclick="showSection('reports')">
                     <span class="icon">🚨</span> Reports
                 </button>
-                <button class="nav-item" onclick="showSection('bans')">
+                <button class="nav-item" data-section="bans" onclick="showSection('bans')">
                     <span class="icon">🚫</span> Banned Devices
                 </button>
-                <button class="nav-item" onclick="showSection('notifications')">
+                <button class="nav-item" data-section="notifications" onclick="showSection('notifications')">
                     <span class="icon">🔔</span> Notifications
                 </button>
-                <button class="nav-item" onclick="showSection('settings')">
+                <button class="nav-item" data-section="settings" onclick="showSection('settings')">
                     <span class="icon">⚙️</span> Settings
                 </button>
                 <button class="nav-item" onclick="logout()" style="margin-top: 2rem; color: var(--accent-red);">
@@ -534,14 +553,15 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Top Bar -->
             <div class="top-bar">
                 <h2 id="sectionTitle">📊 Overview</h2>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <span id="connectionStatus" style="color: var(--accent-green);">● Connected</span>
-                    <button class="refresh-btn" onclick="refreshCurrentSection()">🔄 Refresh</button>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="connectionStatus" style="font-size: 0.875rem;">🟢 Connected</span>
+                    <button class="btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);" 
+                            onclick="refreshCurrentSection()">
+                        🔄 Refresh
+                    </button>
                 </div>
             </div>
 
@@ -549,19 +569,19 @@
             <div class="section active" id="overviewSection">
                 <div class="stats-grid" id="statsGrid">
                     <div class="stat-card blue">
-                        <div class="stat-value" id="activeConnections">0</div>
+                        <div class="stat-value" id="activeConnections">-</div>
                         <div class="stat-label">Active Connections</div>
                     </div>
                     <div class="stat-card green">
-                        <div class="stat-value" id="activeRooms">0</div>
+                        <div class="stat-value" id="activeRooms">-</div>
                         <div class="stat-label">Active Rooms</div>
                     </div>
                     <div class="stat-card yellow">
-                        <div class="stat-value" id="pendingReports">0</div>
+                        <div class="stat-value" id="pendingReports">-</div>
                         <div class="stat-label">Pending Reports</div>
                     </div>
                     <div class="stat-card red">
-                        <div class="stat-value" id="bannedDevices">0</div>
+                        <div class="stat-value" id="bannedDevices">-</div>
                         <div class="stat-label">Banned Devices</div>
                     </div>
                 </div>
@@ -577,7 +597,8 @@
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="margin: 0;">All Reports</h3>
-                        <select id="reportFilter" onchange="loadReports()">
+                        <select id="reportFilter" onchange="loadReports()" 
+                                style="padding: 0.5rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary);">
                             <option value="">All Reports</option>
                             <option value="pending">Pending</option>
                             <option value="banned">Banned</option>
@@ -630,20 +651,20 @@
                 </div>
 
                 <div class="card">
-                    <h3>Manual Ban</h3>
-                    <div class="input-group">
+                    <h3>Manual Ban Device</h3>
+                    <div class="form-group">
                         <label>Device ID</label>
-                        <input type="text" id="banDeviceId" placeholder="Enter device ID...">
+                        <input type="text" id="banDeviceId" placeholder="Enter device ID to ban...">
                     </div>
-                    <div class="input-group">
+                    <div class="form-group">
                         <label>Reason</label>
                         <input type="text" id="banReason" placeholder="Reason for ban...">
                     </div>
-                    <div class="input-group">
-                        <label>Duration (hours, 0 for permanent)</label>
+                    <div class="form-group">
+                        <label>Duration (hours, 0 = permanent)</label>
                         <input type="number" id="banDuration" value="720" min="0">
                     </div>
-                    <button class="btn btn-danger" onclick="banDevice()">
+                    <button class="btn-sm btn-danger" onclick="banDevice()">
                         🚫 Ban Device
                     </button>
                 </div>
@@ -653,33 +674,17 @@
             <div class="section" id="notificationsSection">
                 <div class="card">
                     <h3>Send Notification</h3>
-                    <div class="input-group">
+                    <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="notifTitle" placeholder="Notification title...">
                     </div>
-                    <div class="input-group">
+                    <div class="form-group">
                         <label>Message</label>
-                        <textarea id="notifMessage" placeholder="Notification message..."></textarea>
+                        <textarea id="notifMessage" placeholder="Notification message..." 
+                                  style="width: 100%; padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary); font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
                     </div>
-                    <div class="input-group">
-                        <label>Type</label>
-                        <select id="notifType">
-                            <option value="info">Info</option>
-                            <option value="feature">Feature</option>
-                            <option value="warning">Warning</option>
-                            <option value="alert">Alert</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Priority</label>
-                        <select id="notifPriority">
-                            <option value="normal">Normal</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary" onclick="sendNotification()">
-                        📢 Send Notification
+                    <button class="btn-sm btn-primary" onclick="sendNotification()">
+                        📢 Send to All Users
                     </button>
                 </div>
 
@@ -693,151 +698,197 @@
             <div class="section" id="settingsSection">
                 <div class="card">
                     <h3>Maintenance Mode</h3>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <button class="btn btn-warning" onclick="toggleMaintenance(true)">
-                            🔧 Enable Maintenance
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <button class="btn-sm btn-warning" onclick="toggleMaintenance(true)">
+                            🔧 Enable
                         </button>
-                        <button class="btn btn-success" onclick="toggleMaintenance(false)">
-                            ✅ Disable Maintenance
+                        <button class="btn-sm btn-success" onclick="toggleMaintenance(false)">
+                            ✅ Disable
                         </button>
                         <span id="maintenanceStatus" style="color: var(--text-secondary);"></span>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>Video Quality</h3>
-                    <div class="input-group">
-                        <label>Default Quality</label>
-                        <select id="defaultQuality" onchange="updateVideoQuality()">
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="hd">HD</option>
-                        </select>
-                    </div>
+                    <h3>Video Quality Default</h3>
+                    <select id="defaultQuality" onchange="updateVideoQuality()"
+                            style="padding: 0.75rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary); font-size: 1rem;">
+                        <option value="low">Low (150kbps)</option>
+                        <option value="medium">Medium (500kbps)</option>
+                        <option value="high">High (1.5mbps)</option>
+                        <option value="hd">HD (4mbps)</option>
+                    </select>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Action Modal -->
-    <div class="modal" id="actionModal">
-        <div class="modal-content">
-            <h3 id="modalTitle">Take Action</h3>
-            <input type="hidden" id="modalReportId">
-            
-            <div class="input-group">
-                <label>Action</label>
-                <select id="modalAction">
-                    <option value="ban">Ban User</option>
-                    <option value="warn">Send Warning</option>
-                    <option value="dismiss">Dismiss Report</option>
-                </select>
-            </div>
-            
-            <div class="input-group" id="banDurationGroup">
-                <label>Ban Duration (hours, 0 for permanent)</label>
-                <input type="number" id="modalBanDuration" value="720" min="0">
-            </div>
-            
-            <div class="input-group">
-                <label>Notes</label>
-                <textarea id="modalNotes" placeholder="Admin notes..."></textarea>
-            </div>
-            
-            <div class="modal-actions">
-                <button class="btn btn-sm" onclick="closeModal()" style="background: var(--bg-tertiary); color: var(--text-primary);">
-                    Cancel
-                </button>
-                <button class="btn btn-sm btn-primary" onclick="submitAction()">
-                    Submit
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // State
+        // State management
         let adminKey = '';
         let apiBaseUrl = '';
+        let autoRefreshInterval = null;
 
-        // Initialize
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
-            // Check for saved credentials
+            console.log('🚀 Admin panel loaded');
+            
+            // Try to restore saved credentials
             const saved = localStorage.getItem('oreyAdminAuth');
             if (saved) {
-                const auth = JSON.parse(saved);
-                adminKey = auth.key;
-                apiBaseUrl = auth.url;
-                document.getElementById('adminKey').value = adminKey;
-                document.getElementById('apiUrl').value = apiBaseUrl;
-                
-                // Auto-login if credentials exist
-                if (adminKey && apiBaseUrl) {
-                    login(true);
+                try {
+                    const auth = JSON.parse(saved);
+                    if (auth.key && auth.url) {
+                        document.getElementById('adminKey').value = auth.key;
+                        document.getElementById('apiUrl').value = auth.url;
+                        adminKey = auth.key;
+                        apiBaseUrl = auth.url;
+                        
+                        // Auto-login
+                        console.log('🔄 Auto-login with saved credentials...');
+                        performLogin();
+                    }
+                } catch (e) {
+                    console.error('Failed to parse saved auth:', e);
+                    localStorage.removeItem('oreyAdminAuth');
+                    setDefaultUrl();
                 }
+            } else {
+                setDefaultUrl();
             }
         });
 
-        // Handle Enter key on login
-        document.getElementById('adminKey').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
-
-        async function login(silent = false) {
-            if (!silent) {
-                adminKey = document.getElementById('adminKey').value.trim();
-                apiBaseUrl = document.getElementById('apiUrl').value.trim() || window.location.origin;
+        function setDefaultUrl() {
+            // Set default URL to current origin
+            const apiUrlInput = document.getElementById('apiUrl');
+            if (!apiUrlInput.value) {
+                apiUrlInput.value = window.location.origin;
             }
+        }
+
+        // Form submission handler
+        function handleLogin(event) {
+            event.preventDefault();
+            console.log('📝 Login form submitted');
+            
+            adminKey = document.getElementById('adminKey').value.trim();
+            apiBaseUrl = document.getElementById('apiUrl').value.trim();
             
             if (!adminKey) {
-                showLoginError('Please enter an admin key');
+                showLoginAlert('Please enter an admin key', 'error');
                 return;
             }
+            
+            if (!apiBaseUrl) {
+                showLoginAlert('Please enter the server URL', 'error');
+                return;
+            }
+            
+            // Remove trailing slash
+            apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+            
+            performLogin();
+        }
 
-            // Verify admin key
+        async function performLogin() {
+            const loginButton = document.getElementById('loginButton');
+            const buttonText = document.getElementById('loginButtonText');
+            const spinner = document.getElementById('loginSpinner');
+            
+            // Show loading state
+            loginButton.disabled = true;
+            buttonText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            
+            showLoginAlert('Connecting to server...', 'info');
+            
             try {
+                console.log(`🔗 Attempting connection to: ${apiBaseUrl}/admin/stats`);
+                
                 const response = await fetch(`${apiBaseUrl}/admin/stats`, {
-                    headers: { 'x-admin-key': adminKey }
+                    method: 'GET',
+                    headers: {
+                        'x-admin-key': adminKey,
+                        'Accept': 'application/json'
+                    }
                 });
 
+                console.log('📡 Response status:', response.status);
+                
                 if (!response.ok) {
-                    showLoginError('Invalid admin key or server not reachable');
-                    return;
+                    const errorText = await response.text();
+                    console.error('❌ Server error:', response.status, errorText);
+                    
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Invalid admin key. Please check your credentials.');
+                    } else if (response.status === 404) {
+                        throw new Error('Server endpoint not found. Check the server URL.');
+                    } else {
+                        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                    }
                 }
 
+                const data = await response.json();
+                console.log('✅ Login successful:', data);
+                
                 // Save credentials
                 localStorage.setItem('oreyAdminAuth', JSON.stringify({
                     key: adminKey,
                     url: apiBaseUrl
                 }));
-
-                // Show dashboard
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('dashboard').classList.add('active');
                 
-                // Load initial data
-                showSection('overview');
-                startAutoRefresh();
-
+                // Show dashboard
+                showLoginAlert('Login successful! Loading dashboard...', 'success');
+                
+                setTimeout(() => {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    
+                    // Load initial data
+                    showSection('overview');
+                    startAutoRefresh();
+                }, 500);
+                
             } catch (error) {
-                showLoginError('Cannot connect to server: ' + error.message);
+                console.error('❌ Login failed:', error);
+                showLoginAlert(error.message || 'Failed to connect to server', 'error');
+            } finally {
+                // Reset button state
+                loginButton.disabled = false;
+                buttonText.style.display = 'inline';
+                spinner.style.display = 'none';
             }
         }
 
-        function showLoginError(message) {
-            const errorEl = document.getElementById('loginError');
-            errorEl.textContent = message;
-            errorEl.classList.add('show');
-            setTimeout(() => errorEl.classList.remove('show'), 5000);
+        function showLoginAlert(message, type) {
+            const alert = document.getElementById('loginAlert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type}`;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alert.className = 'alert';
+                }, 3000);
+            }
         }
 
         function logout() {
-            localStorage.removeItem('oreyAdminAuth');
-            adminKey = '';
-            document.getElementById('dashboard').classList.remove('active');
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('adminKey').value = '';
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('oreyAdminAuth');
+                adminKey = '';
+                apiBaseUrl = '';
+                
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                
+                document.getElementById('dashboard').classList.remove('active');
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('adminKey').value = '';
+                document.getElementById('apiUrl').value = '';
+                setDefaultUrl();
+            }
         }
 
         // API Helper
@@ -846,6 +897,7 @@
             const headers = {
                 'x-admin-key': adminKey,
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 ...options.headers
             };
 
@@ -855,22 +907,29 @@
             });
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                const error = await response.text();
+                throw new Error(`API Error (${response.status}): ${error}`);
             }
 
             return response.json();
         }
 
-        // Section Navigation
-        function showSection(section) {
-            // Update nav
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            event.target.classList.add('active');
-
+        // Navigation
+        function showSection(sectionName) {
+            // Update navigation buttons
+            document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const activeNav = document.querySelector(`[data-section="${sectionName}"]`);
+            if (activeNav) {
+                activeNav.classList.add('active');
+            }
+            
             // Hide all sections
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-
-            // Show selected section
+            
+            // Show target section
             const sectionMap = {
                 'overview': 'overviewSection',
                 'reports': 'reportsSection',
@@ -878,35 +937,24 @@
                 'notifications': 'notificationsSection',
                 'settings': 'settingsSection'
             };
-
-            const sectionId = sectionMap[section];
+            
+            const sectionId = sectionMap[sectionName];
             if (sectionId) {
                 document.getElementById(sectionId).classList.add('active');
                 document.getElementById('sectionTitle').textContent = 
-                    document.querySelector(`[onclick="showSection('${section}')"]`).textContent.trim();
+                    activeNav ? activeNav.textContent.trim() : 'Dashboard';
                 
-                // Load section data
-                loadSectionData(section);
+                loadSectionData(sectionName);
             }
         }
 
         function loadSectionData(section) {
             switch(section) {
-                case 'overview':
-                    loadOverview();
-                    break;
-                case 'reports':
-                    loadReports();
-                    break;
-                case 'bans':
-                    loadBans();
-                    break;
-                case 'notifications':
-                    loadNotifications();
-                    break;
-                case 'settings':
-                    loadSettings();
-                    break;
+                case 'overview': loadOverview(); break;
+                case 'reports': loadReports(); break;
+                case 'bans': loadBans(); break;
+                case 'notifications': loadNotifications(); break;
+                case 'settings': loadSettings(); break;
             }
         }
 
@@ -920,7 +968,8 @@
                     'notificationsSection': 'notifications',
                     'settingsSection': 'settings'
                 };
-                loadSectionData(sectionMap[activeSection.id]);
+                const section = sectionMap[activeSection.id];
+                if (section) loadSectionData(section);
             }
         }
 
@@ -928,6 +977,7 @@
         async function loadOverview() {
             try {
                 const stats = await apiCall('/admin/stats');
+                console.log('📊 Stats loaded:', stats);
                 
                 document.getElementById('activeConnections').textContent = stats.activeConnections || 0;
                 document.getElementById('activeRooms').textContent = stats.activeRooms || 0;
@@ -948,8 +998,10 @@
 
                 updateConnectionStatus(true);
             } catch (error) {
-                updateConnectionStatus(false);
                 console.error('Failed to load overview:', error);
+                updateConnectionStatus(false);
+                document.getElementById('systemInfo').innerHTML = 
+                    `<div class="loading">Error loading data: ${error.message}</div>`;
             }
         }
 
@@ -960,6 +1012,7 @@
             
             try {
                 const data = await apiCall(`/admin/reports${filter ? `?status=${filter}` : ''}`);
+                console.log('📋 Reports loaded:', data);
                 
                 if (!data.reports || data.reports.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div>No reports found</td></tr>';
@@ -969,94 +1022,57 @@
                 tbody.innerHTML = data.reports.map(report => `
                     <tr>
                         <td><code>${report.id}</code></td>
-                        <td><code>${report.reportedDeviceId?.substring(0, 12)}...</code></td>
-                        <td>${escapeHtml(report.reason)}</td>
+                        <td title="${report.reportedDeviceId}"><code>${(report.reportedDeviceId || 'N/A').substring(0, 12)}...</code></td>
+                        <td>${escapeHtml(report.reason || 'N/A')}</td>
                         <td><span class="badge badge-${report.status}">${report.status}</span></td>
                         <td>${formatDate(report.timestamp)}</td>
                         <td>
                             <div class="action-buttons">
                                 ${report.status === 'pending' ? `
-                                    <button class="btn btn-sm btn-danger" onclick="openActionModal('${report.id}')">
-                                        Action
-                                    </button>
-                                ` : ''}
-                                <button class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary);" 
-                                    onclick="viewReportDetails('${report.id}')">
-                                    Details
-                                </button>
+                                    <button class="btn-sm btn-danger" onclick="handleReportAction('${report.id}', 'ban')">Ban</button>
+                                    <button class="btn-sm btn-warning" onclick="handleReportAction('${report.id}', 'warn')">Warn</button>
+                                    <button class="btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary);" 
+                                            onclick="handleReportAction('${report.id}', 'dismiss')">Dismiss</button>
+                                ` : `
+                                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Processed</span>
+                                `}
                             </div>
                         </td>
                     </tr>
                 `).join('');
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error loading reports: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error: ${error.message}</td></tr>`;
             }
         }
 
-        function openActionModal(reportId) {
-            document.getElementById('modalReportId').value = reportId;
-            document.getElementById('modalTitle').textContent = `Action on Report #${reportId}`;
-            document.getElementById('actionModal').classList.add('active');
-            
-            // Reset form
-            document.getElementById('modalAction').value = 'ban';
-            document.getElementById('modalBanDuration').value = '720';
-            document.getElementById('modalNotes').value = '';
-            document.getElementById('banDurationGroup').style.display = 'block';
-            
-            // Show/hide ban duration based on action
-            document.getElementById('modalAction').onchange = function() {
-                document.getElementById('banDurationGroup').style.display = 
-                    this.value === 'ban' ? 'block' : 'none';
+        async function handleReportAction(reportId, action) {
+            const actions = {
+                ban: { message: 'Ban this user?', banDuration: 720 },
+                warn: { message: 'Send warning to this user?', banDuration: null },
+                dismiss: { message: 'Dismiss this report?', banDuration: null }
             };
-        }
-
-        function closeModal() {
-            document.getElementById('actionModal').classList.remove('active');
-        }
-
-        async function submitAction() {
-            const reportId = document.getElementById('modalReportId').value;
-            const action = document.getElementById('modalAction').value;
-            const notes = document.getElementById('modalNotes').value;
-            const banDuration = action === 'ban' ? parseInt(document.getElementById('modalBanDuration').value) : null;
+            
+            const actionInfo = actions[action];
+            if (!confirm(actionInfo.message)) return;
+            
+            const notes = prompt('Add notes (optional):') || '';
 
             try {
                 const body = { action, notes };
-                if (banDuration !== null) body.banDuration = banDuration;
+                if (actionInfo.banDuration) {
+                    const duration = prompt('Ban duration in hours? (0 for permanent)', '720');
+                    body.banDuration = parseInt(duration) || 0;
+                }
 
                 await apiCall(`/admin/reports/${reportId}/action`, {
                     method: 'POST',
                     body: JSON.stringify(body)
                 });
 
-                closeModal();
-                loadReports();
                 alert('Action completed successfully!');
+                loadReports();
             } catch (error) {
-                alert('Failed to submit action: ' + error.message);
-            }
-        }
-
-        async function viewReportDetails(reportId) {
-            try {
-                const data = await apiCall(`/admin/reports`);
-                const report = data.reports.find(r => r.id === reportId);
-                
-                if (report) {
-                    alert(`
-Report Details:
-ID: ${report.id}
-Reporter: ${report.reporterDeviceId?.substring(0, 12)}...
-Reported: ${report.reportedDeviceId?.substring(0, 12)}...
-Reason: ${report.reason}
-Description: ${report.description || 'N/A'}
-Status: ${report.status}
-Date: ${formatDate(report.timestamp)}
-                    `.trim());
-                }
-            } catch (error) {
-                alert('Failed to load report details');
+                alert('Failed: ' + error.message);
             }
         }
 
@@ -1066,6 +1082,7 @@ Date: ${formatDate(report.timestamp)}
             
             try {
                 const data = await apiCall('/admin/banned-devices');
+                console.log('🚫 Bans loaded:', data);
                 
                 if (!data.bannedDevices || data.bannedDevices.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div>No banned devices</td></tr>';
@@ -1075,7 +1092,7 @@ Date: ${formatDate(report.timestamp)}
                 tbody.innerHTML = data.bannedDevices.map(ban => `
                     <tr>
                         <td><code>${ban.deviceId}</code></td>
-                        <td>${escapeHtml(ban.reason?.substring(0, 50))}${ban.reason?.length > 50 ? '...' : ''}</td>
+                        <td>${escapeHtml((ban.reason || 'N/A').substring(0, 50))}</td>
                         <td>${formatDate(ban.timestamp)}</td>
                         <td>${ban.permanent ? 'Permanent' : formatDate(new Date(ban.expiresAt))}</td>
                         <td>
@@ -1084,14 +1101,14 @@ Date: ${formatDate(report.timestamp)}
                             </span>
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-success" onclick="unbanDevice('${ban.deviceId}')">
+                            <button class="btn-sm btn-success" onclick="unbanDevice('${ban.deviceId}')">
                                 Unban
                             </button>
                         </td>
                     </tr>
                 `).join('');
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error loading bans: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error: ${error.message}</td></tr>`;
             }
         }
 
@@ -1104,6 +1121,8 @@ Date: ${formatDate(report.timestamp)}
                 alert('Please enter device ID and reason');
                 return;
             }
+
+            if (!confirm(`Ban device ${deviceId}?`)) return;
 
             try {
                 await apiCall('/admin/ban-device', {
@@ -1120,22 +1139,22 @@ Date: ${formatDate(report.timestamp)}
                 document.getElementById('banReason').value = '';
                 loadBans();
             } catch (error) {
-                alert('Failed to ban device: ' + error.message);
+                alert('Failed: ' + error.message);
             }
         }
 
         async function unbanDevice(deviceId) {
-            if (!confirm('Are you sure you want to unban this device?')) return;
+            if (!confirm('Unban this device?')) return;
 
             try {
                 await apiCall(`/admin/ban-device/${deviceId}`, {
                     method: 'DELETE'
                 });
 
-                alert('Device unbanned successfully!');
+                alert('Device unbanned!');
                 loadBans();
             } catch (error) {
-                alert('Failed to unban device: ' + error.message);
+                alert('Failed: ' + error.message);
             }
         }
 
@@ -1145,35 +1164,33 @@ Date: ${formatDate(report.timestamp)}
             
             try {
                 const data = await apiCall('/admin/notifications');
+                console.log('🔔 Notifications loaded:', data);
                 
                 if (!data.notifications || data.notifications.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><div class="icon">🔔</div>No notifications</div>';
+                    container.innerHTML = '<div class="empty-state"><div class="icon">🔔</div>No notifications sent yet</div>';
                     return;
                 }
 
-                container.innerHTML = data.notifications.slice(0, 10).map(notif => `
+                container.innerHTML = data.notifications.slice(0, 10).reverse().map(notif => `
                     <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <strong>${escapeHtml(notif.title)}</strong>
-                            <span class="badge badge-${notif.type}">${notif.type}</span>
+                            <span style="font-size: 0.75rem;">${notif.type}</span>
                         </div>
                         <p style="color: var(--text-secondary); font-size: 0.875rem;">${escapeHtml(notif.message)}</p>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary);">
-                            <span>${formatDate(notif.timestamp)}</span>
-                            <span>Priority: ${notif.priority}</span>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            ${formatDate(notif.timestamp)} • Priority: ${notif.priority}
                         </div>
                     </div>
                 `).join('');
             } catch (error) {
-                container.innerHTML = `<div class="loading">Error loading notifications: ${error.message}</div>`;
+                container.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
             }
         }
 
         async function sendNotification() {
             const title = document.getElementById('notifTitle').value.trim();
             const message = document.getElementById('notifMessage').value.trim();
-            const type = document.getElementById('notifType').value;
-            const priority = document.getElementById('notifPriority').value;
 
             if (!title || !message) {
                 alert('Please enter title and message');
@@ -1183,23 +1200,33 @@ Date: ${formatDate(report.timestamp)}
             try {
                 await apiCall('/admin/notifications', {
                     method: 'POST',
-                    body: JSON.stringify({ title, message, type, priority })
+                    body: JSON.stringify({ 
+                        title, 
+                        message,
+                        type: 'info',
+                        priority: 'normal'
+                    })
                 });
 
-                alert('Notification sent successfully!');
+                alert('Notification sent to all users!');
                 document.getElementById('notifTitle').value = '';
                 document.getElementById('notifMessage').value = '';
                 loadNotifications();
             } catch (error) {
-                alert('Failed to send notification: ' + error.message);
+                alert('Failed: ' + error.message);
             }
         }
 
         // Settings
         async function loadSettings() {
             try {
-                const config = await apiCall('/api/config');
-                document.getElementById('defaultQuality').value = config.videoQuality?.default || 'medium';
+                const config = await apiCall('/api/config?' + Date.now());
+                console.log('⚙️ Settings loaded:', config);
+                
+                if (config.videoQuality) {
+                    document.getElementById('defaultQuality').value = config.videoQuality.default || 'medium';
+                }
+                
                 document.getElementById('maintenanceStatus').textContent = 
                     config.maintenance?.enabled ? '🔧 Maintenance Mode: ON' : '✅ Maintenance Mode: OFF';
             } catch (error) {
@@ -1208,19 +1235,18 @@ Date: ${formatDate(report.timestamp)}
         }
 
         async function toggleMaintenance(enabled) {
+            const message = enabled ? prompt('Maintenance message:', "We're improving Orey. Back soon!") : '';
+
             try {
                 await apiCall('/admin/maintenance', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        enabled,
-                        message: enabled ? 'We're improving Orey. Back soon!' : ''
-                    })
+                    body: JSON.stringify({ enabled, message: message || '' })
                 });
 
                 alert(`Maintenance mode ${enabled ? 'enabled' : 'disabled'}!`);
                 loadSettings();
             } catch (error) {
-                alert('Failed to toggle maintenance: ' + error.message);
+                alert('Failed: ' + error.message);
             }
         }
 
@@ -1235,26 +1261,30 @@ Date: ${formatDate(report.timestamp)}
 
                 alert('Video quality updated!');
             } catch (error) {
-                alert('Failed to update video quality: ' + error.message);
+                alert('Failed: ' + error.message);
             }
         }
 
         // Auto-refresh
-        let autoRefreshInterval;
         function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            
             autoRefreshInterval = setInterval(() => {
                 const activeSection = document.querySelector('.section.active');
                 if (activeSection && activeSection.id === 'overviewSection') {
                     loadOverview();
                 }
-            }, 10000); // Refresh every 10 seconds
+            }, 15000); // Refresh every 15 seconds
         }
 
         // Utility functions
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleString();
+            try {
+                return new Date(dateString).toLocaleString();
+            } catch {
+                return dateString;
+            }
         }
 
         function formatUptime(seconds) {
@@ -1265,6 +1295,7 @@ Date: ${formatDate(report.timestamp)}
         }
 
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
@@ -1273,18 +1304,15 @@ Date: ${formatDate(report.timestamp)}
         function updateConnectionStatus(connected) {
             const status = document.getElementById('connectionStatus');
             if (connected) {
-                status.textContent = '● Connected';
-                status.style.color = 'var(--accent-green)';
+                status.innerHTML = '🟢 Connected';
             } else {
-                status.textContent = '● Disconnected';
-                status.style.color = 'var(--accent-red)';
+                status.innerHTML = '🔴 Disconnected';
             }
         }
 
-        // Close modal on outside click
-        document.getElementById('actionModal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
-        });
+        // Debug helper
+        console.log('✅ Admin panel script loaded successfully');
+        console.log('📝 To test: Use default key "admin_secret_change_this"');
     </script>
 </body>
 </html>
