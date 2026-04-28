@@ -1,6 +1,5 @@
 /* ============================================================
-   CallScreen.css — Complete self-contained styles
-   No Tailwind dependency. Works standalone.
+   CallScreen.css — Redesigned with modern aesthetic
    ============================================================ */
 
 /* ---------- Reset & Base ---------- */
@@ -20,35 +19,56 @@ button {
 /* ---------- Keyframes ---------- */
 @keyframes fadeIn {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
 
-@keyframes fadeInZoomIn {
-  from { opacity: 0; transform: scale(0.93); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes fadeInSlideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulseSlow {
+@keyframes floatParticle {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); }
+  33% { transform: translateY(-10px) translateX(5px) scale(1.2); }
+  66% { transform: translateY(10px) translateX(-5px) scale(0.8); }
+}
+
+@keyframes rotateSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseGlow {
   0%, 100% { opacity: 0.3; transform: scale(1); }
-  50%       { opacity: 0.55; transform: scale(1.08); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(255, 255, 255, 0.1); }
+  50% { border-color: rgba(255, 255, 255, 0.2); }
+}
+
 /* ---------- Root Screen ---------- */
 .cs-screen {
   position: fixed;
   inset: 0;
-  background: #020204;
+  background: #0a0a0f;
   color: #fff;
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -59,99 +79,303 @@ button {
   .cs-screen { flex-direction: row; }
 }
 
+/* ---------- Ambient Background ---------- */
+.cs-ambient-grid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.cs-ambient-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: -1;
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.cs-glow-primary {
+  top: -20%;
+  right: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+}
+
+.cs-glow-secondary {
+  bottom: -20%;
+  left: -10%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.1), transparent 70%);
+  animation-delay: 2s;
+}
+
+/* ---------- Particles ---------- */
+.cs-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.cs-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  animation: floatParticle infinite;
+}
+
+/* ---------- Connection Indicator ---------- */
+.cs-connection-indicator {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+}
+
+.cs-signal-bars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 16px;
+}
+
+.cs-signal-bar {
+  width: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  transition: background 0.3s;
+}
+
+.cs-signal-bar:nth-child(1) { height: 4px; }
+.cs-signal-bar:nth-child(2) { height: 8px; }
+.cs-signal-bar:nth-child(3) { height: 12px; }
+.cs-signal-bar:nth-child(4) { height: 16px; }
+
+.cs-signal-active.cs-signal-bar:nth-child(1),
+.cs-signal-active.cs-signal-bar:nth-child(2) { 
+  background: rgba(239, 68, 68, 0.8); 
+}
+
+.cs-signal-bar:nth-child(3),
+.cs-signal-bar:nth-child(4) { 
+  background: rgba(34, 197, 94, 0.8); 
+}
+
 /* ---------- Remote Viewport ---------- */
 .cs-remote {
   position: relative;
   flex: 1.4;
-  background: #000;
+  background: #0a0a0f;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-@media (min-width: 768px) {
-  .cs-remote {
-    border-bottom: none;
-    border-right: 1px solid rgba(255,255,255,0.05);
-  }
+.cs-remote-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .cs-remote-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  animation: fadeIn 1s cubic-bezier(0.2,1,0.2,1) both;
+  animation: fadeInScale 0.6s cubic-bezier(0.2, 1, 0.2, 1) both;
 }
+
+.cs-video-border {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.cs-video-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: rgba(255, 255, 255, 0.15);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.cs-corner-tl { top: 16px; left: 16px; border-width: 1px 0 0 1px; }
+.cs-corner-tr { top: 16px; right: 16px; border-width: 1px 1px 0 0; }
+.cs-corner-bl { bottom: 16px; left: 16px; border-width: 0 0 1px 1px; }
+.cs-corner-br { bottom: 16px; right: 16px; border-width: 0 1px 1px 0; }
 
 /* ---------- Idle / Disconnected State ---------- */
 .cs-idle {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: fadeInZoomIn 0.7s cubic-bezier(0.2,1,0.2,1) both;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.cs-brand-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cs-brand-ring {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: rotateSlow 20s linear infinite;
 }
 
 .cs-brand-title {
-  font-size: clamp(4rem, 14vw, 9rem);
+  font-size: clamp(3.5rem, 10vw, 6rem);
   font-weight: 900;
-  font-style: italic;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #fff 0%, #f9a8d4 30%, #fb923c 60%, #fff 100%);
+  background: linear-gradient(
+    135deg,
+    #fff 0%,
+    #a78bfa 25%,
+    #ec4899 50%,
+    #f59e0b 75%,
+    #fff 100%
+  );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  animation: shimmer 4s linear infinite;
   line-height: 1;
 }
 
-.cs-idle-subtitle {
-  margin-top: 1rem;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.4em;
-  color: rgba(255,255,255,0.2);
-  text-transform: uppercase;
+.cs-brand-accent {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  margin-top: 0.5rem;
 }
 
-.cs-search-btn {
-  margin-top: 2rem;
+.cs-idle-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cs-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.cs-status-searching {
+  background: rgba(99, 102, 241, 0.8);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+.cs-status-idle {
+  background: rgba(34, 197, 94, 0.6);
+}
+
+.cs-idle-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.cs-discover-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.3s;
+  backdrop-filter: blur(10px);
+}
+
+.cs-discover-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+}
+
+.cs-discover-icon {
+  color: #818cf8;
+  transition: transform 0.3s;
+}
+
+.cs-discover-btn:hover .cs-discover-icon {
+  transform: rotate(15deg) scale(1.1);
+}
+
+/* Partner overlay */
+.cs-partner-overlay {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+
+.cs-partner-badge {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.5rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  transition: background 0.2s;
+  color: rgba(255, 255, 255, 0.7);
 }
-
-.cs-search-btn:hover { background: rgba(255,255,255,0.1); }
-
-.cs-search-icon {
-  color: #ec4899;
-  flex-shrink: 0;
-  transition: transform 0.5s cubic-bezier(0.2,1,0.2,1);
-}
-
-.cs-search-btn:hover .cs-search-icon { transform: rotate(180deg); }
 
 /* ---------- Local Viewport ---------- */
 .cs-local {
   position: relative;
   flex: 1;
-  background: #050508;
+  background: #0a0a0f;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.cs-local-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .cs-local-video {
@@ -161,41 +385,71 @@ button {
   transform: scaleX(-1);
 }
 
+.cs-local-frame {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.cs-local-border-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), transparent 50%);
+  pointer-events: none;
+}
+
+/* Camera off state */
 .cs-cam-off {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: fadeIn 0.5s ease both;
+  justify-content: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
 }
 
-.cs-cam-off-title {
-  font-size: clamp(2rem, 6vw, 3rem);
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.05);
+.cs-avatar-placeholder {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cs-avatar-initials {
+  font-size: 24px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.15);
+  letter-spacing: 0.1em;
+}
+
+.cs-avatar-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: rotateSlow 15s linear infinite;
 }
 
 .cs-cam-off-icon {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 1rem;
-  color: rgba(255,255,255,0.1);
-  display: flex;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  color: rgba(255, 255, 255, 0.1);
 }
 
 /* HUD badge */
 .cs-hud {
   position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .cs-hud { left: auto; right: 1.5rem; }
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
 }
 
 .cs-hud-badge {
@@ -203,21 +457,24 @@ button {
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
-  background: rgba(0,0,0,0.4);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 9999px;
+  animation: borderPulse 3s ease-in-out infinite;
 }
 
-.cs-hud-dot  { color: #10b981; flex-shrink: 0; }
+.cs-hud-dot {
+  color: #22c55e;
+  flex-shrink: 0;
+}
 
 .cs-hud-label {
   font-size: 9px;
-  font-weight: 900;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ---------- Control Bar ---------- */
@@ -228,8 +485,8 @@ button {
   right: 0;
   z-index: 100;
   padding: 1.5rem;
-  transition: transform 0.7s cubic-bezier(0.2,1,0.2,1),
-              opacity  0.7s cubic-bezier(0.2,1,0.2,1);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cs-control-bar--visible {
@@ -251,10 +508,9 @@ button {
 
 .cs-control-panel {
   width: 100%;
-  background: rgba(255,255,255,0.04);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  background: rgba(15, 15, 25, 0.8);
   backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 2rem;
   padding: 0.5rem;
   display: flex;
@@ -262,7 +518,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 640px) {
@@ -274,10 +530,10 @@ button {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 9999px;
   padding: 0.25rem;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cs-icon-btn {
@@ -287,20 +543,20 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   transition: background 0.2s, color 0.2s;
   flex-shrink: 0;
 }
 
 .cs-icon-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .cs-icon-btn--muted {
   background: #ef4444;
   color: #fff;
-  box-shadow: 0 4px 20px rgba(239,68,68,0.2);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
 }
 
 .cs-icon-btn--muted:hover {
@@ -323,9 +579,9 @@ button {
   width: 100%;
   height: 3rem;
   border-radius: 9999px;
-  background: #fff;
-  color: #000;
-  font-weight: 900;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 10px;
@@ -334,19 +590,25 @@ button {
   justify-content: center;
   gap: 0.5rem;
   overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.1s, opacity 0.2s;
+  transition: all 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.cs-next-btn:hover { box-shadow: 0 20px 40px rgba(255,255,255,0.05); }
+.cs-next-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+}
+
 .cs-next-btn:active { transform: scale(0.97); }
-.cs-next-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cs-next-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .cs-next-btn-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #ec4899 0%, #f97316 50%, #eab308 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #ec4899 50%, #f59e0b 100%);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.3s;
 }
 
 .cs-next-btn:hover .cs-next-btn-overlay { opacity: 1; }
@@ -357,11 +619,8 @@ button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #000;
-  transition: color 0.2s;
+  transition: color 0.3s;
 }
-
-.cs-next-btn:hover .cs-next-btn-content { color: #fff; }
 
 .cs-spin { animation: spin 0.9s linear infinite; }
 
@@ -370,6 +629,10 @@ button {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9999px;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cs-report-btn {
@@ -379,13 +642,13 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.2);
-  transition: color 0.2s, background 0.2s;
+  color: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
 }
 
 .cs-report-btn:hover {
   color: #f87171;
-  background: rgba(239,68,68,0.1);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .cs-end-btn {
@@ -395,14 +658,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(239,68,68,0.1);
+  background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-  transition: background 0.2s, color 0.2s;
+  transition: all 0.2s;
 }
 
 .cs-end-btn:hover {
   background: #ef4444;
   color: #fff;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
 }
 
 /* ---------- Report Modal ---------- */
@@ -410,8 +674,7 @@ button {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(0,0,0,0.6);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(24px);
   display: flex;
   align-items: center;
@@ -424,31 +687,31 @@ button {
   position: relative;
   width: 100%;
   max-width: 24rem;
-  background: #0f0f14;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 2.5rem;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2rem;
   padding: 2rem;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-  animation: fadeInSlideUp 0.4s cubic-bezier(0.2,1,0.2,1) both;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  animation: fadeInSlideUp 0.4s cubic-bezier(0.2, 1, 0.2, 1) both;
 }
 
 .cs-modal-close {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255, 255, 255, 0.2);
   width: 2rem;
   height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  transition: color 0.2s, background 0.2s;
+  transition: all 0.2s;
 }
 
 .cs-modal-close:hover {
   color: #fff;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .cs-modal-header {
@@ -464,7 +727,7 @@ button {
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  background: rgba(239,68,68,0.1);
+  background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   display: flex;
   align-items: center;
@@ -485,59 +748,33 @@ button {
 .cs-modal-subtitle {
   margin-top: 0.25rem;
   font-size: 11px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  font-weight: 900;
+  font-weight: 600;
 }
 
-.cs-report-options { display: grid; gap: 0.5rem; }
+.cs-report-options {
+  display: grid;
+  gap: 0.5rem;
+}
 
 .cs-report-option {
   width: 100%;
   padding: 1rem;
   border-radius: 1rem;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   color: #fff;
   text-align: left;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.cs-report-option:hover { background: rgba(255,255,255,0.08); }
-
-/* ---------- Background Blobs ---------- */
-.cs-blobs {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.cs-blob {
-  position: absolute;
-  width: 50%;
-  height: 50%;
-  border-radius: 9999px;
-  filter: blur(120px);
-  animation: pulseSlow 6s ease-in-out infinite;
-}
-
-.cs-blob--pink {
-  top: -10%;
-  left: -10%;
-  background: rgba(219,39,119,0.2);
-  opacity: 0.3;
-}
-
-.cs-blob--orange {
-  bottom: -10%;
-  right: -10%;
-  background: rgba(234,88,12,0.1);
-  opacity: 0.3;
-  animation-delay: 2s;
+.cs-report-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
 }
