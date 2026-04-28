@@ -28,6 +28,57 @@ const CallScreen = () => {
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
   const uiTimerRef     = useRef(null);
+  const localStreamRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+
+  // ── Initialize local media stream ───────────────────────────────────────
+  useEffect(() => {
+    const startLocalStream = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        localStreamRef.current = stream;
+        
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+        // Handle gracefully - camera might be off
+        setVideoEnabled(false);
+        setAudioEnabled(false);
+      }
+    };
+
+    startLocalStream();
+
+    // Cleanup on unmount
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // ── Handle video toggle ────────────────────────────────────────────────
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = videoEnabled;
+      });
+    }
+  }, [videoEnabled]);
+
+  // ── Handle audio toggle ────────────────────────────────────────────────
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = audioEnabled;
+      });
+    }
+  }, [audioEnabled]);
 
   // ── Auto-hide UI when a partner is connected ───────────────────────────────
   useEffect(() => {
@@ -49,17 +100,109 @@ const CallScreen = () => {
     };
   }, [showReportModal, hasPartner]);
 
+  // ── WebRTC Demo: Loopback connection for testing ───────────────────────
+  const setupLoopbackConnection = async () => {
+    try {
+      // Create two peer connections for loopback demo
+      const pc1 = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
+      const pc2 = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
+
+      peerConnectionRef.current = pc1;
+
+      // Add local stream to pc1
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          pc1.addTrack(track, localStreamRef.current);
+        });
+      }
+
+      // Handle remote stream from pc2
+      pc2.ontrack = (event) => {
+        if (remoteVideoRef.current && event.streams[0]) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      // Exchange ICE candidates
+      pc1.onicecandidate = (event) => {
+        if (event.candidate) {
+          pc2.addIceCandidate(event.candidate).catch(console.error);
+        }
+      };
+
+      pc2.onicecandidate = (event) => {
+        if (event.candidate) {
+          pc1.addIceCandidate(event.candidate).catch(console.error);
+        }
+      };
+
+      // Create and exchange SDP
+      const offer = await pc1.createOffer();
+      await pc1.setLocalDescription(offer);
+      await pc2.setRemoteDescription(offer);
+
+      const answer = await pc2.createAnswer();
+      await pc2.setLocalDescription(answer);
+      await pc1.setRemoteDescription(answer);
+
+    } catch (error) {
+      console.error('Error setting up loopback connection:', error);
+    }
+  };
+
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleFindNext = () => {
+  const handleFindNext = async () => {
     setIsConnecting(true);
     setHasPartner(false);
-    setTimeout(() => {
-      setIsConnecting(false);
+
+    // Clean up previous connection if exists
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    // Clear remote video
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+
+    try {
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      
+      // Setup loopback connection (for demo purposes)
+      await setupLoopbackConnection();
+      
       setHasPartner(true);
-    }, 1800);
+    } catch (error) {
+      console.error('Connection failed:', error);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnect = () => {
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    // Clear remote video
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+
     setHasPartner(false);
     setIsConnecting(false);
   };
