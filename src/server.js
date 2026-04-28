@@ -49,7 +49,6 @@ const AUTO_SEARCH_DELAY_MS = 5000;
 const API_KEY = process.env.API_KEY || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
 
-// ─── Ban System Configuration ─────────────────────────────────────────────────
 const AUTO_BAN_THRESHOLD = 3;        // Number of reports needed for auto-ban
 const DEFAULT_BAN_DURATION_HOURS = 720; // 30 days default ban
 
@@ -74,12 +73,12 @@ const rooms = new Map();
 const randomQueue = [];
 const autoSearchTimers = new Map();
 
-// ─── NEW: Report & Ban State ──────────────────────────────────────────────────
-const bannedDevices = new Map();      // deviceId -> banInfo
-const reports = new Map();            // reportId -> reportInfo
-const userReportCount = new Map();    // deviceId -> number of reports received
-const reporterHistory = new Map();    // reporterId -> Set of reportedIds (prevent duplicate reports)
+const bannedDevices = new Map();
+const reports = new Map();
+const userReportCount = new Map();
+const reporterHistory = new Map();
 
+// ─── UPDATED: Default Notifications (HD Video removed, new default added) ───
 let notifications = [
   {
     id: 1,
@@ -90,20 +89,9 @@ let notifications = [
     timestamp: new Date().toISOString(),
     actionUrl: "/welcome",
     icon: "🎉",
+    imageUrl: "https://i.postimg.cc/cLq03ZZg/IMG-20260428-WA0002.jpg", // Added image URL
     isRead: false,
     expiresIn: 30
-  },
-  {
-    id: 2,
-    title: "📹 HD Video Available!",
-    message: "Update your app to enjoy HD video quality calls with better clarity.",
-    type: "feature",
-    priority: "high",
-    timestamp: new Date().toISOString(),
-    actionUrl: "/settings/quality",
-    icon: "📹",
-    isRead: false,
-    expiresIn: 14
   }
 ];
 
@@ -136,8 +124,7 @@ let appConfig = {
   }
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
+// ─── Helpers (No changes below this line, included for completeness) ─────────
 function generateOreyId() {
   return uuidv4().replace(/-/g, '').substring(0, 8).toUpperCase();
 }
@@ -220,12 +207,12 @@ function attemptMatch(newSocketId) {
   const selfData = { 
     userName: selfSocket.data.userName || 'Anonymous', 
     oreyId: selfSocket.data.oreyId || null,
-    deviceId: selfSocket.data.deviceId || null      // NEW: Include device ID
+    deviceId: selfSocket.data.deviceId || null
   };
   const partnerData = { 
     userName: partnerSocket.data.userName || 'Anonymous', 
     oreyId: partnerSocket.data.oreyId || null,
-    deviceId: partnerSocket.data.deviceId || null    // NEW: Include device ID
+    deviceId: partnerSocket.data.deviceId || null
   };
 
   rooms.get(roomId).set(selfId, selfData);
@@ -260,19 +247,12 @@ function attemptMatch(newSocketId) {
   });
 }
 
-// ─── NEW: Ban/Report Helpers ──────────────────────────────────────────────────
-
-/**
- * Check if a device is currently banned
- * Returns banInfo if banned, null if not
- */
 function isDeviceBanned(deviceId) {
   if (!deviceId) return null;
   
   const banInfo = bannedDevices.get(deviceId);
   if (!banInfo) return null;
   
-  // Check if temporary ban has expired
   if (banInfo.expiresAt && Date.now() > banInfo.expiresAt) {
     bannedDevices.delete(deviceId);
     console.log(`✅ Ban expired for device: ${deviceId.substring(0, 12)}...`);
@@ -282,13 +262,9 @@ function isDeviceBanned(deviceId) {
   return banInfo;
 }
 
-/**
- * Apply ban to a device and disconnect all their sockets
- */
 function banDeviceAndDisconnect(deviceId, banInfo) {
   bannedDevices.set(deviceId, banInfo);
   
-  // Disconnect all sockets belonging to this device
   const socketsToDisconnect = [];
   for (const [socketId, socket] of io.sockets.sockets) {
     if (socket.data.deviceId === deviceId) {
@@ -309,7 +285,6 @@ function banDeviceAndDisconnect(deviceId, banInfo) {
 }
 
 // ─── Auth Middleware ─────────────────────────────────────────────────────────
-
 const verifyApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
   if (!apiKey) return res.status(401).json({ error: 'API key required' });
@@ -325,15 +300,14 @@ const verifyAdminKey = (req, res, next) => {
 };
 
 // ─── Public REST Endpoints ──────────────────────────────────────────────────
-
 app.get('/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     activeConnections: io.engine.clientsCount,
-    bannedDevices: bannedDevices.size,       // NEW
-    totalReports: reports.size,              // NEW
+    bannedDevices: bannedDevices.size,
+    totalReports: reports.size,
     memory: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
@@ -357,7 +331,6 @@ app.get('/api/get-key-hash', (_req, res) => {
 });
 
 // ─── App API Endpoints (Require API Key) ────────────────────────────────────
-
 app.get('/api/version', (req, res) => {
   const platform = req.query.platform || 'android';
   const clientVersion = parseInt(req.query.version) || 0;
@@ -372,6 +345,7 @@ app.get('/api/version', (req, res) => {
   }
 });
 
+// ─── UPDATED: Notification Endpoint to include imageUrl ─────────────────────
 app.get('/api/notifications', (req, res) => {
   const lastId = parseInt(req.query.after_id) || 0;
   
@@ -415,13 +389,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// ─── NEW: Device & Report API Endpoints ──────────────────────────────────────
-
-/**
- * POST /api/device/register
- * Register a device ID with the server
- * Body: { deviceId: string, platform?: string }
- */
+// ─── Device & Report API Endpoints ──────────────────────────────────────────
 app.post('/api/device/register', verifyApiKey, (req, res) => {
   const { deviceId, platform } = req.body;
   
@@ -429,7 +397,6 @@ app.post('/api/device/register', verifyApiKey, (req, res) => {
     return res.status(400).json({ error: 'deviceId is required' });
   }
   
-  // Check if device is banned
   const banInfo = isDeviceBanned(deviceId);
   if (banInfo) {
     return res.status(403).json({
@@ -453,11 +420,6 @@ app.post('/api/device/register', verifyApiKey, (req, res) => {
   });
 });
 
-/**
- * POST /api/device/check-ban
- * Check if a device is banned
- * Body: { deviceId: string }
- */
 app.post('/api/device/check-ban', verifyApiKey, (req, res) => {
   const { deviceId } = req.body;
   
@@ -477,22 +439,16 @@ app.post('/api/device/check-ban', verifyApiKey, (req, res) => {
   res.json({ banned: false });
 });
 
-/**
- * POST /api/report
- * Report a user for misbehavior
- * Body: { reporterDeviceId, reportedDeviceId, reportedUserId?, reason, description?, evidence? }
- */
 app.post('/api/report', verifyApiKey, (req, res) => {
   const { 
-    reporterDeviceId,    // Device ID of person filing report
-    reportedDeviceId,    // Device ID of person being reported
-    reportedUserId,      // Optional: Orey ID of person being reported
-    reason,              // Reason for report
-    description,         // Optional: Additional details
-    evidence             // Optional: Evidence (screenshot URL, etc.)
+    reporterDeviceId,
+    reportedDeviceId,
+    reportedUserId,
+    reason,
+    description,
+    evidence
   } = req.body;
 
-  // Validation
   if (!reportedDeviceId || !reason) {
     return res.status(400).json({ 
       error: 'reportedDeviceId and reason are required',
@@ -504,12 +460,10 @@ app.post('/api/report', verifyApiKey, (req, res) => {
     return res.status(400).json({ error: 'reporterDeviceId is required' });
   }
   
-  // Prevent self-reporting
   if (reporterDeviceId === reportedDeviceId) {
     return res.status(400).json({ error: 'Cannot report yourself' });
   }
   
-  // Prevent duplicate reports from same reporter
   const reportedByReporter = reporterHistory.get(reporterDeviceId) || new Set();
   if (reportedByReporter.has(reportedDeviceId)) {
     return res.status(400).json({ 
@@ -518,7 +472,6 @@ app.post('/api/report', verifyApiKey, (req, res) => {
     });
   }
   
-  // Create the report
   const reportId = generateRoomId();
   const report = {
     id: reportId,
@@ -538,11 +491,9 @@ app.post('/api/report', verifyApiKey, (req, res) => {
 
   reports.set(reportId, report);
   
-  // Track reporter history
   reportedByReporter.add(reportedDeviceId);
   reporterHistory.set(reporterDeviceId, reportedByReporter);
   
-  // Increment report count for the reported user
   const currentCount = (userReportCount.get(reportedDeviceId) || 0) + 1;
   userReportCount.set(reportedDeviceId, currentCount);
 
@@ -550,7 +501,6 @@ app.post('/api/report', verifyApiKey, (req, res) => {
   console.log(`   Reporter: ${reporterDeviceId.substring(0, 12)}...`);
   console.log(`   Total reports against this device: ${currentCount}`);
 
-  // Check if auto-ban threshold reached
   let autoBanned = false;
   let banInfo = null;
   
@@ -564,7 +514,6 @@ app.post('/api/report', verifyApiKey, (req, res) => {
       reportIds: []
     };
     
-    // Collect all report IDs for this device
     for (const [rId, r] of reports.entries()) {
       if (r.reportedDeviceId === reportedDeviceId) {
         banInfo.reportIds.push(rId);
@@ -592,7 +541,6 @@ app.post('/api/report', verifyApiKey, (req, res) => {
 });
 
 // ─── Admin Endpoints (Require Admin Key) ────────────────────────────────────
-
 app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
   res.json({ 
     notifications, 
@@ -608,8 +556,9 @@ app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
   });
 });
 
+// ─── UPDATED: Admin Notification Creation with imageUrl ─────────────────────
 app.post('/admin/notifications', verifyAdminKey, (req, res) => {
-  const { title, message, type, priority, actionUrl, icon, expiresIn } = req.body;
+  const { title, message, type, priority, actionUrl, icon, imageUrl, expiresIn } = req.body;
   
   if (!title || !message) {
     return res.status(400).json({ error: 'Title and message are required' });
@@ -628,6 +577,7 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
     timestamp: new Date().toISOString(),
     actionUrl: actionUrl || '/',
     icon: icon || '📢',
+    imageUrl: imageUrl || null, // Added imageUrl field
     isRead: false,
     expiresIn: expiresIn || 30
   };
@@ -705,13 +655,7 @@ app.put('/admin/video-quality', verifyAdminKey, (req, res) => {
   res.json({ success: true, videoQuality: appConfig.videoQuality });
 });
 
-// ─── NEW: Admin Report Management Endpoints ──────────────────────────────────
-
-/**
- * GET /admin/reports
- * Get all reports (with optional status filter)
- * Query: ?status=pending|reviewed|banned|dismissed|auto_banned
- */
+// ─── Admin Report Management Endpoints ────────────────────────────────────
 app.get('/admin/reports', verifyAdminKey, (req, res) => {
   const status = req.query.status;
   const allReports = [];
@@ -721,7 +665,6 @@ app.get('/admin/reports', verifyAdminKey, (req, res) => {
     allReports.push({ id, ...report });
   }
   
-  // Sort by newest first
   allReports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   
   res.json({
@@ -733,11 +676,6 @@ app.get('/admin/reports', verifyAdminKey, (req, res) => {
   });
 });
 
-/**
- * POST /admin/reports/:reportId/action
- * Take action on a specific report
- * Body: { action: 'ban'|'dismiss'|'warn', banDuration?: number, notes?: string }
- */
 app.post('/admin/reports/:reportId/action', verifyAdminKey, (req, res) => {
   const { reportId } = req.params;
   const { action, banDuration, notes } = req.body;
@@ -785,7 +723,6 @@ app.post('/admin/reports/:reportId/action', verifyAdminKey, (req, res) => {
     
     case 'warn': {
       report.status = 'warned';
-      // Could send warning notification to user
       for (const [socketId, socket] of io.sockets.sockets) {
         if (socket.data.deviceId === report.reportedDeviceId) {
           socket.emit('warning', {
@@ -805,13 +742,7 @@ app.post('/admin/reports/:reportId/action', verifyAdminKey, (req, res) => {
   res.json({ success: true, report });
 });
 
-// ─── NEW: Admin Ban Management Endpoints ─────────────────────────────────────
-
-/**
- * POST /admin/ban-device
- * Manually ban a device
- * Body: { deviceId, reason, durationHours? }
- */
+// ─── Admin Ban Management Endpoints ───────────────────────────────────────
 app.post('/admin/ban-device', verifyAdminKey, (req, res) => {
   const { deviceId, reason, durationHours } = req.body;
   
@@ -819,7 +750,6 @@ app.post('/admin/ban-device', verifyAdminKey, (req, res) => {
     return res.status(400).json({ error: 'deviceId is required' });
   }
   
-  // Check if already banned
   const existingBan = isDeviceBanned(deviceId);
   if (existingBan) {
     return res.status(400).json({ 
@@ -850,10 +780,6 @@ app.post('/admin/ban-device', verifyAdminKey, (req, res) => {
   });
 });
 
-/**
- * DELETE /admin/ban-device/:deviceId
- * Unban a device
- */
 app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
   const { deviceId } = req.params;
   
@@ -862,8 +788,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
   }
   
   bannedDevices.delete(deviceId);
-  
-  // Also clear report count so they start fresh
   userReportCount.delete(deviceId);
   
   console.log(`✅ Device unbanned: ${deviceId.substring(0, 12)}...`);
@@ -871,10 +795,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
   res.json({ success: true, message: 'Device has been unbanned' });
 });
 
-/**
- * GET /admin/banned-devices
- * Get list of all banned devices
- */
 app.get('/admin/banned-devices', verifyAdminKey, (_req, res) => {
   const list = [];
   
@@ -890,7 +810,6 @@ app.get('/admin/banned-devices', verifyAdminKey, (_req, res) => {
     });
   }
   
-  // Clean expired bans
   for (const item of list) {
     if (item.isExpired && item.expiresAt) {
       for (const [deviceId, info] of bannedDevices.entries()) {
@@ -907,10 +826,8 @@ app.get('/admin/banned-devices', verifyAdminKey, (_req, res) => {
   });
 });
 
-// ─── NEW: Admin Stats (Updated) ──────────────────────────────────────────────
-
+// ─── Admin Stats ──────────────────────────────────────────────────────────
 app.get('/admin/stats', verifyAdminKey, (_req, res) => {
-  // Clean expired bans first
   for (const [deviceId, info] of bannedDevices.entries()) {
     if (info.expiresAt && Date.now() > info.expiresAt) {
       bannedDevices.delete(deviceId);
@@ -923,19 +840,16 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
     activeRooms: rooms.size,
     queueLength: randomQueue.length,
     totalNotifications: notifications.length,
-    // Ban stats
     bannedDevices: bannedDevices.size,
     totalReports: reports.size,
     pendingReports: [...reports.values()].filter(r => r.status === 'pending').length,
     autoBannedCount: [...reports.values()].filter(r => r.status === 'auto_banned').length,
-    // System
     uptime: process.uptime(),
     memoryMB: process.memoryUsage().heapUsed / 1024 / 1024
   });
 });
 
-// ─── Admin Panel Routes (NO AUTH REQUIRED for the page itself) ────────────────
-
+// ─── Admin Panel Routes ────────────────────────────────────────────────────
 app.get('/admin', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
@@ -945,7 +859,6 @@ app.get('/admin.html', (_req, res) => {
 });
 
 // ─── Static Files & SPA ─────────────────────────────────────────────────────
-
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '..', 'public'), {
     index: false
@@ -963,22 +876,20 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ─── Socket.IO Events ───────────────────────────────────────────────────────
-
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id} (Total: ${io.engine.clientsCount})`);
 
-  // Send config on connect
   socket.emit('video-quality-config', {
     quality: appConfig.videoQuality,
     servers: ICE_SERVERS
   });
 
-  // Check for active maintenance
   if (appConfig.maintenance.enabled) {
     socket.emit('maintenance-mode', appConfig.maintenance);
   }
 
-  // ─── NEW: Device Registration Socket Event ──────────────────────────────────
+  // Socket events for device registration, reporting, and WebRTC...
+  // [The rest of the socket events remain unchanged from the current server file]
   
   socket.on('register-device', ({ deviceId }) => {
     if (!deviceId) {
@@ -986,7 +897,6 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Check if device is banned
     const banInfo = isDeviceBanned(deviceId);
     if (banInfo) {
       socket.emit('device-banned', banInfo);
@@ -1003,8 +913,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // ─── NEW: Report Socket Event (alternative to REST for in-call reporting) ──
-  
   socket.on('report-user', ({ reportedDeviceId, reportedUserId, reason, description }) => {
     const reporterDeviceId = socket.data.deviceId;
     
@@ -1018,13 +926,11 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Prevent self-report
     if (reporterDeviceId === reportedDeviceId) {
       socket.emit('report-error', { error: 'Cannot report yourself' });
       return;
     }
     
-    // Prevent duplicate reports
     const reportedByReporter = reporterHistory.get(reporterDeviceId) || new Set();
     if (reportedByReporter.has(reportedDeviceId)) {
       socket.emit('report-error', { error: 'Already reported this user' });
@@ -1058,7 +964,6 @@ io.on('connection', (socket) => {
 
     console.log(`🚨 Socket Report #${reportId}: ${reportedDeviceId.substring(0, 12)}... for "${reason}"`);
 
-    // Auto-ban check
     let autoBanned = false;
     let banInfo = null;
     
@@ -1094,8 +999,6 @@ io.on('connection', (socket) => {
       autoBanned
     });
   });
-
-  // ─── Existing Socket Events ─────────────────────────────────────────────────
 
   socket.on('register-orey-id', ({ oreyId, userName }) => {
     cleanExpiredOreyIds();
@@ -1149,12 +1052,12 @@ io.on('connection', (socket) => {
     const callerData = { 
       userName: socket.data.userName || 'Anonymous', 
       oreyId: socket.data.oreyId || null,
-      deviceId: socket.data.deviceId || null      // NEW
+      deviceId: socket.data.deviceId || null
     };
     const calleeData = { 
       userName: entry.userName, 
       oreyId: targetOreyId,
-      deviceId: targetSocket.data.deviceId || null  // NEW
+      deviceId: targetSocket.data.deviceId || null
     };
 
     rooms.get(roomId).set(socket.id, callerData);
@@ -1170,8 +1073,6 @@ io.on('connection', (socket) => {
     targetSocket.emit('room-joined', { ...roomData, peers: [{ socketId: socket.id, ...callerData }] });
     targetSocket.emit('incoming-call', { fromName: callerData.userName, fromOreyId: callerData.oreyId });
   });
-
-  // ... (All remaining existing socket events stay exactly the same) ...
   
   socket.on('join-random', () => {
     cancelAutoSearch(socket.id);
@@ -1200,7 +1101,7 @@ io.on('connection', (socket) => {
     r.set(socket.id, { 
       userName: socket.data.userName, 
       oreyId: socket.data.oreyId || null,
-      deviceId: socket.data.deviceId || null      // NEW
+      deviceId: socket.data.deviceId || null
     });
     const peers = [...r.entries()]
       .filter(([id]) => id !== socket.id)
@@ -1377,7 +1278,6 @@ io.on('connection', (socket) => {
 });
 
 // ─── Start Server ────────────────────────────────────────────────────────────
-
 server.listen(PORT, () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🚀 Orey Server Running');
