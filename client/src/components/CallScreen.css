@@ -1,0 +1,543 @@
+/* ============================================================
+   CallScreen.css — Complete self-contained styles
+   No Tailwind dependency. Works standalone.
+   ============================================================ */
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInZoomIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeInSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(1.08); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Root Screen ---------- */
+.cs-screen {
+  position: fixed;
+  inset: 0;
+  background: #020204;
+  color: #fff;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+@media (min-width: 768px) {
+  .cs-screen { flex-direction: row; }
+}
+
+/* ---------- Remote Viewport ---------- */
+.cs-remote {
+  position: relative;
+  flex: 1.4;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+@media (min-width: 768px) {
+  .cs-remote {
+    border-bottom: none;
+    border-right: 1px solid rgba(255,255,255,0.05);
+  }
+}
+
+.cs-remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: fadeIn 1s cubic-bezier(0.2,1,0.2,1) both;
+}
+
+/* ---------- Idle / Disconnected State ---------- */
+.cs-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeInZoomIn 0.7s cubic-bezier(0.2,1,0.2,1) both;
+}
+
+.cs-brand-title {
+  font-size: clamp(4rem, 14vw, 9rem);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #fff 0%, #f9a8d4 30%, #fb923c 60%, #fff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  line-height: 1;
+}
+
+.cs-idle-subtitle {
+  margin-top: 1rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: rgba(255,255,255,0.2);
+  text-transform: uppercase;
+}
+
+.cs-search-btn {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: background 0.2s;
+}
+
+.cs-search-btn:hover { background: rgba(255,255,255,0.1); }
+
+.cs-search-icon {
+  color: #ec4899;
+  flex-shrink: 0;
+  transition: transform 0.5s cubic-bezier(0.2,1,0.2,1);
+}
+
+.cs-search-btn:hover .cs-search-icon { transform: rotate(180deg); }
+
+/* ---------- Local Viewport ---------- */
+.cs-local {
+  position: relative;
+  flex: 1;
+  background: #050508;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cs-local-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.cs-cam-off {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.5s ease both;
+}
+
+.cs-cam-off-title {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.05);
+}
+
+.cs-cam-off-icon {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 1rem;
+  color: rgba(255,255,255,0.1);
+  display: flex;
+}
+
+/* HUD badge */
+.cs-hud {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cs-hud { left: auto; right: 1.5rem; }
+}
+
+.cs-hud-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(0,0,0,0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 9999px;
+}
+
+.cs-hud-dot  { color: #10b981; flex-shrink: 0; }
+
+.cs-hud-label {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ---------- Control Bar ---------- */
+.cs-control-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 1.5rem;
+  transition: transform 0.7s cubic-bezier(0.2,1,0.2,1),
+              opacity  0.7s cubic-bezier(0.2,1,0.2,1);
+}
+
+.cs-control-bar--visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cs-control-bar--hidden {
+  transform: translateY(96px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cs-control-bar-inner {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.cs-control-panel {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+
+@media (min-width: 640px) {
+  .cs-control-panel { justify-content: space-between; }
+}
+
+/* Toggle group */
+.cs-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 9999px;
+  padding: 0.25rem;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.cs-icon-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.4);
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.cs-icon-btn:hover {
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+}
+
+.cs-icon-btn--muted {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(239,68,68,0.2);
+}
+
+.cs-icon-btn--muted:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Main action */
+.cs-main-action {
+  flex: 1;
+  min-width: 140px;
+  max-width: 20rem;
+  display: flex;
+  justify-content: center;
+  padding: 0 0.5rem;
+}
+
+.cs-next-btn {
+  position: relative;
+  width: 100%;
+  height: 3rem;
+  border-radius: 9999px;
+  background: #fff;
+  color: #000;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.1s, opacity 0.2s;
+}
+
+.cs-next-btn:hover { box-shadow: 0 20px 40px rgba(255,255,255,0.05); }
+.cs-next-btn:active { transform: scale(0.97); }
+.cs-next-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cs-next-btn-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #ec4899 0%, #f97316 50%, #eab308 100%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.cs-next-btn:hover .cs-next-btn-overlay { opacity: 1; }
+
+.cs-next-btn-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #000;
+  transition: color 0.2s;
+}
+
+.cs-next-btn:hover .cs-next-btn-content { color: #fff; }
+
+.cs-spin { animation: spin 0.9s linear infinite; }
+
+/* Safety group */
+.cs-safety-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cs-report-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.2);
+  transition: color 0.2s, background 0.2s;
+}
+
+.cs-report-btn:hover {
+  color: #f87171;
+  background: rgba(239,68,68,0.1);
+}
+
+.cs-end-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  transition: background 0.2s, color 0.2s;
+}
+
+.cs-end-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* ---------- Report Modal ---------- */
+.cs-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.6);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.3s ease both;
+}
+
+.cs-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 24rem;
+  background: #0f0f14;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2.5rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  animation: fadeInSlideUp 0.4s cubic-bezier(0.2,1,0.2,1) both;
+}
+
+.cs-modal-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  color: rgba(255,255,255,0.2);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.cs-modal-close:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.cs-modal-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .cs-modal-header { text-align: left; }
+}
+
+.cs-modal-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+@media (min-width: 640px) {
+  .cs-modal-icon { margin: 0 0 1rem; }
+}
+
+.cs-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.cs-modal-subtitle {
+  margin-top: 0.25rem;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 900;
+}
+
+.cs-report-options { display: grid; gap: 0.5rem; }
+
+.cs-report-option {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  color: #fff;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: background 0.2s;
+}
+
+.cs-report-option:hover { background: rgba(255,255,255,0.08); }
+
+/* ---------- Background Blobs ---------- */
+.cs-blobs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.cs-blob {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  border-radius: 9999px;
+  filter: blur(120px);
+  animation: pulseSlow 6s ease-in-out infinite;
+}
+
+.cs-blob--pink {
+  top: -10%;
+  left: -10%;
+  background: rgba(219,39,119,0.2);
+  opacity: 0.3;
+}
+
+.cs-blob--orange {
+  bottom: -10%;
+  right: -10%;
+  background: rgba(234,88,12,0.1);
+  opacity: 0.3;
+  animation-delay: 2s;
+}
