@@ -1,41 +1,124 @@
-/* Orey! Cinematic Call Screen Styles */
+/* ============================================================
+   Orey! Pro — Global Styles
+   All custom Tailwind-like utility classes and animations
+   ============================================================ */
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.15; transform: scale(1); }
-  50% { opacity: 0.25; transform: scale(1.05); }
+/* ---------- Keyframes ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 8s ease-in-out infinite;
+@keyframes fadeInZoomIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-.bg-glass {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.08); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideUpFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Animate-in helpers (replaces tailwindcss-animate plugin) ---------- */
+.animate-fade-in {
+  animation: fadeIn 0.7s cubic-bezier(0.2, 1, 0.2, 1) both;
+}
+
+.animate-fade-in-fast {
+  animation: fadeIn 0.3s ease both;
+}
+
+.animate-fade-zoom-in {
+  animation: fadeInZoomIn 0.7s cubic-bezier(0.2, 1, 0.2, 1) both;
+}
+
+.animate-fade-in-slow {
+  animation: fadeIn 1s cubic-bezier(0.2, 1, 0.2, 1) both;
+}
+
+.animate-slide-up-fade-in {
+  animation: slideUpFadeIn 0.4s cubic-bezier(0.2, 1, 0.2, 1) both;
+}
+
+/* ---------- Brand gradient text ---------- */
 .brand-gradient-text {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f9a8d4 30%,
+    #fb923c 60%,
+    #ffffff 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: transparent;
 }
 
+/* ---------- Glassmorphism card ---------- */
+.bg-glass {
+  background: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* ---------- Action button gradient overlay ---------- */
 .action-button-gradient {
-  background: linear-gradient(90deg, #ec4899, #f97316);
+  background: linear-gradient(
+    135deg,
+    #ec4899 0%,
+    #f97316 50%,
+    #eab308 100%
+  );
 }
 
-/* Custom scrollbar for report modal if needed */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* ---------- Slow pulse blob animation ---------- */
+.animate-pulse-slow {
+  animation: pulseSlow 6s ease-in-out infinite;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+/* ---------- Spinning loader ---------- */
+.animate-spin {
+  animation: spin 0.9s linear infinite;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+/* ---------- Rotate on hover helper ---------- */
+.group:hover .group-hover\:rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* ---------- Smooth rotate transition ---------- */
+.transition-transform-500 {
+  transition: transform 0.5s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+/* ---------- Mirror flip (local video) ---------- */
+.mirror-x {
+  transform: scaleX(-1);
+}
+
+/* ---------- Control bar slide transition ---------- */
+.control-bar-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.control-bar-hidden {
+  transform: translateY(96px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.control-bar-transition {
+  transition: transform 0.7s cubic-bezier(0.2, 1, 0.2, 1),
+              opacity  0.7s cubic-bezier(0.2, 1, 0.2, 1);
 }
