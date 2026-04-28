@@ -46,7 +46,6 @@ const CallScreen = () => {
         }
       } catch (error) {
         console.error('Error accessing media devices:', error);
-        // Handle gracefully - camera might be off
         setVideoEnabled(false);
         setAudioEnabled(false);
       }
@@ -54,10 +53,12 @@ const CallScreen = () => {
 
     startLocalStream();
 
-    // Cleanup on unmount
     return () => {
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
       }
     };
   }, []);
@@ -100,60 +101,93 @@ const CallScreen = () => {
     };
   }, [showReportModal, hasPartner]);
 
-  // ── WebRTC Demo: Loopback connection for testing ───────────────────────
+  // ── WebRTC: Create local loopback connection ────────────────────────────
   const setupLoopbackConnection = async () => {
     try {
-      // Create two peer connections for loopback demo
-      const pc1 = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      });
-      const pc2 = new RTCPeerConnection({
+      // Create RTCPeerConnection with proper configuration
+      const pc = new RTCPeerConnection({
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' }
         ]
       });
 
-      peerConnectionRef.current = pc1;
+      peerConnectionRef.current = pc;
 
-      // Add local stream to pc1
+      // Add local tracks to the peer connection
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => {
-          pc1.addTrack(track, localStreamRef.current);
+          pc.addTrack(track, localStreamRef.current);
         });
       }
 
-      // Handle remote stream from pc2
-      pc2.ontrack = (event) => {
-        if (remoteVideoRef.current && event.streams[0]) {
-          remoteVideoRef.current.srcObject = event.streams[0];
+      // Handle incoming remote stream
+      pc.ontrack = (event) => {
+        console.log('Remote track received:', event);
+        if (remoteVideoRef.current) {
+          const [remoteStream] = event.streams;
+          if (remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            console.log('Remote stream set successfully');
+          }
         }
       };
 
-      // Exchange ICE candidates
-      pc1.onicecandidate = (event) => {
+      // Create offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Create a new peer connection for the "remote" side (ourselves)
+      const remotePc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
+
+      // Add the same local stream to remote peer connection
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          remotePc.addTrack(track, localStreamRef.current);
+        });
+      }
+
+      // Set the remote description on the remote peer
+      await remotePc.setRemoteDescription(pc.localDescription);
+
+      // Create answer from remote peer
+      const answer = await remotePc.createAnswer();
+      await remotePc.setLocalDescription(answer);
+
+      // Set the answer as remote description on local peer
+      await pc.setRemoteDescription(remotePc.localDescription);
+
+      // Handle ICE candidates for both peers
+      pc.onicecandidate = (event) => {
         if (event.candidate) {
-          pc2.addIceCandidate(event.candidate).catch(console.error);
+          remotePc.addIceCandidate(new RTCIceCandidate(event.candidate))
+            .catch(console.error);
         }
       };
 
-      pc2.onicecandidate = (event) => {
+      remotePc.onicecandidate = (event) => {
         if (event.candidate) {
-          pc1.addIceCandidate(event.candidate).catch(console.error);
+          pc.addIceCandidate(new RTCIceCandidate(event.candidate))
+            .catch(console.error);
         }
       };
 
-      // Create and exchange SDP
-      const offer = await pc1.createOffer();
-      await pc1.setLocalDescription(offer);
-      await pc2.setRemoteDescription(offer);
+      // Handle connection state changes
+      pc.onconnectionstatechange = () => {
+        console.log('Local PC connection state:', pc.connectionState);
+      };
 
-      const answer = await pc2.createAnswer();
-      await pc2.setLocalDescription(answer);
-      await pc1.setRemoteDescription(answer);
+      remotePc.onconnectionstatechange = () => {
+        console.log('Remote PC connection state:', remotePc.connectionState);
+      };
+
+      // Wait a bit for ICE candidates to be exchanged
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
     } catch (error) {
       console.error('Error setting up loopback connection:', error);
@@ -163,8 +197,7 @@ const CallScreen = () => {
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleFindNext = async () => {
     setIsConnecting(true);
-    setHasPartner(false);
-
+    
     // Clean up previous connection if exists
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
@@ -176,11 +209,13 @@ const CallScreen = () => {
       remoteVideoRef.current.srcObject = null;
     }
 
+    setHasPartner(false);
+
     try {
       // Simulate connection delay
       await new Promise(resolve => setTimeout(resolve, 1800));
       
-      // Setup loopback connection (for demo purposes)
+      // Setup loopback connection
       await setupLoopbackConnection();
       
       setHasPartner(true);
