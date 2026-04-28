@@ -5,10 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orey Admin Dashboard</title>
     <style>
-        /* ... (all existing styles remain the same) ... */
-        
-        /* Additional styles for new elements */
-        .form-group select {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --border-color: #475569;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Login Screen */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .login-box {
+            background: var(--bg-secondary);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--border-color);
+        }
+
+        .login-box h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+
+        .login-box p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 0.875rem 1rem;
             background: var(--bg-primary);
@@ -18,6 +96,15 @@
             font-size: 1rem;
             transition: all 0.2s;
             outline: none;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group select {
             appearance: none;
             -webkit-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
@@ -25,30 +112,275 @@
             background-position: right 1rem center;
             cursor: pointer;
         }
-        
-        .form-group select:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            color: var(--text-primary);
-            font-family: inherit;
-            resize: vertical;
-            min-height: 80px;
-        }
-        
+
+        .form-group input:focus,
+        .form-group select:focus,
         .form-group textarea:focus {
             border-color: var(--accent-blue);
-            outline: none;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #64748b;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            width: auto;
+            display: inline-flex;
+        }
+
+        .btn-danger { background: var(--accent-red); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--accent-green); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-warning { background: var(--accent-yellow); color: #0f172a; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-purple { background: var(--accent-purple); color: white; }
+        .btn-purple:hover { background: #7c3aed; }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--accent-red); color: #fca5a5; display: block; }
+        .alert-success { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); color: #6ee7b7; display: block; }
+        .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-blue); color: #93c5fd; display: block; }
+
+        .hint {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .hint strong { color: var(--accent-blue); }
+        .hint code { background: var(--bg-primary); padding: 0.2rem 0.5rem; border-radius: 0.25rem; color: var(--accent-blue); }
+
+        /* Dashboard */
+        .dashboard { display: none; min-height: 100vh; }
+        .dashboard.active { display: flex; }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            cursor: pointer;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-blue); color: white; }
+        .nav-item .icon { font-size: 1.25rem; width: 24px; text-align: center; }
+        .nav-item.logout { margin-top: 2rem; color: var(--accent-red); }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+            flex: 1;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .top-bar h2 { font-size: 1.75rem; margin: 0; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .stat-card .stat-label { color: var(--text-secondary); font-size: 0.875rem; }
+        .stat-card.blue .stat-value { color: var(--accent-blue); }
+        .stat-card.green .stat-value { color: var(--accent-green); }
+        .stat-card.red .stat-value { color: var(--accent-red); }
+        .stat-card.yellow .stat-value { color: var(--accent-yellow); }
+        .stat-card.purple .stat-value { color: var(--accent-purple); }
+        .stat-card.pink .stat-value { color: var(--accent-pink); }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 { margin-top: 0; margin-bottom: 1rem; font-size: 1.25rem; }
+
+        .table-container { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td { padding: 0.75rem; border-bottom: 1px solid var(--bg-tertiary); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+        .badge-banned { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-auto_banned { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .badge-dismissed { background: rgba(100, 116, 139, 0.2); color: var(--text-secondary); }
+        .badge-warned { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .badge-expired { background: rgba(100, 116, 139, 0.2); color: var(--text-secondary); }
+        .badge-info { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .badge-feature { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .badge-alert { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-promo { background: rgba(236, 72, 153, 0.2); color: var(--accent-pink); }
+
+        .action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        .loading, .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        code {
+            background: var(--bg-primary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--accent-blue);
+        }
+
         .image-preview {
             margin-top: 0.5rem;
             max-width: 200px;
@@ -56,33 +388,175 @@
             border: 1px solid var(--border-color);
             display: none;
         }
-        
-        .image-preview.visible {
-            display: block;
+
+        .image-preview.visible { display: block; }
+
+        .toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 600;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+
+        .toast-success { background: var(--accent-green); }
+        .toast-error { background: var(--accent-red); }
+        .toast-info { background: var(--accent-blue); }
+
+        @media (max-width: 768px) {
+            .dashboard.active { flex-direction: column; }
+            .sidebar { position: relative; width: 100%; height: auto; padding: 1rem; }
+            .main-content { margin-left: 0; padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .form-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <!-- ... (Login screen remains the same) ... -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- LOGIN SCREEN -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <h1>🛡️ Orey Admin</h1>
+            <p>Enter your admin credentials to continue</p>
+            
+            <div id="loginAlert" class="alert"></div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="adminKey">🔑 Admin Key</label>
+                    <input type="password" id="adminKey" placeholder="Enter your admin key..." autocomplete="off" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiUrl">🌐 Server URL</label>
+                    <input type="text" id="apiUrl" placeholder="http://localhost:3000" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="loginButton">
+                    <span id="loginButtonText">🔐 Access Dashboard</span>
+                    <span id="loginSpinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div class="hint">
+                <strong>💡 Quick Start:</strong><br>
+                Default key: <code>admin_secret_change_this</code><br>
+                Your server is likely at this same address
+            </div>
+        </div>
+    </div>
 
-    <!-- Dashboard -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- DASHBOARD -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="dashboard" id="dashboard">
-        <!-- ... (Sidebar remains the same) ... -->
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo" onclick="showSection('overview')">🛡️ Orey Admin</div>
+            
+            <nav>
+                <button class="nav-item active" data-section="overview" onclick="showSection('overview')">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-item" data-section="reports" onclick="showSection('reports')">
+                    <span class="icon">🚨</span> Reports
+                </button>
+                <button class="nav-item" data-section="bans" onclick="showSection('bans')">
+                    <span class="icon">🚫</span> Banned Devices
+                </button>
+                <button class="nav-item" data-section="notifications" onclick="showSection('notifications')">
+                    <span class="icon">🔔</span> Notifications
+                </button>
+                <button class="nav-item" data-section="version" onclick="showSection('version')">
+                    <span class="icon">📱</span> App Version
+                </button>
+                <button class="nav-item" data-section="settings" onclick="showSection('settings')">
+                    <span class="icon">⚙️</span> Settings
+                </button>
+                <button class="nav-item logout" onclick="logout()">
+                    <span class="icon">🚪</span> Logout
+                </button>
+            </nav>
+        </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
-            <!-- ... (Top bar remains the same) ... -->
+            <div class="top-bar">
+                <h2 id="sectionTitle">📊 Overview</h2>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="connectionStatus" style="font-size: 0.875rem;">🟢 Connected</span>
+                    <button class="btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);" 
+                            onclick="refreshCurrentSection()">🔄 Refresh</button>
+                </div>
+            </div>
 
-            <!-- Overview Section (unchanged) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- OVERVIEW SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
             <div class="section active" id="overviewSection">
-                <!-- ... -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card blue"><div class="stat-value" id="activeConnections">-</div><div class="stat-label">Active Connections</div></div>
+                    <div class="stat-card green"><div class="stat-value" id="activeRooms">-</div><div class="stat-label">Active Rooms</div></div>
+                    <div class="stat-card yellow"><div class="stat-value" id="pendingReports">-</div><div class="stat-label">Pending Reports</div></div>
+                    <div class="stat-card red"><div class="stat-value" id="bannedDevices">-</div><div class="stat-label">Banned Devices</div></div>
+                    <div class="stat-card purple"><div class="stat-value" id="totalReports">-</div><div class="stat-label">Total Reports</div></div>
+                    <div class="stat-card pink"><div class="stat-value" id="autoBannedCount">-</div><div class="stat-label">Auto Banned</div></div>
+                </div>
+
+                <div class="card">
+                    <h3>System Information</h3>
+                    <div id="systemInfo" class="loading">Loading...</div>
+                </div>
             </div>
 
-            <!-- Reports Section (unchanged) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- REPORTS SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
             <div class="section" id="reportsSection">
-                <!-- ... -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                        <h3 style="margin: 0;">All Reports</h3>
+                        <select id="reportFilter" onchange="loadReports()" 
+                                style="padding: 0.5rem 1rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; color: var(--text-primary);">
+                            <option value="">All Reports</option>
+                            <option value="pending">Pending</option>
+                            <option value="banned">Banned</option>
+                            <option value="auto_banned">Auto Banned</option>
+                            <option value="dismissed">Dismissed</option>
+                            <option value="warned">Warned</option>
+                        </select>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Report ID</th>
+                                    <th>Reported Device</th>
+                                    <th>Reporter Device</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody">
+                                <tr><td colspan="7" class="loading">Loading reports...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
-            <!-- Bans Section -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- BANS SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
             <div class="section" id="bansSection">
                 <div class="card">
                     <h3>Banned Devices</h3>
@@ -94,12 +568,13 @@
                                     <th>Reason</th>
                                     <th>Banned Date</th>
                                     <th>Expires</th>
+                                    <th>Source</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="bansTableBody">
-                                <tr><td colspan="6" class="loading">Loading banned devices...</td></tr>
+                                <tr><td colspan="7" class="loading">Loading banned devices...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -131,16 +606,16 @@
                         <label>Duration (hours, 0 = permanent)</label>
                         <input type="number" id="banDuration" value="720" min="0">
                     </div>
-                    <button class="btn-sm btn-danger" onclick="banDevice()">
-                        🚫 Ban Device
-                    </button>
+                    <button class="btn-sm btn-danger" onclick="banDevice()">🚫 Ban Device</button>
                 </div>
             </div>
 
-            <!-- Notifications Section (UPDATED with image URL) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- NOTIFICATIONS SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
             <div class="section" id="notificationsSection">
                 <div class="card">
-                    <h3>Send Notification</h3>
+                    <h3>📢 Send Notification</h3>
                     <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="notifTitle" placeholder="Notification title...">
@@ -149,284 +624,688 @@
                         <label>Message</label>
                         <textarea id="notifMessage" placeholder="Notification message..."></textarea>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="notifType">
+                                <option value="info">Info</option>
+                                <option value="feature">Feature</option>
+                                <option value="alert">Alert</option>
+                                <option value="promo">Promo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select id="notifPriority">
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Icon (emoji)</label>
+                            <input type="text" id="notifIcon" placeholder="📢" maxlength="4">
+                        </div>
+                        <div class="form-group">
+                            <label>Expires In (days)</label>
+                            <input type="number" id="notifExpiresIn" value="30" min="1" max="365">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Action URL (optional)</label>
+                        <input type="text" id="notifActionUrl" placeholder="/welcome">
+                    </div>
                     <div class="form-group">
                         <label>Image URL (optional)</label>
-                        <input type="url" id="notifImageUrl" placeholder="https://example.com/image.jpg" 
-                               oninput="previewNotificationImage()">
+                        <input type="url" id="notifImageUrl" placeholder="https://i.postimg.cc/..." oninput="previewNotificationImage()">
                         <img id="imagePreview" class="image-preview" src="" alt="Preview">
                     </div>
-                    <div class="form-group">
-                        <label>Type</label>
-                        <select id="notifType">
-                            <option value="info">Info</option>
-                            <option value="feature">Feature</option>
-                            <option value="alert">Alert</option>
-                            <option value="promo">Promo</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Priority</label>
-                        <select id="notifPriority">
-                            <option value="normal">Normal</option>
-                            <option value="high">High</option>
-                            <option value="low">Low</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Expires In (days)</label>
-                        <input type="number" id="notifExpiresIn" value="30" min="1" max="365">
-                    </div>
-                    <button class="btn-sm btn-primary" onclick="sendNotification()">
-                        📢 Send to All Users
-                    </button>
+                    <button class="btn-sm btn-primary" onclick="sendNotification()">📢 Send to All Users</button>
                 </div>
 
                 <div class="card">
-                    <h3>Recent Notifications</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">Recent Notifications</h3>
+                        <button class="btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);" 
+                                onclick="loadNotifications()">🔄 Refresh</button>
+                    </div>
                     <div id="notificationsList" class="loading">Loading notifications...</div>
                 </div>
             </div>
 
-            <!-- Settings Section (unchanged) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- APP VERSION SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="section" id="versionSection">
+                <div class="card">
+                    <h3>📱 Update App Version</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Platform</label>
+                            <select id="versionPlatform">
+                                <option value="android">Android</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Version Code</label>
+                            <input type="number" id="versionCode" placeholder="1" min="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Version Name</label>
+                        <input type="text" id="versionName" placeholder="1.0.0">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Update Type</label>
+                            <select id="updateType">
+                                <option value="flexible">Flexible</option>
+                                <option value="immediate">Immediate</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Update Priority (1-5)</label>
+                            <input type="number" id="updatePriority" value="2" min="1" max="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Update Title</label>
+                        <input type="text" id="updateTitle" placeholder="Update Available">
+                    </div>
+                    <div class="form-group">
+                        <label>Update Message</label>
+                        <textarea id="updateMessage" placeholder="New features available! Update for better experience."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Download URL</label>
+                        <input type="url" id="downloadUrl" placeholder="https://play.google.com/store/apps/details?id=com.orey.app">
+                    </div>
+                    <div class="form-group">
+                        <label>What's New (comma separated)</label>
+                        <textarea id="whatsNew" placeholder="HD Video quality support, Push notifications, Bug fixes"></textarea>
+                    </div>
+                    <button class="btn-sm btn-purple" onclick="updateAppVersion()">📱 Push Update</button>
+                </div>
+
+                <div class="card">
+                    <h3>Current Version Config</h3>
+                    <div id="currentVersionInfo" class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- SETTINGS SECTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
             <div class="section" id="settingsSection">
-                <!-- ... -->
+                <div class="card">
+                    <h3>🔧 Maintenance Mode</h3>
+                    <div class="form-group">
+                        <label>Maintenance Message</label>
+                        <input type="text" id="maintenanceMessage" placeholder="We're improving Orey. Back soon!" value="We're improving Orey. Back soon!">
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn-sm btn-warning" onclick="toggleMaintenance(true)">🔧 Enable Maintenance</button>
+                        <button class="btn-sm btn-success" onclick="toggleMaintenance(false)">✅ Disable Maintenance</button>
+                    </div>
+                    <div id="maintenanceStatus" style="margin-top: 1rem; color: var(--text-secondary);"></div>
+                </div>
+
+                <div class="card">
+                    <h3>📹 Video Quality Settings</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Default Quality</label>
+                            <select id="defaultQuality">
+                                <option value="low">Low (150kbps)</option>
+                                <option value="medium">Medium (500kbps)</option>
+                                <option value="high">High (1.5mbps)</option>
+                                <option value="hd">HD (4mbps)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Max Bitrate (bps)</label>
+                            <input type="number" id="maxBitrate" value="1500000" min="100000" max="10000000" step="100000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="autoAdjust" checked style="width: auto; cursor: pointer;">
+                            Auto-adjust quality based on network
+                        </label>
+                    </div>
+                    <button class="btn-sm btn-primary" onclick="updateVideoQuality()">💾 Save Quality Settings</button>
+                </div>
+
+                <div class="card">
+                    <h3>🧹 Clear Notification</h3>
+                    <div class="form-group">
+                        <label>Notification ID to delete</label>
+                        <input type="number" id="deleteNotifId" placeholder="Enter notification ID..." min="1">
+                    </div>
+                    <button class="btn-sm btn-danger" onclick="deleteNotification()">🗑️ Delete Notification</button>
+                </div>
             </div>
         </main>
     </div>
 
-    <script>
-        // ... (All existing state management, login, navigation, etc. remains the same) ...
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
-        // ─── UPDATED: Notifications with image support ───────────────────────
-        
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // STATE MANAGEMENT
+        // ═══════════════════════════════════════════════════════════════
+        let adminKey = '';
+        let apiBaseUrl = '';
+        let autoRefreshInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Admin panel loaded');
+            const saved = localStorage.getItem('oreyAdminAuth');
+            if (saved) {
+                try {
+                    const auth = JSON.parse(saved);
+                    if (auth.key && auth.url) {
+                        document.getElementById('adminKey').value = auth.key;
+                        document.getElementById('apiUrl').value = auth.url;
+                        adminKey = auth.key;
+                        apiBaseUrl = auth.url;
+                        performLogin();
+                    }
+                } catch (e) {
+                    localStorage.removeItem('oreyAdminAuth');
+                    setDefaultUrl();
+                }
+            } else {
+                setDefaultUrl();
+            }
+        });
+
+        function setDefaultUrl() {
+            const input = document.getElementById('apiUrl');
+            if (!input.value) input.value = window.location.origin;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // AUTH
+        // ═══════════════════════════════════════════════════════════════
+        function handleLogin(event) {
+            event.preventDefault();
+            adminKey = document.getElementById('adminKey').value.trim();
+            apiBaseUrl = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+            if (!adminKey || !apiBaseUrl) {
+                showLoginAlert('Please fill all fields', 'error');
+                return;
+            }
+            performLogin();
+        }
+
+        async function performLogin() {
+            const btn = document.getElementById('loginButton');
+            const text = document.getElementById('loginButtonText');
+            const spin = document.getElementById('loginSpinner');
+            btn.disabled = true;
+            text.style.display = 'none';
+            spin.style.display = 'inline-block';
+            showLoginAlert('Connecting...', 'info');
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/admin/stats`, {
+                    headers: { 'x-admin-key': adminKey, 'Accept': 'application/json' }
+                });
+                if (!response.ok) {
+                    const err = await response.text();
+                    throw new Error(response.status === 401 || response.status === 403 
+                        ? 'Invalid admin key' 
+                        : `Server error: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('✅ Login:', data);
+
+                localStorage.setItem('oreyAdminAuth', JSON.stringify({ key: adminKey, url: apiBaseUrl }));
+                showLoginAlert('Success! Loading...', 'success');
+                
+                setTimeout(() => {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    showSection('overview');
+                    startAutoRefresh();
+                }, 500);
+            } catch (error) {
+                showLoginAlert(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                text.style.display = 'inline';
+                spin.style.display = 'none';
+            }
+        }
+
+        function showLoginAlert(msg, type) {
+            const alert = document.getElementById('loginAlert');
+            alert.textContent = msg;
+            alert.className = `alert alert-${type}`;
+        }
+
+        function logout() {
+            if (confirm('Logout?')) {
+                localStorage.removeItem('oreyAdminAuth');
+                if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                location.reload();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // API HELPER
+        // ═══════════════════════════════════════════════════════════════
+        async function apiCall(endpoint, options = {}) {
+            const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+                ...options,
+                headers: {
+                    'x-admin-key': adminKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...options.headers
+                }
+            });
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`API Error (${response.status}): ${error}`);
+            }
+            return response.json();
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // TOAST
+        // ═══════════════════════════════════════════════════════════════
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════════════
+        function showSection(name) {
+            document.querySelectorAll('.nav-item[data-section]').forEach(n => n.classList.remove('active'));
+            const nav = document.querySelector(`[data-section="${name}"]`);
+            if (nav) nav.classList.add('active');
+
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            const sectionMap = {
+                overview: 'overviewSection',
+                reports: 'reportsSection',
+                bans: 'bansSection',
+                notifications: 'notificationsSection',
+                version: 'versionSection',
+                settings: 'settingsSection'
+            };
+
+            const id = sectionMap[name];
+            if (id) {
+                document.getElementById(id).classList.add('active');
+                document.getElementById('sectionTitle').textContent = nav ? nav.textContent.trim() : 'Dashboard';
+                loadSectionData(name);
+            }
+        }
+
+        function loadSectionData(section) {
+            const loaders = {
+                overview: loadOverview,
+                reports: loadReports,
+                bans: loadBans,
+                notifications: loadNotifications,
+                version: loadVersionInfo,
+                settings: loadSettings
+            };
+            if (loaders[section]) loaders[section]();
+        }
+
+        function refreshCurrentSection() {
+            const active = document.querySelector('.section.active');
+            const map = { overviewSection: 'overview', reportsSection: 'reports', bansSection: 'bans', notificationsSection: 'notifications', versionSection: 'version', settingsSection: 'settings' };
+            if (active && map[active.id]) loadSectionData(map[active.id]);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // OVERVIEW
+        // ═══════════════════════════════════════════════════════════════
+        async function loadOverview() {
+            try {
+                const stats = await apiCall('/admin/stats');
+                document.getElementById('activeConnections').textContent = stats.activeConnections || 0;
+                document.getElementById('activeRooms').textContent = stats.activeRooms || 0;
+                document.getElementById('pendingReports').textContent = stats.pendingReports || 0;
+                document.getElementById('bannedDevices').textContent = stats.bannedDevices || 0;
+                document.getElementById('totalReports').textContent = stats.totalReports || 0;
+                document.getElementById('autoBannedCount').textContent = stats.autoBannedCount || 0;
+
+                document.getElementById('systemInfo').innerHTML = `
+                    <table>
+                        <tr><td><strong>Uptime:</strong></td><td>${formatUptime(stats.uptime)}</td></tr>
+                        <tr><td><strong>Memory:</strong></td><td>${(stats.memoryMB || 0).toFixed(1)} MB</td></tr>
+                        <tr><td><strong>Orey IDs:</strong></td><td>${stats.totalOreyIds || 0}</td></tr>
+                        <tr><td><strong>Queue:</strong></td><td>${stats.queueLength || 0}</td></tr>
+                        <tr><td><strong>Notifications:</strong></td><td>${stats.totalNotifications || 0}</td></tr>
+                    </table>`;
+                updateConnectionStatus(true);
+            } catch (e) {
+                updateConnectionStatus(false);
+                document.getElementById('systemInfo').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // REPORTS
+        // ═══════════════════════════════════════════════════════════════
+        async function loadReports() {
+            const filter = document.getElementById('reportFilter')?.value || '';
+            const tbody = document.getElementById('reportsTableBody');
+            try {
+                const data = await apiCall(`/admin/reports${filter ? `?status=${filter}` : ''}`);
+                if (!data.reports?.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">✅</div>No reports</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.reports.map(r => `
+                    <tr>
+                        <td><code>${r.id}</code></td>
+                        <td title="${esc(r.reportedDeviceId)}"><code>${(r.reportedDeviceId || 'N/A').substring(0, 12)}...</code></td>
+                        <td title="${esc(r.reporterDeviceId)}"><code>${(r.reporterDeviceId || 'N/A').substring(0, 12)}...</code></td>
+                        <td>${esc(r.reason)}${r.description ? `<br><small style="color:var(--text-secondary)">${esc(r.description).substring(0, 60)}</small>` : ''}</td>
+                        <td><span class="badge badge-${r.status}">${r.status}</span></td>
+                        <td>${formatDate(r.timestamp)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                ${r.status === 'pending' ? `
+                                    <button class="btn-sm btn-danger" onclick="handleReportAction('${r.id}','ban')">Ban</button>
+                                    <button class="btn-sm btn-warning" onclick="handleReportAction('${r.id}','warn')">Warn</button>
+                                    <button class="btn-sm" style="background:var(--bg-tertiary);color:var(--text-primary);" onclick="handleReportAction('${r.id}','dismiss')">Dismiss</button>
+                                ` : `<span style="color:var(--text-secondary);font-size:0.875rem;">${r.status}</span>`}
+                            </div>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="loading">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function handleReportAction(reportId, action) {
+            const map = { ban: 'Ban user?', warn: 'Send warning?', dismiss: 'Dismiss report?' };
+            if (!confirm(map[action])) return;
+            const notes = prompt('Notes (optional):') || '';
+            try {
+                const body = { action, notes };
+                if (action === 'ban') {
+                    const dur = prompt('Duration in hours? (0=permanent, 720=30 days)', '720');
+                    body.banDuration = parseInt(dur) || 720;
+                }
+                await apiCall(`/admin/reports/${reportId}/action`, { method: 'POST', body: JSON.stringify(body) });
+                showToast('Action completed!', 'success');
+                loadReports();
+            } catch (e) {
+                alert('Failed: ' + e.message);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // BANS
+        // ═══════════════════════════════════════════════════════════════
+        async function loadBans() {
+            const tbody = document.getElementById('bansTableBody');
+            try {
+                const data = await apiCall('/admin/banned-devices');
+                if (!data.bannedDevices?.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">✅</div>No banned devices</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.bannedDevices.map(b => {
+                    const fullId = b.deviceId || '';
+                    return `
+                        <tr>
+                            <td title="${esc(fullId)}"><code>${fullId.length > 20 ? fullId.substring(0, 16) + '...' : esc(fullId)}</code></td>
+                            <td>${esc((b.reason || 'N/A').substring(0, 80))}</td>
+                            <td>${formatDate(b.timestamp)}</td>
+                            <td>${b.permanent ? '<span class="badge badge-banned">Permanent</span>' : formatDate(new Date(b.expiresAt))}</td>
+                            <td><span class="badge badge-info">${b.source || 'manual'}</span></td>
+                            <td><span class="badge ${b.isExpired ? 'badge-expired' : 'badge-active'}">${b.isExpired ? 'Expired' : 'Active'}</span></td>
+                            <td><button class="btn-sm btn-success" onclick="unbanDevice('${esc(fullId).replace(/'/g, "\\'")}')">Unban</button></td>
+                        </tr>`;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="loading">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function banDevice() {
+            const deviceId = document.getElementById('banDeviceId').value.trim();
+            const reason = document.getElementById('banReason').value;
+            const duration = parseInt(document.getElementById('banDuration').value);
+            if (!deviceId) return alert('Enter device ID');
+            if (!reason) return alert('Select reason');
+            if (!confirm(`Ban ${deviceId}?\nReason: ${reason}\nDuration: ${duration === 0 ? 'Permanent' : duration + 'h'}`)) return;
+            try {
+                await apiCall('/admin/ban-device', {
+                    method: 'POST',
+                    body: JSON.stringify({ deviceId, reason, durationHours: duration || null })
+                });
+                showToast('Device banned!', 'success');
+                document.getElementById('banDeviceId').value = '';
+                document.getElementById('banReason').value = '';
+                loadBans();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        async function unbanDevice(deviceId) {
+            if (!confirm(`Unban ${deviceId.substring(0, 16)}...?`)) return;
+            try {
+                await apiCall(`/admin/ban-device/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+                showToast('Device unbanned!', 'success');
+                loadBans();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // NOTIFICATIONS
+        // ═══════════════════════════════════════════════════════════════
         function previewNotificationImage() {
             const url = document.getElementById('notifImageUrl').value.trim();
             const preview = document.getElementById('imagePreview');
-            
-            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-                preview.src = url;
-                preview.classList.add('visible');
-            } else {
-                preview.src = '';
-                preview.classList.remove('visible');
-            }
+            if (url && url.startsWith('http')) { preview.src = url; preview.classList.add('visible'); }
+            else { preview.src = ''; preview.classList.remove('visible'); }
         }
 
         async function loadNotifications() {
             const container = document.getElementById('notificationsList');
-            
             try {
                 const data = await apiCall('/admin/notifications');
-                console.log('🔔 Notifications loaded:', data);
-                
-                if (!data.notifications || data.notifications.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><div class="icon">🔔</div>No notifications sent yet</div>';
+                if (!data.notifications?.length) {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">🔔</div>No notifications</div>';
                     return;
                 }
-
-                container.innerHTML = data.notifications.slice(0, 10).reverse().map(notif => {
-                    const imageHtml = notif.imageUrl 
-                        ? `<img src="${escapeHtml(notif.imageUrl)}" style="max-width: 100%; max-height: 200px; border-radius: 0.5rem; margin-top: 0.5rem;" alt="Notification image" onerror="this.style.display='none'">` 
-                        : '';
-                    
-                    return `
-                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <strong>${escapeHtml(notif.title)}</strong>
-                                <span class="badge badge-${notif.type || 'info'}">${notif.type}</span>
-                            </div>
-                            <p style="color: var(--text-secondary); font-size: 0.875rem;">${escapeHtml(notif.message)}</p>
-                            ${imageHtml}
-                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                                ${formatDate(notif.timestamp)} • Priority: ${notif.priority} • Expires: ${notif.expiresIn}d
-                            </div>
+                container.innerHTML = data.notifications.slice(0, 20).reverse().map(n => {
+                    const img = n.imageUrl ? `<img src="${esc(n.imageUrl)}" style="max-width:100%;max-height:200px;border-radius:0.5rem;margin-top:0.5rem;" onerror="this.style.display='none'">` : '';
+                    return `<div style="background:var(--bg-tertiary);padding:1rem;border-radius:0.5rem;margin-bottom:0.5rem;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;">
+                            <strong>${n.icon || ''} ${esc(n.title)}</strong>
+                            <span class="badge badge-${n.type || 'info'}">${n.type}</span>
                         </div>
-                    `;
+                        <p style="color:var(--text-secondary);font-size:0.875rem;">${esc(n.message)}</p>
+                        ${img}
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">
+                            ID: ${n.id} • ${formatDate(n.timestamp)} • Priority: ${n.priority} • Expires: ${n.expiresIn}d
+                            ${n.actionUrl ? ` • Action: ${esc(n.actionUrl)}` : ''}
+                        </div>
+                    </div>`;
                 }).join('');
-            } catch (error) {
-                container.innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+            } catch (e) {
+                container.innerHTML = `<div class="loading">Error: ${e.message}</div>`;
             }
         }
 
         async function sendNotification() {
             const title = document.getElementById('notifTitle').value.trim();
             const message = document.getElementById('notifMessage').value.trim();
-            const imageUrl = document.getElementById('notifImageUrl').value.trim();
-            const type = document.getElementById('notifType').value;
-            const priority = document.getElementById('notifPriority').value;
-            const expiresIn = parseInt(document.getElementById('notifExpiresIn').value) || 30;
-
-            if (!title || !message) {
-                alert('Please enter title and message');
-                return;
-            }
-
-            try {
-                const body = { 
-                    title, 
-                    message,
-                    type,
-                    priority,
-                    expiresIn
-                };
-                
-                // Only include imageUrl if provided
-                if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-                    body.imageUrl = imageUrl;
-                }
-
-                await apiCall('/admin/notifications', {
-                    method: 'POST',
-                    body: JSON.stringify(body)
-                });
-
-                alert('Notification sent to all users!');
-                document.getElementById('notifTitle').value = '';
-                document.getElementById('notifMessage').value = '';
-                document.getElementById('notifImageUrl').value = '';
-                document.getElementById('imagePreview').classList.remove('visible');
-                loadNotifications();
-            } catch (error) {
-                alert('Failed: ' + error.message);
-            }
-        }
-
-        // ─── UPDATED: Ban with dropdown reason ──────────────────────────────
-        
-        async function banDevice() {
-            const deviceId = document.getElementById('banDeviceId').value.trim();
-            const reason = document.getElementById('banReason').value;
-            const duration = parseInt(document.getElementById('banDuration').value);
-
-            if (!deviceId) {
-                alert('Please enter a device ID');
-                return;
-            }
+            if (!title || !message) return alert('Title and message required');
             
-            if (!reason) {
-                alert('Please select a reason');
-                return;
-            }
-
-            if (!confirm(`Ban device ${deviceId}?\nReason: ${reason}\nDuration: ${duration === 0 ? 'Permanent' : duration + ' hours'}`)) return;
-
-            try {
-                await apiCall('/admin/ban-device', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        deviceId,
-                        reason,
-                        durationHours: duration || null
-                    })
-                });
-
-                alert('Device banned successfully!');
-                document.getElementById('banDeviceId').value = '';
-                document.getElementById('banReason').value = '';
-                loadBans();
-            } catch (error) {
-                alert('Failed: ' + error.message);
-            }
-        }
-
-        // ─── FIXED: Unban now sends the FULL device ID ──────────────────────
-        
-        async function loadBans() {
-            const tbody = document.getElementById('bansTableBody');
-            
-            try {
-                const data = await apiCall('/admin/banned-devices');
-                console.log('🚫 Bans loaded (full data):', data);
-                
-                if (!data.bannedDevices || data.bannedDevices.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div>No banned devices</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.bannedDevices.map(ban => {
-                    // Store the full device ID in a data attribute for the unban function
-                    const fullDeviceId = ban.deviceId || '';
-                    const shortId = fullDeviceId.length > 20 ? fullDeviceId.substring(0, 16) + '...' : fullDeviceId;
-                    
-                    return `
-                        <tr>
-                            <td title="${escapeHtml(fullDeviceId)}"><code>${escapeHtml(shortId)}</code></td>
-                            <td>${escapeHtml((ban.reason || 'N/A').substring(0, 80))}</td>
-                            <td>${formatDate(ban.timestamp)}</td>
-                            <td>${ban.permanent ? '<span class="badge badge-banned">Permanent</span>' : formatDate(new Date(ban.expiresAt))}</td>
-                            <td>
-                                <span class="badge ${ban.isExpired ? 'badge-expired' : 'badge-active'}">
-                                    ${ban.isExpired ? 'Expired' : 'Active'}
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn-sm btn-success" onclick="unbanDevice('${escapeHtml(fullDeviceId).replace(/'/g, "\\'")}')">
-                                    Unban
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error: ${error.message}</td></tr>`;
-            }
-        }
-
-        async function unbanDevice(deviceId) {
-            if (!confirm(`Unban device: ${deviceId.substring(0, 16)}...?`)) return;
-
-            try {
-                // Encode the device ID in case it contains special characters
-                const encodedId = encodeURIComponent(deviceId);
-                console.log(`🔓 Unbanning: ${deviceId} (encoded: ${encodedId})`);
-                
-                const result = await apiCall(`/admin/ban-device/${encodedId}`, {
-                    method: 'DELETE'
-                });
-
-                console.log('Unban result:', result);
-                alert('Device unbanned!');
-                loadBans();
-            } catch (error) {
-                console.error('Unban error:', error);
-                alert('Failed: ' + error.message);
-            }
-        }
-        
-        // ─── FIXED: Report action with dropdown reasons ─────────────────────
-        
-        async function handleReportAction(reportId, action) {
-            const actions = {
-                ban: { message: 'Ban this user?', banDuration: 720 },
-                warn: { message: 'Send warning to this user?', banDuration: null },
-                dismiss: { message: 'Dismiss this report?', banDuration: null }
+            const body = {
+                title, message,
+                type: document.getElementById('notifType').value,
+                priority: document.getElementById('notifPriority').value,
+                icon: document.getElementById('notifIcon').value || '📢',
+                expiresIn: parseInt(document.getElementById('notifExpiresIn').value) || 30,
+                actionUrl: document.getElementById('notifActionUrl').value || '/'
             };
             
-            const actionInfo = actions[action];
-            if (!confirm(actionInfo.message)) return;
-            
-            const notes = prompt('Add notes (optional):') || '';
+            const imgUrl = document.getElementById('notifImageUrl').value.trim();
+            if (imgUrl && imgUrl.startsWith('http')) body.imageUrl = imgUrl;
 
             try {
-                const body = { action, notes };
-                if (actionInfo.banDuration) {
-                    const duration = prompt('Ban duration in hours? (0 for permanent, default 720 = 30 days)', '720');
-                    body.banDuration = parseInt(duration) || 720;
-                }
+                await apiCall('/admin/notifications', { method: 'POST', body: JSON.stringify(body) });
+                showToast('Notification sent!', 'success');
+                ['notifTitle','notifMessage','notifImageUrl','notifActionUrl'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('imagePreview').classList.remove('visible');
+                loadNotifications();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
 
-                await apiCall(`/admin/reports/${reportId}/action`, {
-                    method: 'POST',
-                    body: JSON.stringify(body)
-                });
+        async function deleteNotification() {
+            const id = document.getElementById('deleteNotifId').value;
+            if (!id) return alert('Enter notification ID');
+            if (!confirm(`Delete notification #${id}?`)) return;
+            try {
+                await apiCall(`/admin/notifications/${id}`, { method: 'DELETE' });
+                showToast('Notification deleted!', 'success');
+                document.getElementById('deleteNotifId').value = '';
+                loadNotifications();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
 
-                alert('Action completed successfully!');
-                loadReports();
-            } catch (error) {
-                alert('Failed: ' + error.message);
+        // ═══════════════════════════════════════════════════════════════
+        // APP VERSION
+        // ═══════════════════════════════════════════════════════════════
+        async function loadVersionInfo() {
+            try {
+                const config = await apiCall('/api/config?' + Date.now());
+                document.getElementById('currentVersionInfo').innerHTML = `
+                    <table>
+                        <tr><td><strong>Version Code:</strong></td><td>${config.android?.versionCode || 'N/A'}</td></tr>
+                        <tr><td><strong>Version Name:</strong></td><td>${config.android?.versionName || 'N/A'}</td></tr>
+                        <tr><td><strong>Update Type:</strong></td><td>${config.android?.updateType || 'N/A'}</td></tr>
+                        <tr><td><strong>Video Default:</strong></td><td>${config.videoQuality?.default || 'N/A'}</td></tr>
+                        <tr><td><strong>Max Bitrate:</strong></td><td>${(config.videoQuality?.maxBitrate || 0).toLocaleString()} bps</td></tr>
+                        <tr><td><strong>Maintenance:</strong></td><td>${config.maintenance?.enabled ? '🔧 ON' : '✅ OFF'}</td></tr>
+                        <tr><td><strong>HD Video:</strong></td><td>${config.features?.hdVideo ? '✅' : '❌'}</td></tr>
+                        <tr><td><strong>Screen Share:</strong></td><td>${config.features?.screenShare ? '✅' : '❌'}</td></tr>
+                    </table>`;
+            } catch (e) {
+                document.getElementById('currentVersionInfo').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
             }
         }
 
-        // ... (rest of the script remains the same) ...
+        async function updateAppVersion() {
+            const versionCode = parseInt(document.getElementById('versionCode').value);
+            if (!versionCode) return alert('Enter version code');
+            
+            const body = {
+                platform: document.getElementById('versionPlatform').value,
+                versionCode,
+                versionName: document.getElementById('versionName').value || `v${versionCode}`,
+                updateType: document.getElementById('updateType').value,
+                updatePriority: parseInt(document.getElementById('updatePriority').value) || 2,
+                updateTitle: document.getElementById('updateTitle').value,
+                updateMessage: document.getElementById('updateMessage').value,
+                downloadUrl: document.getElementById('downloadUrl').value,
+                whatsNew: document.getElementById('whatsNew').value.split(',').map(s => s.trim()).filter(Boolean)
+            };
+            
+            try {
+                await apiCall('/api/version', { method: 'PUT', body: JSON.stringify(body) });
+                showToast('Version updated! Users will be notified.', 'success');
+                loadVersionInfo();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SETTINGS
+        // ═══════════════════════════════════════════════════════════════
+        async function loadSettings() {
+            try {
+                const config = await apiCall('/api/config?' + Date.now());
+                if (config.videoQuality) {
+                    document.getElementById('defaultQuality').value = config.videoQuality.default || 'medium';
+                    document.getElementById('maxBitrate').value = config.videoQuality.maxBitrate || 1500000;
+                    document.getElementById('autoAdjust').checked = config.videoQuality.autoAdjust !== false;
+                }
+                document.getElementById('maintenanceStatus').textContent = 
+                    config.maintenance?.enabled ? '🔧 Maintenance Mode: ON' : '✅ Maintenance Mode: OFF';
+            } catch (e) { console.error('Settings load error:', e); }
+        }
+
+        async function toggleMaintenance(enabled) {
+            const message = enabled ? (document.getElementById('maintenanceMessage').value || "We're improving Orey. Back soon!") : '';
+            try {
+                await apiCall('/admin/maintenance', { method: 'POST', body: JSON.stringify({ enabled, message }) });
+                showToast(`Maintenance ${enabled ? 'ENABLED' : 'DISABLED'}!`, enabled ? 'warning' : 'success');
+                loadSettings();
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        async function updateVideoQuality() {
+            try {
+                await apiCall('/admin/video-quality', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        default: document.getElementById('defaultQuality').value,
+                        maxBitrate: parseInt(document.getElementById('maxBitrate').value),
+                        autoAdjust: document.getElementById('autoAdjust').checked
+                    })
+                });
+                showToast('Video quality updated!', 'success');
+            } catch (e) { alert('Failed: ' + e.message); }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // UTILITIES
+        // ═══════════════════════════════════════════════════════════════
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => {
+                const active = document.querySelector('.section.active');
+                if (active?.id === 'overviewSection') loadOverview();
+            }, 15000);
+        }
+
+        function formatDate(d) {
+            if (!d) return 'N/A';
+            try { return new Date(d).toLocaleString(); } catch { return d; }
+        }
+
+        function formatUptime(s) {
+            if (!s) return 'N/A';
+            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+            return `${h}h ${m}m`;
+        }
+
+        function esc(t) {
+            if (!t) return '';
+            const div = document.createElement('div');
+            div.textContent = t;
+            return div.innerHTML;
+        }
+
+        function updateConnectionStatus(ok) {
+            document.getElementById('connectionStatus').innerHTML = ok ? '🟢 Connected' : '🔴 Disconnected';
+        }
+
+        console.log('✅ Admin panel ready - All endpoints integrated');
     </script>
 </body>
 </html>
