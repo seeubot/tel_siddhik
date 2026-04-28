@@ -3,7 +3,7 @@ import {
   Mic, MicOff, Video, VideoOff,
   Zap, PhoneOff, Loader2,
   Flag, ShieldCheck, Activity,
-  RefreshCw, X
+  RefreshCw, X, Users, Sparkles
 } from 'lucide-react';
 import { useWebRTC } from '../hooks/useWebRTC';
 import './CallScreen.css';
@@ -32,9 +32,11 @@ const CallScreen = ({ socketRef, roomId }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState(0); // 0-3 for visual effects
 
   const uiTimerRef = useRef(null);
   const initializedRef = useRef(false);
+  const qualityIntervalRef = useRef(null);
 
   // ── Initialize local stream on mount ────────────────────────────────────
   useEffect(() => {
@@ -51,6 +53,19 @@ const CallScreen = ({ socketRef, roomId }) => {
     };
   }, []);
 
+  // ── Simulate connection quality for visual effects ─────────────────────
+  useEffect(() => {
+    if (hasPartner) {
+      qualityIntervalRef.current = setInterval(() => {
+        setConnectionQuality(Math.floor(Math.random() * 4));
+      }, 3000);
+    } else {
+      clearInterval(qualityIntervalRef.current);
+      setConnectionQuality(0);
+    }
+    return () => clearInterval(qualityIntervalRef.current);
+  }, [hasPartner]);
+
   // ── Handle callActive state ──────────────────────────────────────────────
   useEffect(() => {
     if (callActive) {
@@ -64,7 +79,6 @@ const CallScreen = ({ socketRef, roomId }) => {
     const socket = socketRef?.current;
     if (!socket) return;
 
-    // FIX 4: Handle room-joined for Orey-ID calls — first peer makes the offer
     const handleRoomJoined = async ({ peers }) => {
       if (peers && peers.length > 0) {
         console.log('Room joined, making offer to:', peers[0].socketId);
@@ -94,12 +108,10 @@ const CallScreen = ({ socketRef, roomId }) => {
       await handleIceCandidate(candidate);
     };
 
-    // FIX 2: was 'media-state' — server emits 'peer-media-state'
     const handleMediaState = ({ audioEnabled, videoEnabled }) => {
       setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
     };
 
-    // FIX 3: was 'partner-disconnected' — server emits 'partner-left'
     const handlePartnerDisconnected = () => {
       console.log('Partner disconnected');
       setHasPartner(false);
@@ -107,13 +119,13 @@ const CallScreen = ({ socketRef, roomId }) => {
       closePeer();
     };
 
-    socket.on('room-joined', handleRoomJoined);        // FIX 4: added
+    socket.on('room-joined', handleRoomJoined);
     socket.on('match-found', handleMatchFound);
     socket.on('offer', handleIncomingOffer);
     socket.on('answer', handleIncomingAnswer);
     socket.on('ice-candidate', handleIncomingIce);
-    socket.on('peer-media-state', handleMediaState);   // FIX 2: was 'media-state'
-    socket.on('partner-left', handlePartnerDisconnected); // FIX 3: was 'partner-disconnected'
+    socket.on('peer-media-state', handleMediaState);
+    socket.on('partner-left', handlePartnerDisconnected);
 
     return () => {
       socket.off('room-joined', handleRoomJoined);
@@ -172,56 +184,114 @@ const CallScreen = ({ socketRef, roomId }) => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="cs-screen">
+      
+      {/* Ambient background particles */}
+      <div className="cs-particles">
+        {[...Array(20)].map((_, i) => (
+          <div 
+            key={i}
+            className="cs-particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${3 + Math.random() * 4}s`
+            }}
+          />
+        ))}
+      </div>
 
-      {/* ── 1. REMOTE VIEWPORT ─────────────────────────────────────────────
-          FIX 1: Always keep <video> in the DOM so ontrack can attach the
-          stream before hasPartner flips to true. Toggle visibility only. */}
+      {/* Connection quality indicator */}
+      {hasPartner && (
+        <div className="cs-connection-indicator">
+          <div className={`cs-signal-bars ${connectionQuality > 2 ? 'cs-signal-excellent' : connectionQuality > 1 ? 'cs-signal-good' : 'cs-signal-poor'}`}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className={`cs-signal-bar ${i < connectionQuality ? 'cs-signal-active' : ''}`} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── 1. REMOTE VIEWPORT ───────────────────────────────────────────── */}
       <div className="cs-remote">
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="cs-remote-video"
-          style={{ display: hasPartner ? 'block' : 'none' }}
-        />
+        <div className="cs-remote-frame">
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="cs-remote-video"
+            style={{ display: hasPartner ? 'block' : 'none' }}
+          />
+          <div className="cs-video-border" />
+          <div className="cs-video-corner cs-corner-tl" />
+          <div className="cs-video-corner cs-corner-tr" />
+          <div className="cs-video-corner cs-corner-bl" />
+          <div className="cs-video-corner cs-corner-br" />
+        </div>
+        
         {!hasPartner && (
           <div className="cs-idle">
-            <h1 className="cs-brand-title">Orey!</h1>
-            <p className="cs-idle-subtitle">
-              {isConnecting ? 'Negotiating Mesh…' : 'Partner Disconnected'}
-            </p>
+            <div className="cs-brand-container">
+              <div className="cs-brand-ring" />
+              <h1 className="cs-brand-title">OREY</h1>
+              <div className="cs-brand-accent" />
+            </div>
+            <div className="cs-idle-status">
+              <div className={`cs-status-dot ${isConnecting ? 'cs-status-searching' : 'cs-status-idle'}`} />
+              <p className="cs-idle-subtitle">
+                {isConnecting ? 'Finding your match...' : 'Ready to connect'}
+              </p>
+            </div>
             {!isConnecting && (
-              <button onClick={handleFindNext} className="cs-search-btn">
-                <RefreshCw size={14} className="cs-search-icon" />
-                <span>Search Again</span>
+              <button onClick={handleFindNext} className="cs-discover-btn">
+                <Sparkles size={20} className="cs-discover-icon" />
+                <span>Begin Discovery</span>
               </button>
             )}
+          </div>
+        )}
+        
+        {/* Partner info overlay */}
+        {hasPartner && (
+          <div className="cs-partner-overlay">
+            <div className="cs-partner-badge">
+              <Users size={14} />
+              <span>Connected</span>
+            </div>
           </div>
         )}
       </div>
 
       {/* ── 2. LOCAL VIEWPORT ───────────────────────────────────────────── */}
       <div className="cs-local">
-        {videoEnabled ? (
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="cs-local-video"
-          />
-        ) : (
-          <div className="cs-cam-off">
-            <h2 className="cs-cam-off-title">Orey!</h2>
-            <div className="cs-cam-off-icon">
-              <VideoOff size={20} />
+        <div className="cs-local-container">
+          {videoEnabled ? (
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="cs-local-video"
+            />
+          ) : (
+            <div className="cs-cam-off">
+              <div className="cs-avatar-placeholder">
+                <div className="cs-avatar-initials">YOU</div>
+                <div className="cs-avatar-ring" />
+              </div>
+              <div className="cs-cam-off-icon">
+                <VideoOff size={18} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <div className="cs-local-border-glow" />
+          <div className="cs-local-frame" />
+        </div>
+        
         <div className="cs-hud">
           <div className="cs-hud-badge">
             <Activity size={12} className="cs-hud-dot" />
-            <span className="cs-hud-label">Live Encrypted</span>
+            <span className="cs-hud-label">Secure Channel</span>
           </div>
         </div>
       </div>
@@ -282,11 +352,10 @@ const CallScreen = ({ socketRef, roomId }) => {
         </div>
       )}
 
-      {/* ── 5. BACKGROUND BLOBS ─────────────────────────────────────────── */}
-      <div className="cs-blobs">
-        <div className="cs-blob cs-blob--pink" />
-        <div className="cs-blob cs-blob--orange" />
-      </div>
+      {/* ── 5. BACKGROUND AMBIENT ─────────────────────────────────────────── */}
+      <div className="cs-ambient-grid" />
+      <div className="cs-ambient-glow cs-glow-primary" />
+      <div className="cs-ambient-glow cs-glow-secondary" />
 
     </div>
   );
