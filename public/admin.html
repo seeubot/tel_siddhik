@@ -3,351 +3,1288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orey Admin</title>
+    <title>Orey Admin Dashboard</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --border-color: #475569;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Login Screen */
+        .login-container {
             min-height: 100vh;
-            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         }
-        .container { max-width: 650px; margin: 0 auto; }
-        h1 { text-align: center; color: #FF2D55; margin-bottom: 30px; font-size: 28px; }
-        .card {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border: 1px solid #333;
-        }
-        .card h2 { font-size: 18px; margin-bottom: 16px; color: #FF2D55; }
-        label { display: block; font-size: 13px; margin-bottom: 4px; color: #999; }
-        input, select, textarea {
+
+        .login-box {
+            background: var(--bg-secondary);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--card-shadow);
             width: 100%;
-            padding: 10px 12px;
-            margin-bottom: 14px;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 14px;
-            font-family: inherit;
+            max-width: 400px;
+            border: 1px solid var(--border-color);
         }
-        textarea { min-height: 70px; resize: vertical; }
-        input:focus, select:focus, textarea:focus { border-color: #FF2D55; outline: none; }
-        .row { display: flex; gap: 10px; }
-        .row > div { flex: 1; }
-        button {
+
+        .login-box h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-box p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .input-group input {
             width: 100%;
-            padding: 12px;
-            background: #FF2D55;
-            color: #fff;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        button:hover { background: #e02648; }
-        button:disabled { background: #444; cursor: not-allowed; }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid #FF2D55;
-            color: #FF2D55;
-            margin-top: 8px;
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+            width: 100%;
+            justify-content: center;
         }
-        .btn-outline:hover { background: #FF2D55; color: #fff; }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: bold;
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: var(--accent-yellow);
+            color: #0f172a;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
             display: none;
-            z-index: 1000;
-            animation: slideUp 0.3s ease;
         }
-        @keyframes slideUp {
-            from { transform: translateX(-50%) translateY(100px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        .error-message.show {
+            display: block;
         }
-        .toast.success { background: #4CAF50; display: block; }
-        .toast.error { background: #f44336; display: block; }
-        .toast.info { background: #2196F3; display: block; }
-        .notif-list { max-height: 350px; overflow-y: auto; }
-        .notif-item {
-            background: #0a0a0a;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-left: 3px solid #FF2D55;
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .nav-item .icon {
+            font-size: 1.25rem;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 2rem;
+        }
+
+        .top-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
         }
-        .notif-content { flex: 1; }
-        .notif-content strong { font-size: 14px; display: block; margin-bottom: 4px; }
-        .notif-content small { color: #999; font-size: 12px; }
-        .notif-content p { font-size: 13px; color: #ccc; margin-top: 4px; }
-        .delete-btn {
-            background: #f44336;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
-            width: auto;
-            white-space: nowrap;
+
+        .top-bar h2 {
+            font-size: 1.75rem;
         }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .stat-card.blue .stat-value { color: var(--accent-blue); }
+        .stat-card.green .stat-value { color: var(--accent-green); }
+        .stat-card.red .stat-value { color: var(--accent-red); }
+        .stat-card.yellow .stat-value { color: var(--accent-yellow); }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
         .badge {
             display: inline-block;
-            padding: 1px 8px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: bold;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
             text-transform: uppercase;
         }
-        .badge.high { background: #f44336; }
-        .badge.normal { background: #2196F3; }
-        .badge.low { background: #4CAF50; }
-        .stats { display: flex; gap: 10px; margin-top: 8px; }
-        .stat { flex: 1; background: #0a0a0a; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat .num { font-size: 24px; font-weight: bold; color: #FF2D55; }
-        .stat .label { font-size: 11px; color: #999; margin-top: 4px; }
+
+        .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+        .badge-banned { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-auto_banned { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .badge-dismissed { background: rgba(100, 116, 139, 0.2); color: var(--text-secondary); }
+        .badge-warned { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .badge-expired { background: rgba(100, 116, 139, 0.2); color: var(--text-secondary); }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .refresh-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+                padding: 1rem;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>⚡ Orey Admin</h1>
-        
-        <!-- Send Notification -->
-        <div class="card">
-            <h2>📤 Send Push Notification</h2>
-            <form id="notifForm">
-                <label>Admin Key</label>
-                <input type="password" id="adminKey" placeholder="Enter admin key" required>
-                
-                <div class="row">
-                    <div>
-                        <label>Title *</label>
-                        <input type="text" id="title" placeholder="Notification title" required>
-                    </div>
-                    <div>
-                        <label>Icon (Emoji)</label>
-                        <input type="text" id="icon" placeholder="🎉" maxlength="4">
-                    </div>
-                </div>
-                
-                <label>Message *</label>
-                <textarea id="message" placeholder="Notification message" required></textarea>
-                
-                <div class="row">
-                    <div>
-                        <label>Type</label>
-                        <select id="type">
-                            <option value="info">ℹ️ Info</option>
-                            <option value="feature">⭐ Feature</option>
-                            <option value="system">⚙️ System</option>
-                            <option value="alert">🚨 Alert</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Priority</label>
-                        <select id="priority">
-                            <option value="normal">Normal</option>
-                            <option value="high">High</option>
-                            <option value="low">Low</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div>
-                        <label>Action URL</label>
-                        <input type="text" id="actionUrl" placeholder="/welcome">
-                    </div>
-                    <div>
-                        <label>Expires (days)</label>
-                        <input type="number" id="expiresIn" value="30" min="1" max="365">
-                    </div>
-                </div>
-                
-                <button type="submit">🚀 Send Now</button>
-            </form>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="card">
-            <h2>⚡ Quick Actions</h2>
-            <button class="btn-outline" onclick="loadNotifications()">📋 View All Notifications</button>
-            <button class="btn-outline" onclick="checkHealth()">💚 Server Status</button>
-            <button class="btn-outline" onclick="toggleMaintenance()">🔧 Toggle Maintenance</button>
-        </div>
-        
-        <!-- Notifications List -->
-        <div class="card" id="listCard" style="display:none;">
-            <h2>📋 Notifications (<span id="notifCount">0</span>)</h2>
-            <div class="notif-list" id="notifList"></div>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <h1>🛡️ Orey Admin</h1>
+            <p>Enter your admin key to access the dashboard</p>
+            
+            <div class="error-message" id="loginError">
+                Invalid admin key. Please try again.
+            </div>
+            
+            <div class="input-group">
+                <label for="adminKey">Admin Key</label>
+                <input 
+                    type="password" 
+                    id="adminKey" 
+                    placeholder="Enter your admin key..."
+                    autocomplete="off"
+                >
+            </div>
+            
+            <div class="input-group">
+                <label for="apiUrl">Server URL</label>
+                <input 
+                    type="text" 
+                    id="apiUrl" 
+                    placeholder="http://localhost:3000"
+                    value=""
+                >
+            </div>
+            
+            <button class="btn btn-primary" onclick="login()">
+                🔐 Access Dashboard
+            </button>
+            
+            <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
+                Default key: admin_secret_change_this
+            </p>
         </div>
     </div>
-    
-    <div class="toast" id="toast"></div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">🛡️ Orey Admin</div>
+            
+            <nav>
+                <button class="nav-item active" onclick="showSection('overview')">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-item" onclick="showSection('reports')">
+                    <span class="icon">🚨</span> Reports
+                </button>
+                <button class="nav-item" onclick="showSection('bans')">
+                    <span class="icon">🚫</span> Banned Devices
+                </button>
+                <button class="nav-item" onclick="showSection('notifications')">
+                    <span class="icon">🔔</span> Notifications
+                </button>
+                <button class="nav-item" onclick="showSection('settings')">
+                    <span class="icon">⚙️</span> Settings
+                </button>
+                <button class="nav-item" onclick="logout()" style="margin-top: 2rem; color: var(--accent-red);">
+                    <span class="icon">🚪</span> Logout
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h2 id="sectionTitle">📊 Overview</h2>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span id="connectionStatus" style="color: var(--accent-green);">● Connected</span>
+                    <button class="refresh-btn" onclick="refreshCurrentSection()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Overview Section -->
+            <div class="section active" id="overviewSection">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card blue">
+                        <div class="stat-value" id="activeConnections">0</div>
+                        <div class="stat-label">Active Connections</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-value" id="activeRooms">0</div>
+                        <div class="stat-label">Active Rooms</div>
+                    </div>
+                    <div class="stat-card yellow">
+                        <div class="stat-value" id="pendingReports">0</div>
+                        <div class="stat-label">Pending Reports</div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="stat-value" id="bannedDevices">0</div>
+                        <div class="stat-label">Banned Devices</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>System Information</h3>
+                    <div id="systemInfo" class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div class="section" id="reportsSection">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">All Reports</h3>
+                        <select id="reportFilter" onchange="loadReports()">
+                            <option value="">All Reports</option>
+                            <option value="pending">Pending</option>
+                            <option value="banned">Banned</option>
+                            <option value="auto_banned">Auto Banned</option>
+                            <option value="dismissed">Dismissed</option>
+                            <option value="warned">Warned</option>
+                        </select>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Report ID</th>
+                                    <th>Reported Device</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody">
+                                <tr><td colspan="6" class="loading">Loading reports...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bans Section -->
+            <div class="section" id="bansSection">
+                <div class="card">
+                    <h3>Banned Devices</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Device ID</th>
+                                    <th>Reason</th>
+                                    <th>Banned Date</th>
+                                    <th>Expires</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bansTableBody">
+                                <tr><td colspan="6" class="loading">Loading banned devices...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Manual Ban</h3>
+                    <div class="input-group">
+                        <label>Device ID</label>
+                        <input type="text" id="banDeviceId" placeholder="Enter device ID...">
+                    </div>
+                    <div class="input-group">
+                        <label>Reason</label>
+                        <input type="text" id="banReason" placeholder="Reason for ban...">
+                    </div>
+                    <div class="input-group">
+                        <label>Duration (hours, 0 for permanent)</label>
+                        <input type="number" id="banDuration" value="720" min="0">
+                    </div>
+                    <button class="btn btn-danger" onclick="banDevice()">
+                        🚫 Ban Device
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div class="section" id="notificationsSection">
+                <div class="card">
+                    <h3>Send Notification</h3>
+                    <div class="input-group">
+                        <label>Title</label>
+                        <input type="text" id="notifTitle" placeholder="Notification title...">
+                    </div>
+                    <div class="input-group">
+                        <label>Message</label>
+                        <textarea id="notifMessage" placeholder="Notification message..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Type</label>
+                        <select id="notifType">
+                            <option value="info">Info</option>
+                            <option value="feature">Feature</option>
+                            <option value="warning">Warning</option>
+                            <option value="alert">Alert</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Priority</label>
+                        <select id="notifPriority">
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="sendNotification()">
+                        📢 Send Notification
+                    </button>
+                </div>
+
+                <div class="card">
+                    <h3>Recent Notifications</h3>
+                    <div id="notificationsList" class="loading">Loading notifications...</div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="section" id="settingsSection">
+                <div class="card">
+                    <h3>Maintenance Mode</h3>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button class="btn btn-warning" onclick="toggleMaintenance(true)">
+                            🔧 Enable Maintenance
+                        </button>
+                        <button class="btn btn-success" onclick="toggleMaintenance(false)">
+                            ✅ Disable Maintenance
+                        </button>
+                        <span id="maintenanceStatus" style="color: var(--text-secondary);"></span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Video Quality</h3>
+                    <div class="input-group">
+                        <label>Default Quality</label>
+                        <select id="defaultQuality" onchange="updateVideoQuality()">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="hd">HD</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Action Modal -->
+    <div class="modal" id="actionModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Take Action</h3>
+            <input type="hidden" id="modalReportId">
+            
+            <div class="input-group">
+                <label>Action</label>
+                <select id="modalAction">
+                    <option value="ban">Ban User</option>
+                    <option value="warn">Send Warning</option>
+                    <option value="dismiss">Dismiss Report</option>
+                </select>
+            </div>
+            
+            <div class="input-group" id="banDurationGroup">
+                <label>Ban Duration (hours, 0 for permanent)</label>
+                <input type="number" id="modalBanDuration" value="720" min="0">
+            </div>
+            
+            <div class="input-group">
+                <label>Notes</label>
+                <textarea id="modalNotes" placeholder="Admin notes..."></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-sm" onclick="closeModal()" style="background: var(--bg-tertiary); color: var(--text-primary);">
+                    Cancel
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="submitAction()">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const SERVER = window.location.origin;
-        
-        function showToast(msg, type) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.className = 'toast ' + type;
-            setTimeout(() => t.className = 'toast', 3000);
-        }
-        
-        function getAdminKey() {
-            return document.getElementById('adminKey').value;
-        }
-        
-        // Send notification
-        document.getElementById('notifForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            btn.disabled = true;
-            btn.textContent = 'Sending...';
-            
-            const data = {
-                title: document.getElementById('title').value,
-                message: document.getElementById('message').value,
-                icon: document.getElementById('icon').value || '📢',
-                type: document.getElementById('type').value,
-                priority: document.getElementById('priority').value,
-                actionUrl: document.getElementById('actionUrl').value || '/',
-                expiresIn: parseInt(document.getElementById('expiresIn').value)
-            };
-            
-            try {
-                const res = await fetch(SERVER + '/admin/notifications', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-key': getAdminKey()
-                    },
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                if (res.ok) {
-                    showToast('✅ Notification sent to all users!', 'success');
-                    document.getElementById('title').value = '';
-                    document.getElementById('message').value = '';
-                } else {
-                    showToast('❌ ' + (result.error || 'Failed'), 'error');
+        // State
+        let adminKey = '';
+        let apiBaseUrl = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for saved credentials
+            const saved = localStorage.getItem('oreyAdminAuth');
+            if (saved) {
+                const auth = JSON.parse(saved);
+                adminKey = auth.key;
+                apiBaseUrl = auth.url;
+                document.getElementById('adminKey').value = adminKey;
+                document.getElementById('apiUrl').value = apiBaseUrl;
+                
+                // Auto-login if credentials exist
+                if (adminKey && apiBaseUrl) {
+                    login(true);
                 }
-            } catch (err) {
-                showToast('❌ Network error', 'error');
             }
-            btn.disabled = false;
-            btn.textContent = '🚀 Send Now';
         });
-        
-        // Load notifications
-        async function loadNotifications() {
-            if (!getAdminKey()) { showToast('⚠️ Enter admin key first', 'error'); return; }
+
+        // Handle Enter key on login
+        document.getElementById('adminKey').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        async function login(silent = false) {
+            if (!silent) {
+                adminKey = document.getElementById('adminKey').value.trim();
+                apiBaseUrl = document.getElementById('apiUrl').value.trim() || window.location.origin;
+            }
             
+            if (!adminKey) {
+                showLoginError('Please enter an admin key');
+                return;
+            }
+
+            // Verify admin key
             try {
-                const res = await fetch(SERVER + '/admin/notifications', {
-                    headers: { 'x-admin-key': getAdminKey() }
+                const response = await fetch(`${apiBaseUrl}/admin/stats`, {
+                    headers: { 'x-admin-key': adminKey }
                 });
-                const data = await res.json();
-                
-                document.getElementById('listCard').style.display = 'block';
-                document.getElementById('notifCount').textContent = data.total;
-                
-                const list = document.getElementById('notifList');
-                if (data.notifications.length === 0) {
-                    list.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">No notifications yet</p>';
+
+                if (!response.ok) {
+                    showLoginError('Invalid admin key or server not reachable');
                     return;
                 }
+
+                // Save credentials
+                localStorage.setItem('oreyAdminAuth', JSON.stringify({
+                    key: adminKey,
+                    url: apiBaseUrl
+                }));
+
+                // Show dashboard
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').classList.add('active');
                 
-                list.innerHTML = data.notifications.reverse().map(n => `
-                    <div class="notif-item">
-                        <div class="notif-content">
-                            <strong>${n.icon || '📢'} ${n.title}</strong>
-                            <span class="badge ${n.priority}">${n.priority}</span>
-                            <p>${n.message}</p>
-                            <small>Type: ${n.type} | Action: ${n.actionUrl} | Expires: ${n.expiresIn}d</small>
-                        </div>
-                        <button class="delete-btn" onclick="deleteNotif(${n.id})">🗑️</button>
-                    </div>
-                `).join('');
-                list.scrollTop = 0;
-            } catch (err) {
-                showToast('❌ Failed to load', 'error');
+                // Load initial data
+                showSection('overview');
+                startAutoRefresh();
+
+            } catch (error) {
+                showLoginError('Cannot connect to server: ' + error.message);
             }
         }
-        
-        // Delete notification
-        async function deleteNotif(id) {
-            if (!confirm('Delete this notification?')) return;
-            try {
-                const res = await fetch(SERVER + '/admin/notifications/' + id, {
-                    method: 'DELETE',
-                    headers: { 'x-admin-key': getAdminKey() }
-                });
-                if (res.ok) {
-                    showToast('✅ Deleted!', 'success');
+
+        function showLoginError(message) {
+            const errorEl = document.getElementById('loginError');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => errorEl.classList.remove('show'), 5000);
+        }
+
+        function logout() {
+            localStorage.removeItem('oreyAdminAuth');
+            adminKey = '';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminKey').value = '';
+        }
+
+        // API Helper
+        async function apiCall(endpoint, options = {}) {
+            const url = `${apiBaseUrl}${endpoint}`;
+            const headers = {
+                'x-admin-key': adminKey,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+
+            return response.json();
+        }
+
+        // Section Navigation
+        function showSection(section) {
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+            // Show selected section
+            const sectionMap = {
+                'overview': 'overviewSection',
+                'reports': 'reportsSection',
+                'bans': 'bansSection',
+                'notifications': 'notificationsSection',
+                'settings': 'settingsSection'
+            };
+
+            const sectionId = sectionMap[section];
+            if (sectionId) {
+                document.getElementById(sectionId).classList.add('active');
+                document.getElementById('sectionTitle').textContent = 
+                    document.querySelector(`[onclick="showSection('${section}')"]`).textContent.trim();
+                
+                // Load section data
+                loadSectionData(section);
+            }
+        }
+
+        function loadSectionData(section) {
+            switch(section) {
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'reports':
+                    loadReports();
+                    break;
+                case 'bans':
+                    loadBans();
+                    break;
+                case 'notifications':
                     loadNotifications();
+                    break;
+                case 'settings':
+                    loadSettings();
+                    break;
+            }
+        }
+
+        function refreshCurrentSection() {
+            const activeSection = document.querySelector('.section.active');
+            if (activeSection) {
+                const sectionMap = {
+                    'overviewSection': 'overview',
+                    'reportsSection': 'reports',
+                    'bansSection': 'bans',
+                    'notificationsSection': 'notifications',
+                    'settingsSection': 'settings'
+                };
+                loadSectionData(sectionMap[activeSection.id]);
+            }
+        }
+
+        // Overview
+        async function loadOverview() {
+            try {
+                const stats = await apiCall('/admin/stats');
+                
+                document.getElementById('activeConnections').textContent = stats.activeConnections || 0;
+                document.getElementById('activeRooms').textContent = stats.activeRooms || 0;
+                document.getElementById('pendingReports').textContent = stats.pendingReports || 0;
+                document.getElementById('bannedDevices').textContent = stats.bannedDevices || 0;
+
+                document.getElementById('systemInfo').innerHTML = `
+                    <table>
+                        <tr><td><strong>Uptime:</strong></td><td>${formatUptime(stats.uptime)}</td></tr>
+                        <tr><td><strong>Memory Usage:</strong></td><td>${(stats.memoryMB || 0).toFixed(2)} MB</td></tr>
+                        <tr><td><strong>Total Orey IDs:</strong></td><td>${stats.totalOreyIds || 0}</td></tr>
+                        <tr><td><strong>Queue Length:</strong></td><td>${stats.queueLength || 0}</td></tr>
+                        <tr><td><strong>Total Reports:</strong></td><td>${stats.totalReports || 0}</td></tr>
+                        <tr><td><strong>Auto Banned:</strong></td><td>${stats.autoBannedCount || 0}</td></tr>
+                        <tr><td><strong>Total Notifications:</strong></td><td>${stats.totalNotifications || 0}</td></tr>
+                    </table>
+                `;
+
+                updateConnectionStatus(true);
+            } catch (error) {
+                updateConnectionStatus(false);
+                console.error('Failed to load overview:', error);
+            }
+        }
+
+        // Reports
+        async function loadReports() {
+            const filter = document.getElementById('reportFilter')?.value || '';
+            const tbody = document.getElementById('reportsTableBody');
+            
+            try {
+                const data = await apiCall(`/admin/reports${filter ? `?status=${filter}` : ''}`);
+                
+                if (!data.reports || data.reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div>No reports found</td></tr>';
+                    return;
                 }
-            } catch (err) {
-                showToast('❌ Error', 'error');
+
+                tbody.innerHTML = data.reports.map(report => `
+                    <tr>
+                        <td><code>${report.id}</code></td>
+                        <td><code>${report.reportedDeviceId?.substring(0, 12)}...</code></td>
+                        <td>${escapeHtml(report.reason)}</td>
+                        <td><span class="badge badge-${report.status}">${report.status}</span></td>
+                        <td>${formatDate(report.timestamp)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                ${report.status === 'pending' ? `
+                                    <button class="btn btn-sm btn-danger" onclick="openActionModal('${report.id}')">
+                                        Action
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm" style="background: var(--bg-tertiary); color: var(--text-primary);" 
+                                    onclick="viewReportDetails('${report.id}')">
+                                    Details
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error loading reports: ${error.message}</td></tr>`;
             }
         }
-        
-        // Health check
-        async function checkHealth() {
-            try {
-                const res = await fetch(SERVER + '/health');
-                const data = await res.json();
-                showToast('✅ Server: ' + data.status + ' | Active: ' + data.activeConnections + ' | Uptime: ' + Math.floor(data.uptime) + 's', 'success');
-            } catch (err) {
-                showToast('❌ Server unreachable', 'error');
-            }
+
+        function openActionModal(reportId) {
+            document.getElementById('modalReportId').value = reportId;
+            document.getElementById('modalTitle').textContent = `Action on Report #${reportId}`;
+            document.getElementById('actionModal').classList.add('active');
+            
+            // Reset form
+            document.getElementById('modalAction').value = 'ban';
+            document.getElementById('modalBanDuration').value = '720';
+            document.getElementById('modalNotes').value = '';
+            document.getElementById('banDurationGroup').style.display = 'block';
+            
+            // Show/hide ban duration based on action
+            document.getElementById('modalAction').onchange = function() {
+                document.getElementById('banDurationGroup').style.display = 
+                    this.value === 'ban' ? 'block' : 'none';
+            };
         }
-        
-        // Toggle maintenance
-        async function toggleMaintenance() {
-            if (!getAdminKey()) { showToast('⚠️ Enter admin key first', 'error'); return; }
-            const enabled = confirm('Enable maintenance mode?\n\nOK = Enable\nCancel = Disable');
+
+        function closeModal() {
+            document.getElementById('actionModal').classList.remove('active');
+        }
+
+        async function submitAction() {
+            const reportId = document.getElementById('modalReportId').value;
+            const action = document.getElementById('modalAction').value;
+            const notes = document.getElementById('modalNotes').value;
+            const banDuration = action === 'ban' ? parseInt(document.getElementById('modalBanDuration').value) : null;
+
             try {
-                const res = await fetch(SERVER + '/admin/maintenance', {
+                const body = { action, notes };
+                if (banDuration !== null) body.banDuration = banDuration;
+
+                await apiCall(`/admin/reports/${reportId}/action`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-key': getAdminKey()
-                    },
+                    body: JSON.stringify(body)
+                });
+
+                closeModal();
+                loadReports();
+                alert('Action completed successfully!');
+            } catch (error) {
+                alert('Failed to submit action: ' + error.message);
+            }
+        }
+
+        async function viewReportDetails(reportId) {
+            try {
+                const data = await apiCall(`/admin/reports`);
+                const report = data.reports.find(r => r.id === reportId);
+                
+                if (report) {
+                    alert(`
+Report Details:
+ID: ${report.id}
+Reporter: ${report.reporterDeviceId?.substring(0, 12)}...
+Reported: ${report.reportedDeviceId?.substring(0, 12)}...
+Reason: ${report.reason}
+Description: ${report.description || 'N/A'}
+Status: ${report.status}
+Date: ${formatDate(report.timestamp)}
+                    `.trim());
+                }
+            } catch (error) {
+                alert('Failed to load report details');
+            }
+        }
+
+        // Bans
+        async function loadBans() {
+            const tbody = document.getElementById('bansTableBody');
+            
+            try {
+                const data = await apiCall('/admin/banned-devices');
+                
+                if (!data.bannedDevices || data.bannedDevices.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">✅</div>No banned devices</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.bannedDevices.map(ban => `
+                    <tr>
+                        <td><code>${ban.deviceId}</code></td>
+                        <td>${escapeHtml(ban.reason?.substring(0, 50))}${ban.reason?.length > 50 ? '...' : ''}</td>
+                        <td>${formatDate(ban.timestamp)}</td>
+                        <td>${ban.permanent ? 'Permanent' : formatDate(new Date(ban.expiresAt))}</td>
+                        <td>
+                            <span class="badge ${ban.isExpired ? 'badge-expired' : 'badge-active'}">
+                                ${ban.isExpired ? 'Expired' : 'Active'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="unbanDevice('${ban.deviceId}')">
+                                Unban
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" class="loading">Error loading bans: ${error.message}</td></tr>`;
+            }
+        }
+
+        async function banDevice() {
+            const deviceId = document.getElementById('banDeviceId').value.trim();
+            const reason = document.getElementById('banReason').value.trim();
+            const duration = parseInt(document.getElementById('banDuration').value);
+
+            if (!deviceId || !reason) {
+                alert('Please enter device ID and reason');
+                return;
+            }
+
+            try {
+                await apiCall('/admin/ban-device', {
+                    method: 'POST',
                     body: JSON.stringify({
-                        enabled: enabled,
-                        message: enabled ? 'Orey is under maintenance. Back soon! 🚧' : ''
+                        deviceId,
+                        reason,
+                        durationHours: duration || null
                     })
                 });
-                if (res.ok) {
-                    showToast('✅ Maintenance ' + (enabled ? 'ENABLED' : 'DISABLED'), 'info');
-                }
-            } catch (err) {
-                showToast('❌ Error', 'error');
+
+                alert('Device banned successfully!');
+                document.getElementById('banDeviceId').value = '';
+                document.getElementById('banReason').value = '';
+                loadBans();
+            } catch (error) {
+                alert('Failed to ban device: ' + error.message);
             }
         }
-        
-        // Save admin key
-        const keyInput = document.getElementById('adminKey');
-        const saved = localStorage.getItem('orey_admin_key');
-        if (saved) keyInput.value = saved;
-        keyInput.addEventListener('input', () => localStorage.setItem('orey_admin_key', keyInput.value));
+
+        async function unbanDevice(deviceId) {
+            if (!confirm('Are you sure you want to unban this device?')) return;
+
+            try {
+                await apiCall(`/admin/ban-device/${deviceId}`, {
+                    method: 'DELETE'
+                });
+
+                alert('Device unbanned successfully!');
+                loadBans();
+            } catch (error) {
+                alert('Failed to unban device: ' + error.message);
+            }
+        }
+
+        // Notifications
+        async function loadNotifications() {
+            const container = document.getElementById('notificationsList');
+            
+            try {
+                const data = await apiCall('/admin/notifications');
+                
+                if (!data.notifications || data.notifications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="icon">🔔</div>No notifications</div>';
+                    return;
+                }
+
+                container.innerHTML = data.notifications.slice(0, 10).map(notif => `
+                    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <strong>${escapeHtml(notif.title)}</strong>
+                            <span class="badge badge-${notif.type}">${notif.type}</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem;">${escapeHtml(notif.message)}</p>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary);">
+                            <span>${formatDate(notif.timestamp)}</span>
+                            <span>Priority: ${notif.priority}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<div class="loading">Error loading notifications: ${error.message}</div>`;
+            }
+        }
+
+        async function sendNotification() {
+            const title = document.getElementById('notifTitle').value.trim();
+            const message = document.getElementById('notifMessage').value.trim();
+            const type = document.getElementById('notifType').value;
+            const priority = document.getElementById('notifPriority').value;
+
+            if (!title || !message) {
+                alert('Please enter title and message');
+                return;
+            }
+
+            try {
+                await apiCall('/admin/notifications', {
+                    method: 'POST',
+                    body: JSON.stringify({ title, message, type, priority })
+                });
+
+                alert('Notification sent successfully!');
+                document.getElementById('notifTitle').value = '';
+                document.getElementById('notifMessage').value = '';
+                loadNotifications();
+            } catch (error) {
+                alert('Failed to send notification: ' + error.message);
+            }
+        }
+
+        // Settings
+        async function loadSettings() {
+            try {
+                const config = await apiCall('/api/config');
+                document.getElementById('defaultQuality').value = config.videoQuality?.default || 'medium';
+                document.getElementById('maintenanceStatus').textContent = 
+                    config.maintenance?.enabled ? '🔧 Maintenance Mode: ON' : '✅ Maintenance Mode: OFF';
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        async function toggleMaintenance(enabled) {
+            try {
+                await apiCall('/admin/maintenance', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        enabled,
+                        message: enabled ? 'We're improving Orey. Back soon!' : ''
+                    })
+                });
+
+                alert(`Maintenance mode ${enabled ? 'enabled' : 'disabled'}!`);
+                loadSettings();
+            } catch (error) {
+                alert('Failed to toggle maintenance: ' + error.message);
+            }
+        }
+
+        async function updateVideoQuality() {
+            const quality = document.getElementById('defaultQuality').value;
+
+            try {
+                await apiCall('/admin/video-quality', {
+                    method: 'PUT',
+                    body: JSON.stringify({ default: quality })
+                });
+
+                alert('Video quality updated!');
+            } catch (error) {
+                alert('Failed to update video quality: ' + error.message);
+            }
+        }
+
+        // Auto-refresh
+        let autoRefreshInterval;
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                const activeSection = document.querySelector('.section.active');
+                if (activeSection && activeSection.id === 'overviewSection') {
+                    loadOverview();
+                }
+            }, 10000); // Refresh every 10 seconds
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        function formatUptime(seconds) {
+            if (!seconds) return 'N/A';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '● Connected';
+                status.style.color = 'var(--accent-green)';
+            } else {
+                status.textContent = '● Disconnected';
+                status.style.color = 'var(--accent-red)';
+            }
+        }
+
+        // Close modal on outside click
+        document.getElementById('actionModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
     </script>
 </body>
 </html>
