@@ -8,16 +8,7 @@ import {
 import { useWebRTC } from '../hooks/useWebRTC';
 import './CallScreen.css';
 
-/**
- * Orey! Pro — Minimalist Adaptive Interface
- *
- * REWRITE REASON: Tailwind CSS was not loading in the build environment,
- * causing a completely broken, unstyled layout. All Tailwind utility classes
- * have been removed and replaced with semantic CSS class names (prefixed `cs-`)
- * that are fully defined in CallScreen.css. The component now works with zero
- * dependency on Tailwind or any CSS framework.
- */
-const CallScreen = ({ socket, roomId }) => {
+const CallScreen = ({ socketRef, roomId }) => {
   // ── WebRTC Hook ──────────────────────────────────────────────────────────
   const {
     localVideoRef,
@@ -36,25 +27,32 @@ const CallScreen = ({ socket, roomId }) => {
     handleIceCandidate,
     toggleAudio,
     toggleVideo,
-  } = useWebRTC(socket);
+  } = useWebRTC(socketRef);
 
   // ── UI State ─────────────────────────────────────────────────────────────
-  const [hasPartner, setHasPartner]           = useState(false);
-  const [isConnecting, setIsConnecting]       = useState(false);
-  const [uiVisible, setUiVisible]             = useState(true);
+  const [hasPartner, setHasPartner] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [uiVisible, setUiVisible] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
 
   const uiTimerRef = useRef(null);
+  const initializedRef = useRef(false);
 
   // ── Initialize local stream on mount ────────────────────────────────────
   useEffect(() => {
-    startLocal().catch(console.error);
-    
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      startLocal().catch(err => {
+        console.error('Failed to start local stream:', err);
+      });
+    }
+
     return () => {
       stopLocal();
       closePeer();
+      initializedRef.current = false;
     };
-  }, [startLocal, stopLocal, closePeer]);
+  }, []);
 
   // ── Handle callActive state ─────────────────────────────────────────────
   useEffect(() => {
@@ -66,44 +64,54 @@ const CallScreen = ({ socket, roomId }) => {
 
   // ── Socket event listeners ──────────────────────────────────────────────
   useEffect(() => {
-    if (!socket?.current) return;
+    const socket = socketRef?.current;
+    if (!socket) return;
 
-    const sock = socket.current;
+    const handleMatchFound = async ({ partnerId }) => {
+      console.log('Match found with:', partnerId);
+      await makeOffer(partnerId);
+    };
 
-    sock.on('offer', async ({ fromId, offer }) => {
+    const handleIncomingOffer = async ({ fromId, offer }) => {
+      console.log('Received offer from:', fromId);
       await handleOffer(fromId, offer);
-    });
+    };
 
-    sock.on('answer', async ({ answer }) => {
+    const handleIncomingAnswer = async ({ answer }) => {
+      console.log('Received answer');
       await handleAnswer(answer);
-    });
+    };
 
-    sock.on('ice-candidate', async ({ candidate }) => {
+    const handleIncomingIce = async ({ candidate }) => {
       await handleIceCandidate(candidate);
-    });
+    };
 
-    sock.on('media-state', ({ audioEnabled, videoEnabled }) => {
+    const handleMediaState = ({ audioEnabled, videoEnabled }) => {
       setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
-    });
+    };
 
-    sock.on('partner-disconnected', () => {
+    const handlePartnerDisconnected = () => {
+      console.log('Partner disconnected');
       setHasPartner(false);
       closePeer();
-    });
+    };
 
-    sock.on('match-found', async ({ partnerId }) => {
-      await makeOffer(partnerId);
-    });
+    socket.on('match-found', handleMatchFound);
+    socket.on('offer', handleIncomingOffer);
+    socket.on('answer', handleIncomingAnswer);
+    socket.on('ice-candidate', handleIncomingIce);
+    socket.on('media-state', handleMediaState);
+    socket.on('partner-disconnected', handlePartnerDisconnected);
 
     return () => {
-      sock.off('offer');
-      sock.off('answer');
-      sock.off('ice-candidate');
-      sock.off('media-state');
-      sock.off('partner-disconnected');
-      sock.off('match-found');
+      socket.off('match-found', handleMatchFound);
+      socket.off('offer', handleIncomingOffer);
+      socket.off('answer', handleIncomingAnswer);
+      socket.off('ice-candidate', handleIncomingIce);
+      socket.off('media-state', handleMediaState);
+      socket.off('partner-disconnected', handlePartnerDisconnected);
     };
-  }, [socket, handleOffer, handleAnswer, handleIceCandidate, setPartnerMedia, closePeer, makeOffer]);
+  }, [socketRef, makeOffer, handleOffer, handleAnswer, handleIceCandidate, setPartnerMedia, closePeer]);
 
   // ── Auto-hide UI when a partner is connected ───────────────────────────────
   useEffect(() => {
@@ -115,11 +123,11 @@ const CallScreen = ({ socket, roomId }) => {
       }
     };
 
-    window.addEventListener('mousemove',  handleActivity);
+    window.addEventListener('mousemove', handleActivity);
     window.addEventListener('touchstart', handleActivity);
 
     return () => {
-      window.removeEventListener('mousemove',  handleActivity);
+      window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('touchstart', handleActivity);
       clearTimeout(uiTimerRef.current);
     };
@@ -129,15 +137,18 @@ const CallScreen = ({ socket, roomId }) => {
   const handleFindNext = useCallback(async () => {
     setIsConnecting(true);
     setHasPartner(false);
-    
+
     // Close any existing connection
     closePeer();
 
     // Emit find partner event to server
-    if (socket?.current) {
-      socket.current.emit('find-partner', { roomId });
+    if (socketRef?.current) {
+      socketRef.current.emit('find-partner', { roomId });
+    } else {
+      console.error('Socket not connected');
+      setIsConnecting(false);
     }
-  }, [socket, roomId, closePeer]);
+  }, [socketRef, roomId, closePeer]);
 
   const handleDisconnect = useCallback(() => {
     closePeer();
@@ -145,10 +156,10 @@ const CallScreen = ({ socket, roomId }) => {
     setIsConnecting(false);
 
     // Notify server
-    if (socket?.current) {
-      socket.current.emit('disconnect-partner', { roomId });
+    if (socketRef?.current) {
+      socketRef.current.emit('disconnect-partner', { roomId });
     }
-  }, [socket, roomId, closePeer]);
+  }, [socketRef, roomId, closePeer]);
 
   const handleToggleAudio = useCallback(() => {
     toggleAudio(roomId);
@@ -157,6 +168,22 @@ const CallScreen = ({ socket, roomId }) => {
   const handleToggleVideo = useCallback(() => {
     toggleVideo(roomId);
   }, [toggleVideo, roomId]);
+
+  // ── DEBUG: Monitor video refs ──────────────────────────────────────────
+  useEffect(() => {
+    const checkVideos = setInterval(() => {
+      if (localVideoRef.current) {
+        console.log('Local video srcObject:', localVideoRef.current.srcObject);
+        console.log('Local video readyState:', localVideoRef.current.readyState);
+      }
+      if (remoteVideoRef.current) {
+        console.log('Remote video srcObject:', remoteVideoRef.current.srcObject);
+        console.log('Remote video readyState:', remoteVideoRef.current.readyState);
+      }
+    }, 3000);
+
+    return () => clearInterval(checkVideos);
+  }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
