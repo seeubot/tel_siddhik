@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
   Zap, PhoneOff, Loader2,
   Flag, ShieldCheck, Activity,
   RefreshCw, X
 } from 'lucide-react';
+import { useWebRTC } from '../hooks/useWebRTC';
 import './CallScreen.css';
 
 /**
@@ -16,70 +17,93 @@ import './CallScreen.css';
  * that are fully defined in CallScreen.css. The component now works with zero
  * dependency on Tailwind or any CSS framework.
  */
-const CallScreen = () => {
-  // ── State ──────────────────────────────────────────────────────────────────
+const CallScreen = ({ socket, roomId }) => {
+  // ── WebRTC Hook ──────────────────────────────────────────────────────────
+  const {
+    localVideoRef,
+    remoteVideoRef,
+    audioEnabled,
+    videoEnabled,
+    partnerMedia,
+    setPartnerMedia,
+    callActive,
+    startLocal,
+    stopLocal,
+    closePeer,
+    makeOffer,
+    handleOffer,
+    handleAnswer,
+    handleIceCandidate,
+    toggleAudio,
+    toggleVideo,
+  } = useWebRTC(socket);
+
+  // ── UI State ─────────────────────────────────────────────────────────────
   const [hasPartner, setHasPartner]           = useState(false);
-  const [audioEnabled, setAudioEnabled]       = useState(true);
-  const [videoEnabled, setVideoEnabled]       = useState(true);
   const [isConnecting, setIsConnecting]       = useState(false);
   const [uiVisible, setUiVisible]             = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  const localVideoRef  = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const uiTimerRef     = useRef(null);
-  const localStreamRef = useRef(null);
-  const peerConnectionRef = useRef(null);
+  const uiTimerRef = useRef(null);
 
-  // ── Initialize local media stream ───────────────────────────────────────
+  // ── Initialize local stream on mount ────────────────────────────────────
   useEffect(() => {
-    const startLocalStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        localStreamRef.current = stream;
-        
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.error('Error accessing media devices:', error);
-        setVideoEnabled(false);
-        setAudioEnabled(false);
-      }
+    startLocal().catch(console.error);
+    
+    return () => {
+      stopLocal();
+      closePeer();
     };
+  }, [startLocal, stopLocal, closePeer]);
 
-    startLocalStream();
+  // ── Handle callActive state ─────────────────────────────────────────────
+  useEffect(() => {
+    if (callActive) {
+      setHasPartner(true);
+      setIsConnecting(false);
+    }
+  }, [callActive]);
+
+  // ── Socket event listeners ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!socket?.current) return;
+
+    const sock = socket.current;
+
+    sock.on('offer', async ({ fromId, offer }) => {
+      await handleOffer(fromId, offer);
+    });
+
+    sock.on('answer', async ({ answer }) => {
+      await handleAnswer(answer);
+    });
+
+    sock.on('ice-candidate', async ({ candidate }) => {
+      await handleIceCandidate(candidate);
+    });
+
+    sock.on('media-state', ({ audioEnabled, videoEnabled }) => {
+      setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
+    });
+
+    sock.on('partner-disconnected', () => {
+      setHasPartner(false);
+      closePeer();
+    });
+
+    sock.on('match-found', async ({ partnerId }) => {
+      await makeOffer(partnerId);
+    });
 
     return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-      }
+      sock.off('offer');
+      sock.off('answer');
+      sock.off('ice-candidate');
+      sock.off('media-state');
+      sock.off('partner-disconnected');
+      sock.off('match-found');
     };
-  }, []);
-
-  // ── Handle video toggle ────────────────────────────────────────────────
-  useEffect(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getVideoTracks().forEach(track => {
-        track.enabled = videoEnabled;
-      });
-    }
-  }, [videoEnabled]);
-
-  // ── Handle audio toggle ────────────────────────────────────────────────
-  useEffect(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getAudioTracks().forEach(track => {
-        track.enabled = audioEnabled;
-      });
-    }
-  }, [audioEnabled]);
+  }, [socket, handleOffer, handleAnswer, handleIceCandidate, setPartnerMedia, closePeer, makeOffer]);
 
   // ── Auto-hide UI when a partner is connected ───────────────────────────────
   useEffect(() => {
@@ -101,146 +125,38 @@ const CallScreen = () => {
     };
   }, [showReportModal, hasPartner]);
 
-  // ── WebRTC: Create local loopback connection ────────────────────────────
-  const setupLoopbackConnection = async () => {
-    try {
-      // Create RTCPeerConnection with proper configuration
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      });
-
-      peerConnectionRef.current = pc;
-
-      // Add local tracks to the peer connection
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => {
-          pc.addTrack(track, localStreamRef.current);
-        });
-      }
-
-      // Handle incoming remote stream
-      pc.ontrack = (event) => {
-        console.log('Remote track received:', event);
-        if (remoteVideoRef.current) {
-          const [remoteStream] = event.streams;
-          if (remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream;
-            console.log('Remote stream set successfully');
-          }
-        }
-      };
-
-      // Create offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Create a new peer connection for the "remote" side (ourselves)
-      const remotePc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      });
-
-      // Add the same local stream to remote peer connection
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => {
-          remotePc.addTrack(track, localStreamRef.current);
-        });
-      }
-
-      // Set the remote description on the remote peer
-      await remotePc.setRemoteDescription(pc.localDescription);
-
-      // Create answer from remote peer
-      const answer = await remotePc.createAnswer();
-      await remotePc.setLocalDescription(answer);
-
-      // Set the answer as remote description on local peer
-      await pc.setRemoteDescription(remotePc.localDescription);
-
-      // Handle ICE candidates for both peers
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          remotePc.addIceCandidate(new RTCIceCandidate(event.candidate))
-            .catch(console.error);
-        }
-      };
-
-      remotePc.onicecandidate = (event) => {
-        if (event.candidate) {
-          pc.addIceCandidate(new RTCIceCandidate(event.candidate))
-            .catch(console.error);
-        }
-      };
-
-      // Handle connection state changes
-      pc.onconnectionstatechange = () => {
-        console.log('Local PC connection state:', pc.connectionState);
-      };
-
-      remotePc.onconnectionstatechange = () => {
-        console.log('Remote PC connection state:', remotePc.connectionState);
-      };
-
-      // Wait a bit for ICE candidates to be exchanged
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-    } catch (error) {
-      console.error('Error setting up loopback connection:', error);
-    }
-  };
-
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleFindNext = async () => {
+  const handleFindNext = useCallback(async () => {
     setIsConnecting(true);
-    
-    // Clean up previous connection if exists
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-
-    // Clear remote video
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
-
     setHasPartner(false);
+    
+    // Close any existing connection
+    closePeer();
 
-    try {
-      // Simulate connection delay
-      await new Promise(resolve => setTimeout(resolve, 1800));
-      
-      // Setup loopback connection
-      await setupLoopbackConnection();
-      
-      setHasPartner(true);
-    } catch (error) {
-      console.error('Connection failed:', error);
-    } finally {
-      setIsConnecting(false);
+    // Emit find partner event to server
+    if (socket?.current) {
+      socket.current.emit('find-partner', { roomId });
     }
-  };
+  }, [socket, roomId, closePeer]);
 
-  const handleDisconnect = () => {
-    // Close peer connection
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-
-    // Clear remote video
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
-
+  const handleDisconnect = useCallback(() => {
+    closePeer();
     setHasPartner(false);
     setIsConnecting(false);
-  };
+
+    // Notify server
+    if (socket?.current) {
+      socket.current.emit('disconnect-partner', { roomId });
+    }
+  }, [socket, roomId, closePeer]);
+
+  const handleToggleAudio = useCallback(() => {
+    toggleAudio(roomId);
+  }, [toggleAudio, roomId]);
+
+  const handleToggleVideo = useCallback(() => {
+    toggleVideo(roomId);
+  }, [toggleVideo, roomId]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -307,14 +223,14 @@ const CallScreen = () => {
             {/* Toggle group */}
             <div className="cs-toggle-group">
               <button
-                onClick={() => setVideoEnabled(v => !v)}
+                onClick={handleToggleVideo}
                 className={`cs-icon-btn ${!videoEnabled ? 'cs-icon-btn--muted' : ''}`}
                 title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
               >
                 {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
               </button>
               <button
-                onClick={() => setAudioEnabled(a => !a)}
+                onClick={handleToggleAudio}
                 className={`cs-icon-btn ${!audioEnabled ? 'cs-icon-btn--muted' : ''}`}
                 title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
               >
