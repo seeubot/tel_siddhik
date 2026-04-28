@@ -32,7 +32,7 @@ const CallScreen = ({ socketRef, roomId }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState(0); // 0-3 for visual effects
+  const [connectionQuality, setConnectionQuality] = useState(0);
 
   const uiTimerRef = useRef(null);
   const initializedRef = useRef(false);
@@ -214,20 +214,25 @@ const CallScreen = ({ socketRef, roomId }) => {
 
       {/* ── 1. REMOTE VIEWPORT ───────────────────────────────────────────── */}
       <div className="cs-remote">
-        <div className="cs-remote-frame">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="cs-remote-video"
-            style={{ display: hasPartner ? 'block' : 'none' }}
-          />
-          <div className="cs-video-border" />
-          <div className="cs-video-corner cs-corner-tl" />
-          <div className="cs-video-corner cs-corner-tr" />
-          <div className="cs-video-corner cs-corner-bl" />
-          <div className="cs-video-corner cs-corner-br" />
-        </div>
+        {/* FIX: Always render the video element, use opacity/visibility instead of display */}
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={`cs-remote-video ${!hasPartner ? 'cs-remote-video--hidden' : ''}`}
+          style={{ opacity: hasPartner ? 1 : 0 }}
+        />
+        
+        {/* Decorative frame - only show when partner is connected */}
+        {hasPartner && (
+          <>
+            <div className="cs-video-border" />
+            <div className="cs-video-corner cs-corner-tl" />
+            <div className="cs-video-corner cs-corner-tr" />
+            <div className="cs-video-corner cs-corner-bl" />
+            <div className="cs-video-corner cs-corner-br" />
+          </>
+        )}
         
         {!hasPartner && (
           <div className="cs-idle">
