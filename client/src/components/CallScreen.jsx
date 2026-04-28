@@ -9,7 +9,6 @@ import { useWebRTC } from '../hooks/useWebRTC';
 import './CallScreen.css';
 
 const CallScreen = ({ socketRef, roomId }) => {
-  // ── WebRTC Hook ──────────────────────────────────────────────────────────
   const {
     localVideoRef,
     remoteVideoRef,
@@ -29,7 +28,6 @@ const CallScreen = ({ socketRef, roomId }) => {
     toggleVideo,
   } = useWebRTC(socketRef);
 
-  // ── UI State ─────────────────────────────────────────────────────────────
   const [hasPartner, setHasPartner] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
@@ -46,7 +44,6 @@ const CallScreen = ({ socketRef, roomId }) => {
         console.error('Failed to start local stream:', err);
       });
     }
-
     return () => {
       stopLocal();
       closePeer();
@@ -54,7 +51,7 @@ const CallScreen = ({ socketRef, roomId }) => {
     };
   }, []);
 
-  // ── Handle callActive state ─────────────────────────────────────────────
+  // ── Handle callActive state ──────────────────────────────────────────────
   useEffect(() => {
     if (callActive) {
       setHasPartner(true);
@@ -62,18 +59,29 @@ const CallScreen = ({ socketRef, roomId }) => {
     }
   }, [callActive]);
 
-  // ── Socket event listeners ──────────────────────────────────────────────
+  // ── Socket event listeners ───────────────────────────────────────────────
   useEffect(() => {
     const socket = socketRef?.current;
     if (!socket) return;
 
+    // FIX 4: Handle room-joined for Orey-ID calls — first peer makes the offer
+    const handleRoomJoined = async ({ peers }) => {
+      if (peers && peers.length > 0) {
+        console.log('Room joined, making offer to:', peers[0].socketId);
+        setIsConnecting(true);
+        await makeOffer(peers[0].socketId);
+      }
+    };
+
     const handleMatchFound = async ({ partnerId }) => {
       console.log('Match found with:', partnerId);
+      setIsConnecting(true);
       await makeOffer(partnerId);
     };
 
     const handleIncomingOffer = async ({ fromId, offer }) => {
       console.log('Received offer from:', fromId);
+      setIsConnecting(true);
       await handleOffer(fromId, offer);
     };
 
@@ -86,34 +94,39 @@ const CallScreen = ({ socketRef, roomId }) => {
       await handleIceCandidate(candidate);
     };
 
+    // FIX 2: was 'media-state' — server emits 'peer-media-state'
     const handleMediaState = ({ audioEnabled, videoEnabled }) => {
       setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
     };
 
+    // FIX 3: was 'partner-disconnected' — server emits 'partner-left'
     const handlePartnerDisconnected = () => {
       console.log('Partner disconnected');
       setHasPartner(false);
+      setIsConnecting(false);
       closePeer();
     };
 
+    socket.on('room-joined', handleRoomJoined);        // FIX 4: added
     socket.on('match-found', handleMatchFound);
     socket.on('offer', handleIncomingOffer);
     socket.on('answer', handleIncomingAnswer);
     socket.on('ice-candidate', handleIncomingIce);
-    socket.on('media-state', handleMediaState);
-    socket.on('partner-disconnected', handlePartnerDisconnected);
+    socket.on('peer-media-state', handleMediaState);   // FIX 2: was 'media-state'
+    socket.on('partner-left', handlePartnerDisconnected); // FIX 3: was 'partner-disconnected'
 
     return () => {
+      socket.off('room-joined', handleRoomJoined);
       socket.off('match-found', handleMatchFound);
       socket.off('offer', handleIncomingOffer);
       socket.off('answer', handleIncomingAnswer);
       socket.off('ice-candidate', handleIncomingIce);
-      socket.off('media-state', handleMediaState);
-      socket.off('partner-disconnected', handlePartnerDisconnected);
+      socket.off('peer-media-state', handleMediaState);
+      socket.off('partner-left', handlePartnerDisconnected);
     };
   }, [socketRef, makeOffer, handleOffer, handleAnswer, handleIceCandidate, setPartnerMedia, closePeer]);
 
-  // ── Auto-hide UI when a partner is connected ───────────────────────────────
+  // ── Auto-hide UI ─────────────────────────────────────────────────────────
   useEffect(() => {
     const handleActivity = () => {
       setUiVisible(true);
@@ -122,10 +135,8 @@ const CallScreen = ({ socketRef, roomId }) => {
         uiTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
       }
     };
-
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('touchstart', handleActivity);
-
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('touchstart', handleActivity);
@@ -133,15 +144,11 @@ const CallScreen = ({ socketRef, roomId }) => {
     };
   }, [showReportModal, hasPartner]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Actions ──────────────────────────────────────────────────────────────
   const handleFindNext = useCallback(async () => {
     setIsConnecting(true);
     setHasPartner(false);
-
-    // Close any existing connection
     closePeer();
-
-    // Emit find partner event to server
     if (socketRef?.current) {
       socketRef.current.emit('find-partner', { roomId });
     } else {
@@ -154,51 +161,30 @@ const CallScreen = ({ socketRef, roomId }) => {
     closePeer();
     setHasPartner(false);
     setIsConnecting(false);
-
-    // Notify server
     if (socketRef?.current) {
       socketRef.current.emit('disconnect-partner', { roomId });
     }
   }, [socketRef, roomId, closePeer]);
 
-  const handleToggleAudio = useCallback(() => {
-    toggleAudio(roomId);
-  }, [toggleAudio, roomId]);
+  const handleToggleAudio = useCallback(() => toggleAudio(roomId), [toggleAudio, roomId]);
+  const handleToggleVideo = useCallback(() => toggleVideo(roomId), [toggleVideo, roomId]);
 
-  const handleToggleVideo = useCallback(() => {
-    toggleVideo(roomId);
-  }, [toggleVideo, roomId]);
-
-  // ── DEBUG: Monitor video refs ──────────────────────────────────────────
-  useEffect(() => {
-    const checkVideos = setInterval(() => {
-      if (localVideoRef.current) {
-        console.log('Local video srcObject:', localVideoRef.current.srcObject);
-        console.log('Local video readyState:', localVideoRef.current.readyState);
-      }
-      if (remoteVideoRef.current) {
-        console.log('Remote video srcObject:', remoteVideoRef.current.srcObject);
-        console.log('Remote video readyState:', remoteVideoRef.current.readyState);
-      }
-    }, 3000);
-
-    return () => clearInterval(checkVideos);
-  }, []);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="cs-screen">
 
-      {/* ── 1. REMOTE VIEWPORT ────────────────────────────────────────────── */}
+      {/* ── 1. REMOTE VIEWPORT ─────────────────────────────────────────────
+          FIX 1: Always keep <video> in the DOM so ontrack can attach the
+          stream before hasPartner flips to true. Toggle visibility only. */}
       <div className="cs-remote">
-        {hasPartner ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="cs-remote-video"
-          />
-        ) : (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="cs-remote-video"
+          style={{ display: hasPartner ? 'block' : 'none' }}
+        />
+        {!hasPartner && (
           <div className="cs-idle">
             <h1 className="cs-brand-title">Orey!</h1>
             <p className="cs-idle-subtitle">
@@ -214,7 +200,7 @@ const CallScreen = ({ socketRef, roomId }) => {
         )}
       </div>
 
-      {/* ── 2. LOCAL VIEWPORT ─────────────────────────────────────────────── */}
+      {/* ── 2. LOCAL VIEWPORT ───────────────────────────────────────────── */}
       <div className="cs-local">
         {videoEnabled ? (
           <video
@@ -232,8 +218,6 @@ const CallScreen = ({ socketRef, roomId }) => {
             </div>
           </div>
         )}
-
-        {/* HUD badge */}
         <div className="cs-hud">
           <div className="cs-hud-badge">
             <Activity size={12} className="cs-hud-dot" />
@@ -242,96 +226,54 @@ const CallScreen = ({ socketRef, roomId }) => {
         </div>
       </div>
 
-      {/* ── 3. CONTROL BAR ────────────────────────────────────────────────── */}
+      {/* ── 3. CONTROL BAR ──────────────────────────────────────────────── */}
       <div className={`cs-control-bar ${uiVisible ? 'cs-control-bar--visible' : 'cs-control-bar--hidden'}`}>
         <div className="cs-control-bar-inner">
           <div className="cs-control-panel">
-
-            {/* Toggle group */}
             <div className="cs-toggle-group">
-              <button
-                onClick={handleToggleVideo}
-                className={`cs-icon-btn ${!videoEnabled ? 'cs-icon-btn--muted' : ''}`}
-                title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              >
+              <button onClick={handleToggleVideo} className={`cs-icon-btn ${!videoEnabled ? 'cs-icon-btn--muted' : ''}`} title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}>
                 {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
               </button>
-              <button
-                onClick={handleToggleAudio}
-                className={`cs-icon-btn ${!audioEnabled ? 'cs-icon-btn--muted' : ''}`}
-                title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-              >
+              <button onClick={handleToggleAudio} className={`cs-icon-btn ${!audioEnabled ? 'cs-icon-btn--muted' : ''}`} title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}>
                 {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
               </button>
             </div>
-
-            {/* Main action */}
             <div className="cs-main-action">
-              <button
-                onClick={handleFindNext}
-                disabled={isConnecting}
-                className="cs-next-btn"
-              >
+              <button onClick={handleFindNext} disabled={isConnecting} className="cs-next-btn">
                 <div className="cs-next-btn-overlay" />
                 <div className="cs-next-btn-content">
-                  {isConnecting
-                    ? <Loader2 size={16} className="cs-spin" />
-                    : <Zap size={16} style={{ fill: 'currentColor' }} />
-                  }
+                  {isConnecting ? <Loader2 size={16} className="cs-spin" /> : <Zap size={16} style={{ fill: 'currentColor' }} />}
                   <span>{isConnecting ? 'Searching…' : 'Next Discovery'}</span>
                 </div>
               </button>
             </div>
-
-            {/* Safety & exit */}
             <div className="cs-safety-group">
-              <button
-                onClick={() => setShowReportModal(true)}
-                className="cs-report-btn"
-                title="Report User"
-              >
+              <button onClick={() => setShowReportModal(true)} className="cs-report-btn" title="Report User">
                 <Flag size={18} />
               </button>
-              <button
-                onClick={handleDisconnect}
-                className="cs-end-btn"
-                title="End Call"
-              >
+              <button onClick={handleDisconnect} className="cs-end-btn" title="End Call">
                 <PhoneOff size={18} />
               </button>
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* ── 4. REPORT MODAL ───────────────────────────────────────────────── */}
+      {/* ── 4. REPORT MODAL ─────────────────────────────────────────────── */}
       {showReportModal && (
         <div className="cs-modal-overlay">
           <div className="cs-modal-card">
-            <button
-              onClick={() => setShowReportModal(false)}
-              className="cs-modal-close"
-              aria-label="Close safety center"
-            >
+            <button onClick={() => setShowReportModal(false)} className="cs-modal-close" aria-label="Close safety center">
               <X size={20} />
             </button>
-
             <div className="cs-modal-header">
-              <div className="cs-modal-icon">
-                <ShieldCheck size={24} />
-              </div>
+              <div className="cs-modal-icon"><ShieldCheck size={24} /></div>
               <h3 className="cs-modal-title">Safety Center</h3>
               <p className="cs-modal-subtitle">Report current session</p>
             </div>
-
             <div className="cs-report-options">
               {['Nudity / Sexual', 'Harassment', 'Underage', 'Other'].map(reason => (
-                <button
-                  key={reason}
-                  className="cs-report-option"
-                  onClick={() => setShowReportModal(false)}
-                >
+                <button key={reason} className="cs-report-option" onClick={() => setShowReportModal(false)}>
                   {reason}
                 </button>
               ))}
@@ -340,7 +282,7 @@ const CallScreen = ({ socketRef, roomId }) => {
         </div>
       )}
 
-      {/* ── 5. BACKGROUND BLOBS ───────────────────────────────────────────── */}
+      {/* ── 5. BACKGROUND BLOBS ─────────────────────────────────────────── */}
       <div className="cs-blobs">
         <div className="cs-blob cs-blob--pink" />
         <div className="cs-blob cs-blob--orange" />
