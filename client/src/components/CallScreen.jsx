@@ -1,367 +1,591 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  Zap, PhoneOff, Loader2,
-  Flag, ShieldCheck, Activity,
-  RefreshCw, X, Users, Sparkles
+  Zap, PhoneOff, Loader,
+  Flag, Shield, Activity,
+  AlertTriangle,
 } from 'lucide-react';
-import { useWebRTC } from '../hooks/useWebRTC';
-import './CallScreen.css';
+import styles from './CallScreen.module.css';
 
-const CallScreen = ({ socketRef, roomId }) => {
-  const {
-    localVideoRef,
-    remoteVideoRef,
-    audioEnabled,
-    videoEnabled,
-    partnerMedia,
-    setPartnerMedia,
-    callActive,
-    startLocal,
-    stopLocal,
-    closePeer,
-    makeOffer,
-    handleOffer,
-    handleAnswer,
-    handleIceCandidate,
-    toggleAudio,
-    toggleVideo,
-  } = useWebRTC(socketRef);
+/**
+ * Orey! Pro — CallScreen
+ *
+ * Props
+ * ─────
+ * socket          : Socket.IO socket instance (required)
+ * localVideoRef   : ref for local <video>
+ * remoteVideoRef  : ref for remote <video>
+ * roomId          : current room id string
+ * partner         : { socketId, userName, oreyId, deviceId } | null
+ * audioEnabled    : bool
+ * videoEnabled    : bool
+ * partnerMedia    : { video: bool, audio: bool }
+ * searching       : bool  – currently in random queue
+ * autoSearchCountdown : number | null  – seconds until auto-search fires
+ * onToggleAudio   : () => void
+ * onToggleVideo   : () => void
+ * onSkip          : () => void   – emits 'skip' then re-queues
+ * onLeave         : () => void   – emits 'leave-chat' and navigates away
+ * onCancelAutoSearch : () => void
+ * onFindRandomPeer: () => void
+ * onReport        : () => void
+ *
+ * All socket emissions that happen INSIDE this component:
+ *   • media-state  (audio/video toggle)
+ *   • skip         (next peer)
+ *   • leave-chat
+ *   • cancel-random / cancel-auto-search
+ *   • report-user  (via ReportModal)
+ *   • offer / answer / ice-candidate  (WebRTC signalling)
+ *
+ * The parent is only responsible for:
+ *   • creating the socket
+ *   • acquiring / passing localStream via localVideoRef.current.srcObject
+ *   • passing in roomId + partner after 'room-joined' fires
+ */
 
-  const [hasPartner, setHasPartner] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [uiVisible, setUiVisible] = useState(true);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [connectionQuality, setConnectionQuality] = useState(0);
+// ─── Reason catalogue (mirrors server HIGH_PRIORITY_REASONS) ──────────────────
+const ALL_REASONS = [
+  { label: 'Nudity / Sexual Content',  hp: true  },
+  { label: 'Sexual Harassment',        hp: true  },
+  { label: 'Underage User',            hp: true  },
+  { label: 'Violence / Threats',       hp: true  },
+  { label: 'Inappropriate Behavior',   hp: false },
+  { label: 'Hate Speech',              hp: false },
+  { label: 'Spam / Bot',               hp: false },
+  { label: 'Other',                    hp: false },
+];
 
-  const uiTimerRef = useRef(null);
-  const initializedRef = useRef(false);
-  const qualityIntervalRef = useRef(null);
+// ─── Report Modal ─────────────────────────────────────────────────────────────
+const ReportModal = ({ partner, socket, onClose }) => {
+  const [selected, setSelected] = useState(null);
+  const [desc, setDesc]         = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  // ── Initialize local stream on mount ────────────────────────────────────
-  useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      startLocal().catch(err => {
-        console.error('Failed to start local stream:', err);
-      });
-    }
-    return () => {
-      stopLocal();
-      closePeer();
-      initializedRef.current = false;
-    };
-  }, []);
+  const submit = useCallback(() => {
+    if (!selected || !partner) return;
+    socket.emit('report-user', {
+      reportedDeviceId: partner.deviceId   || partner.socketId,
+      reportedUserId:   partner.oreyId     || null,
+      reason:           selected,
+      description:      desc.trim(),
+    });
+    setSubmitted(true);
+    setTimeout(onClose, 1800);
+  }, [selected, desc, partner, socket, onClose]);
 
-  // ── Simulate connection quality for visual effects ─────────────────────
-  useEffect(() => {
-    if (hasPartner) {
-      qualityIntervalRef.current = setInterval(() => {
-        setConnectionQuality(Math.floor(Math.random() * 4));
-      }, 3000);
-    } else {
-      clearInterval(qualityIntervalRef.current);
-      setConnectionQuality(0);
-    }
-    return () => clearInterval(qualityIntervalRef.current);
-  }, [hasPartner]);
-
-  // ── Handle callActive state ──────────────────────────────────────────────
-  useEffect(() => {
-    if (callActive) {
-      setHasPartner(true);
-      setIsConnecting(false);
-    }
-  }, [callActive]);
-
-  // ── Socket event listeners ───────────────────────────────────────────────
-  useEffect(() => {
-    const socket = socketRef?.current;
-    if (!socket) return;
-
-    const handleRoomJoined = async ({ peers }) => {
-      if (peers && peers.length > 0) {
-        console.log('Room joined, making offer to:', peers[0].socketId);
-        setIsConnecting(true);
-        await makeOffer(peers[0].socketId);
-      }
-    };
-
-    const handleMatchFound = async ({ partnerId }) => {
-      console.log('Match found with:', partnerId);
-      setIsConnecting(true);
-      await makeOffer(partnerId);
-    };
-
-    const handleIncomingOffer = async ({ fromId, offer }) => {
-      console.log('Received offer from:', fromId);
-      setIsConnecting(true);
-      await handleOffer(fromId, offer);
-    };
-
-    const handleIncomingAnswer = async ({ answer }) => {
-      console.log('Received answer');
-      await handleAnswer(answer);
-    };
-
-    const handleIncomingIce = async ({ candidate }) => {
-      await handleIceCandidate(candidate);
-    };
-
-    const handleMediaState = ({ audioEnabled, videoEnabled }) => {
-      setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
-    };
-
-    const handlePartnerDisconnected = () => {
-      console.log('Partner disconnected');
-      setHasPartner(false);
-      setIsConnecting(false);
-      closePeer();
-    };
-
-    socket.on('room-joined', handleRoomJoined);
-    socket.on('match-found', handleMatchFound);
-    socket.on('offer', handleIncomingOffer);
-    socket.on('answer', handleIncomingAnswer);
-    socket.on('ice-candidate', handleIncomingIce);
-    socket.on('peer-media-state', handleMediaState);
-    socket.on('partner-left', handlePartnerDisconnected);
-
-    return () => {
-      socket.off('room-joined', handleRoomJoined);
-      socket.off('match-found', handleMatchFound);
-      socket.off('offer', handleIncomingOffer);
-      socket.off('answer', handleIncomingAnswer);
-      socket.off('ice-candidate', handleIncomingIce);
-      socket.off('peer-media-state', handleMediaState);
-      socket.off('partner-left', handlePartnerDisconnected);
-    };
-  }, [socketRef, makeOffer, handleOffer, handleAnswer, handleIceCandidate, setPartnerMedia, closePeer]);
-
-  // ── Auto-hide UI ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handleActivity = () => {
-      setUiVisible(true);
-      clearTimeout(uiTimerRef.current);
-      if (!showReportModal && hasPartner) {
-        uiTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
-      }
-    };
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
-    return () => {
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('touchstart', handleActivity);
-      clearTimeout(uiTimerRef.current);
-    };
-  }, [showReportModal, hasPartner]);
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-  const handleFindNext = useCallback(async () => {
-    setIsConnecting(true);
-    setHasPartner(false);
-    closePeer();
-    if (socketRef?.current) {
-      socketRef.current.emit('find-partner', { roomId });
-    } else {
-      console.error('Socket not connected');
-      setIsConnecting(false);
-    }
-  }, [socketRef, roomId, closePeer]);
-
-  const handleDisconnect = useCallback(() => {
-    closePeer();
-    setHasPartner(false);
-    setIsConnecting(false);
-    if (socketRef?.current) {
-      socketRef.current.emit('disconnect-partner', { roomId });
-    }
-  }, [socketRef, roomId, closePeer]);
-
-  const handleToggleAudio = useCallback(() => toggleAudio(roomId), [toggleAudio, roomId]);
-  const handleToggleVideo = useCallback(() => toggleVideo(roomId), [toggleVideo, roomId]);
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="cs-screen">
-      
-      {/* Ambient background particles */}
-      <div className="cs-particles">
-        {[...Array(20)].map((_, i) => (
-          <div 
-            key={i}
-            className="cs-particle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Connection quality indicator */}
-      {hasPartner && (
-        <div className="cs-connection-indicator">
-          <div className={`cs-signal-bars ${connectionQuality > 2 ? 'cs-signal-excellent' : connectionQuality > 1 ? 'cs-signal-good' : 'cs-signal-poor'}`}>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className={`cs-signal-bar ${i < connectionQuality ? 'cs-signal-active' : ''}`} />
-            ))}
+    <div className={styles.reportBackdrop} onClick={onClose}>
+      <div className={styles.reportCard} onClick={e => e.stopPropagation()}>
+        {submitted ? (
+          <div className={styles.reportSuccess}>
+            <div className={styles.reportSuccessIcon}>✓</div>
+            <p className={styles.reportSuccessText}>Report submitted</p>
           </div>
-        </div>
-      )}
-
-      {/* ── 1. REMOTE VIEWPORT ───────────────────────────────────────────── */}
-      <div className="cs-remote">
-        {/* FIX: Always render the video element, use opacity/visibility instead of display */}
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className={`cs-remote-video ${!hasPartner ? 'cs-remote-video--hidden' : ''}`}
-          style={{ opacity: hasPartner ? 1 : 0 }}
-        />
-        
-        {/* Decorative frame - only show when partner is connected */}
-        {hasPartner && (
+        ) : (
           <>
-            <div className="cs-video-border" />
-            <div className="cs-video-corner cs-corner-tl" />
-            <div className="cs-video-corner cs-corner-tr" />
-            <div className="cs-video-corner cs-corner-bl" />
-            <div className="cs-video-corner cs-corner-br" />
-          </>
-        )}
-        
-        {!hasPartner && (
-          <div className="cs-idle">
-            <div className="cs-brand-container">
-              <div className="cs-brand-ring" />
-              <h1 className="cs-brand-title">OREY</h1>
-              <div className="cs-brand-accent" />
-            </div>
-            <div className="cs-idle-status">
-              <div className={`cs-status-dot ${isConnecting ? 'cs-status-searching' : 'cs-status-idle'}`} />
-              <p className="cs-idle-subtitle">
-                {isConnecting ? 'Finding your match...' : 'Ready to connect'}
-              </p>
-            </div>
-            {!isConnecting && (
-              <button onClick={handleFindNext} className="cs-discover-btn">
-                <Sparkles size={20} className="cs-discover-icon" />
-                <span>Begin Discovery</span>
-              </button>
-            )}
-          </div>
-        )}
-        
-        {/* Partner info overlay */}
-        {hasPartner && (
-          <div className="cs-partner-overlay">
-            <div className="cs-partner-badge">
-              <Users size={14} />
-              <span>Connected</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── 2. LOCAL VIEWPORT ───────────────────────────────────────────── */}
-      <div className="cs-local">
-        <div className="cs-local-container">
-          {videoEnabled ? (
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="cs-local-video"
-            />
-          ) : (
-            <div className="cs-cam-off">
-              <div className="cs-avatar-placeholder">
-                <div className="cs-avatar-initials">YOU</div>
-                <div className="cs-avatar-ring" />
+            <div className={styles.reportHeader}>
+              <div className={styles.reportTitle}>
+                <Flag size={14} className={styles.reportTitleIcon} />
+                Report User
               </div>
-              <div className="cs-cam-off-icon">
-                <VideoOff size={18} />
-              </div>
+              <button className={styles.reportClose} onClick={onClose}>✕</button>
             </div>
-          )}
-          <div className="cs-local-border-glow" />
-          <div className="cs-local-frame" />
-        </div>
-        
-        <div className="cs-hud">
-          <div className="cs-hud-badge">
-            <Activity size={12} className="cs-hud-dot" />
-            <span className="cs-hud-label">Secure Channel</span>
-          </div>
-        </div>
-      </div>
 
-      {/* ── 3. CONTROL BAR ──────────────────────────────────────────────── */}
-      <div className={`cs-control-bar ${uiVisible ? 'cs-control-bar--visible' : 'cs-control-bar--hidden'}`}>
-        <div className="cs-control-bar-inner">
-          <div className="cs-control-panel">
-            <div className="cs-toggle-group">
-              <button onClick={handleToggleVideo} className={`cs-icon-btn ${!videoEnabled ? 'cs-icon-btn--muted' : ''}`} title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}>
-                {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-              </button>
-              <button onClick={handleToggleAudio} className={`cs-icon-btn ${!audioEnabled ? 'cs-icon-btn--muted' : ''}`} title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}>
-                {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-              </button>
-            </div>
-            <div className="cs-main-action">
-              <button onClick={handleFindNext} disabled={isConnecting} className="cs-next-btn">
-                <div className="cs-next-btn-overlay" />
-                <div className="cs-next-btn-content">
-                  {isConnecting ? <Loader2 size={16} className="cs-spin" /> : <Zap size={16} style={{ fill: 'currentColor' }} />}
-                  <span>{isConnecting ? 'Searching…' : 'Next Discovery'}</span>
-                </div>
-              </button>
-            </div>
-            <div className="cs-safety-group">
-              <button onClick={() => setShowReportModal(true)} className="cs-report-btn" title="Report User">
-                <Flag size={18} />
-              </button>
-              <button onClick={handleDisconnect} className="cs-end-btn" title="End Call">
-                <PhoneOff size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+            <p className={styles.reportHint}>
+              High-priority violations are reviewed immediately and may trigger an instant ban.
+            </p>
 
-      {/* ── 4. REPORT MODAL ─────────────────────────────────────────────── */}
-      {showReportModal && (
-        <div className="cs-modal-overlay">
-          <div className="cs-modal-card">
-            <button onClick={() => setShowReportModal(false)} className="cs-modal-close" aria-label="Close safety center">
-              <X size={20} />
-            </button>
-            <div className="cs-modal-header">
-              <div className="cs-modal-icon"><ShieldCheck size={24} /></div>
-              <h3 className="cs-modal-title">Safety Center</h3>
-              <p className="cs-modal-subtitle">Report current session</p>
-            </div>
-            <div className="cs-report-options">
-              {['Nudity / Sexual', 'Harassment', 'Underage', 'Other'].map(reason => (
-                <button key={reason} className="cs-report-option" onClick={() => setShowReportModal(false)}>
-                  {reason}
+            <div className={styles.reasonGrid}>
+              {ALL_REASONS.map(({ label, hp }) => (
+                <button
+                  key={label}
+                  className={[
+                    styles.reasonBtn,
+                    hp        ? styles.reasonBtnHp       : '',
+                    selected === label ? styles.reasonBtnSelected : '',
+                  ].join(' ')}
+                  onClick={() => setSelected(label)}
+                >
+                  {hp && <AlertTriangle size={10} className={styles.hpIcon} />}
+                  {label}
                 </button>
               ))}
             </div>
+
+            <textarea
+              className={styles.reportDesc}
+              placeholder="Additional details (optional)…"
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              rows={3}
+            />
+
+            <button
+              className={styles.btnSubmitReport}
+              disabled={!selected}
+              onClick={submit}
+            >
+              Submit Report
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── CallScreen ───────────────────────────────────────────────────────────────
+const CallScreen = ({
+  socket            = null,
+  localVideoRef,
+  remoteVideoRef,
+  roomId            = null,
+  partner           = null,
+  audioEnabled      = true,
+  videoEnabled      = true,
+  partnerMedia      = { video: true, audio: true },
+  searching         = false,
+  autoSearchCountdown = null,
+  onToggleAudio     = () => {},
+  onToggleVideo     = () => {},
+  onSkip            = () => {},
+  onLeave           = () => {},
+  onCancelAutoSearch = () => {},
+  onFindRandomPeer  = () => {},
+  onReport          = () => {},  // optional external override
+}) => {
+  const [uiVisible,    setUiVisible]    = useState(true);
+  const [nextLoading,  setNextLoading]  = useState(false);
+  const [showReport,   setShowReport]   = useState(false);
+  const [localVideoOn, setLocalVideoOn] = useState(videoEnabled);
+  const [localAudioOn, setLocalAudioOn] = useState(audioEnabled);
+  const [remoteHasStream, setRemoteHasStream] = useState(false);
+
+  // Internal refs
+  const uiTimerRef    = useRef(null);
+  const pcRef         = useRef(null);   // RTCPeerConnection
+
+  // ── ICE servers come from server via 'video-quality-config' ──────────────
+  const iceServersRef = useRef([
+    { urls: 'stun:stun.l.google.com:19302'  },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ]);
+
+  // ── Auto-hide UI ──────────────────────────────────────────────────────────
+  const resetUiTimer = useCallback(() => {
+    setUiVisible(true);
+    clearTimeout(uiTimerRef.current);
+    uiTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove',  resetUiTimer);
+    window.addEventListener('touchstart', resetUiTimer);
+    resetUiTimer();
+    return () => {
+      window.removeEventListener('mousemove',  resetUiTimer);
+      window.removeEventListener('touchstart', resetUiTimer);
+      clearTimeout(uiTimerRef.current);
+    };
+  }, [resetUiTimer]);
+
+  // ── Mirror prop changes from parent ──────────────────────────────────────
+  useEffect(() => { setLocalVideoOn(videoEnabled); }, [videoEnabled]);
+  useEffect(() => { setLocalAudioOn(audioEnabled); }, [audioEnabled]);
+
+  // ── WebRTC helpers ────────────────────────────────────────────────────────
+  const closePeer = useCallback(() => {
+    if (pcRef.current) {
+      pcRef.current.ontrack          = null;
+      pcRef.current.onicecandidate   = null;
+      pcRef.current.oniceconnectionstatechange = null;
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    setRemoteHasStream(false);
+    if (remoteVideoRef?.current) remoteVideoRef.current.srcObject = null;
+  }, [remoteVideoRef]);
+
+  const buildPeerConnection = useCallback(() => {
+    closePeer();
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
+    pcRef.current = pc;
+
+    // Attach local tracks
+    const localStream = localVideoRef?.current?.srcObject;
+    if (localStream) {
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    }
+
+    pc.ontrack = (e) => {
+      if (e.streams?.[0] && remoteVideoRef?.current) {
+        remoteVideoRef.current.srcObject = e.streams[0];
+        setRemoteHasStream(true);
+      }
+    };
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate && partner?.socketId && socket) {
+        socket.emit('ice-candidate', { targetId: partner.socketId, candidate: e.candidate });
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (['disconnected', 'failed', 'closed'].includes(pc.iceConnectionState)) {
+        setRemoteHasStream(false);
+      }
+    };
+
+    return pc;
+  }, [closePeer, localVideoRef, remoteVideoRef, partner, socket]);
+
+  const makeOffer = useCallback(async (targetId) => {
+    const pc = pcRef.current || buildPeerConnection();
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket?.emit('offer', { targetId, offer });
+    } catch (err) { console.error('[WebRTC] offer error', err); }
+  }, [buildPeerConnection, socket]);
+
+  // ── Socket event listeners ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const onConfig = ({ servers }) => {
+      if (servers) iceServersRef.current = servers;
+    };
+
+    const onUserJoined = ({ socketId }) => {
+      // We're the callee – build PC and wait for offer
+      buildPeerConnection();
+      // If we are also the initiator (autoMatched caller), make offer
+      if (partner?.socketId === socketId) makeOffer(socketId);
+    };
+
+    const onOffer = async ({ offer, fromId }) => {
+      const pc = pcRef.current || buildPeerConnection();
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('answer', { targetId: fromId, answer });
+      } catch (err) { console.error('[WebRTC] answer error', err); }
+    };
+
+    const onAnswer = async ({ answer }) => {
+      const pc = pcRef.current;
+      if (pc && pc.signalingState !== 'stable') {
+        try { await pc.setRemoteDescription(new RTCSessionDescription(answer)); }
+        catch (err) { console.error('[WebRTC] setRemoteDesc error', err); }
+      }
+    };
+
+    const onIce = async ({ candidate }) => {
+      if (pcRef.current && candidate) {
+        try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); }
+        catch (_) {}
+      }
+    };
+
+    const onPartnerLeft = () => {
+      closePeer();
+    };
+
+    const onRoomJoined = ({ roomId: rid, peers, iceServers }) => {
+      if (iceServers) iceServersRef.current = iceServers;
+      buildPeerConnection();
+      // If we got peers immediately (auto-match), we are the initiator
+      if (peers?.length) {
+        makeOffer(peers[0].socketId);
+      }
+    };
+
+    socket.on('video-quality-config', onConfig);
+    socket.on('room-joined',          onRoomJoined);
+    socket.on('user-joined',          onUserJoined);
+    socket.on('offer',                onOffer);
+    socket.on('answer',               onAnswer);
+    socket.on('ice-candidate',        onIce);
+    socket.on('partner-left',         onPartnerLeft);
+    socket.on('skip-confirmed',       closePeer);
+
+    return () => {
+      socket.off('video-quality-config', onConfig);
+      socket.off('room-joined',          onRoomJoined);
+      socket.off('user-joined',          onUserJoined);
+      socket.off('offer',                onOffer);
+      socket.off('answer',               onAnswer);
+      socket.off('ice-candidate',        onIce);
+      socket.off('partner-left',         onPartnerLeft);
+      socket.off('skip-confirmed',       closePeer);
+    };
+  }, [socket, buildPeerConnection, makeOffer, closePeer, partner]);
+
+  // Cleanup peer on unmount
+  useEffect(() => () => closePeer(), [closePeer]);
+
+  // ── Toggle handlers (emit media-state) ───────────────────────────────────
+  const handleToggleVideo = useCallback(() => {
+    onToggleVideo();
+    const next = !localVideoOn;
+    setLocalVideoOn(next);
+    if (roomId && socket) {
+      socket.emit('media-state', { roomId, audioEnabled: localAudioOn, videoEnabled: next });
+    }
+  }, [onToggleVideo, localVideoOn, localAudioOn, roomId, socket]);
+
+  const handleToggleAudio = useCallback(() => {
+    onToggleAudio();
+    const next = !localAudioOn;
+    setLocalAudioOn(next);
+    if (roomId && socket) {
+      socket.emit('media-state', { roomId, audioEnabled: next, videoEnabled: localVideoOn });
+    }
+  }, [onToggleAudio, localAudioOn, localVideoOn, roomId, socket]);
+
+  // ── Skip / Next ───────────────────────────────────────────────────────────
+  const handleNext = useCallback(() => {
+    if (nextLoading) return;
+    setNextLoading(true);
+    closePeer();
+
+    if (roomId && socket) {
+      socket.emit('skip', { roomId });
+    } else {
+      onFindRandomPeer?.();
+    }
+
+    setTimeout(() => setNextLoading(false), 2200);
+  }, [nextLoading, roomId, socket, closePeer, onFindRandomPeer]);
+
+  // ── Leave ─────────────────────────────────────────────────────────────────
+  const handleLeave = useCallback(() => {
+    closePeer();
+    if (roomId && socket) socket.emit('leave-chat', { roomId });
+    onLeave?.();
+  }, [closePeer, roomId, socket, onLeave]);
+
+  // ── Cancel auto-search ────────────────────────────────────────────────────
+  const handleCancelAutoSearch = useCallback(() => {
+    socket?.emit('cancel-auto-search');
+    socket?.emit('cancel-random');
+    onCancelAutoSearch?.();
+  }, [socket, onCancelAutoSearch]);
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  const handleOpenReport = useCallback(() => {
+    if (typeof onReport === 'function' && onReport !== (() => {})) {
+      onReport(); // parent override
+    } else {
+      setShowReport(true);
+    }
+  }, [onReport]);
+
+  // ─── Derived ──────────────────────────────────────────────────────────────
+  const isConnected = !!partner && remoteHasStream;
+
+  return (
+    <div className={styles.container}>
+      {/* Noise */}
+      <div className={styles.noiseLayer} />
+
+      {/* ── REMOTE PANE (left/top — 50%) ─── */}
+      <div className={styles.remoteView}>
+        <video
+          ref={remoteVideoRef}
+          className={`${styles.videoBase} ${(searching && !isConnected) ? styles.searchingBlur : ''}`}
+          autoPlay
+          playsInline
+          style={{ display: remoteHasStream ? 'block' : 'none' }}
+        />
+
+        {!remoteHasStream && (
+          <div className={styles.placeholder}>
+            <div className={styles.brandText}>Orey!</div>
+            {searching && (
+              <div className={styles.loadingDots}>
+                <span className={styles.dot} />
+                <span className={styles.dot} />
+                <span className={styles.dot} />
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Partner muted indicator */}
+        {partner && !partnerMedia?.audio && (
+          <div className={styles.remoteMuteBadge}>
+            <MicOff size={13} />
+          </div>
+        )}
+      </div>
+
+      {/* ── LOCAL PANE (right/bottom — 50%) ─── */}
+      <div className={styles.localView}>
+        <video
+          ref={localVideoRef}
+          className={`${styles.videoBase} ${styles.mirrored}`}
+          autoPlay
+          playsInline
+          muted
+          style={{ display: localVideoOn ? 'block' : 'none' }}
+        />
+
+        {!localVideoOn && (
+          <div className={styles.cameraOffOverlay}>
+            <div className={styles.cameraOffIcon}>
+              <VideoOff size={32} className={styles.cameraOffSvg} />
+            </div>
+            <span className={styles.cameraOffText}>Camera Suspended</span>
+          </div>
+        )}
+
+        {!localAudioOn && (
+          <div className={styles.muteIndicator}>
+            <MicOff size={14} className={styles.muteIcon} />
+          </div>
+        )}
+
+        {/* YOU label */}
+        <div className={styles.paneLabel}>YOU</div>
+      </div>
+
+      {/* ── CONTROL UI (fades on idle) ─── */}
+      <div className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}>
+
+        {/* Partner info bar */}
+        {partner && (
+          <div className={styles.partnerBar}>
+            <div className={styles.partnerInfo}>
+              <div className={styles.partnerAvatar}>
+                {(partner.userName || '?').charAt(0).toUpperCase()}
+              </div>
+              <span className={styles.partnerName}>
+                {partner.userName || 'Anonymous'}
+              </span>
+            </div>
+            <button
+              onClick={handleOpenReport}
+              className={styles.reportBtn}
+              title="Report User"
+            >
+              <Flag size={13} />
+              <span>Report</span>
+            </button>
+          </div>
+        )}
+
+        {/* Status pill */}
+        <div className={styles.statusPill}>
+          <div className={`${styles.statusDot} ${isConnected ? styles.statusConnected : styles.statusSearching}`} />
+          <span className={styles.statusText}>
+            {isConnected
+              ? `Live Hub · ${roomId || '—'}`
+              : searching
+                ? 'Searching Mesh…'
+                : 'Waiting…'}
+          </span>
+          <div className={styles.statusDivider} />
+          <Activity size={12} className={styles.statusActivity} />
+        </div>
+
+        {/* Main island */}
+        <div className={styles.mainIsland}>
+          {/* Media controls */}
+          <div className={styles.controlsLeft}>
+            <button
+              onClick={handleToggleVideo}
+              className={`${styles.controlBtn} ${!localVideoOn ? styles.btnDanger : styles.btnDefault}`}
+              title={localVideoOn ? 'Turn off camera' : 'Turn on camera'}
+            >
+              {localVideoOn ? <Video size={20} /> : <VideoOff size={20} />}
+            </button>
+            <button
+              onClick={handleToggleAudio}
+              className={`${styles.controlBtn} ${!localAudioOn ? styles.btnDanger : styles.btnDefault}`}
+              title={localAudioOn ? 'Mute mic' : 'Unmute mic'}
+            >
+              {localAudioOn ? <Mic size={20} /> : <MicOff size={20} />}
+            </button>
+          </div>
+
+          {/* Next / Skip */}
+          <button
+            onClick={handleNext}
+            disabled={nextLoading}
+            className={styles.nextBtn}
+          >
+            {nextLoading
+              ? <Loader size={18} className={styles.spinner} />
+              : <Zap    size={18} className={styles.zapIcon}  />
+            }
+            <span>{nextLoading ? 'Wait' : 'Next'}</span>
+          </button>
+
+          {/* Utility controls */}
+          <div className={styles.controlsRight}>
+            <button
+              onClick={handleOpenReport}
+              className={`${styles.controlBtn} ${styles.btnReport}`}
+              title="Report User"
+            >
+              <Flag size={19} />
+            </button>
+            <button
+              onClick={handleLeave}
+              className={`${styles.controlBtn} ${styles.btnDanger} ${styles.btnLeave}`}
+              title="Leave call"
+            >
+              <PhoneOff size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── OVERLAYS ─── */}
+      {(searching || autoSearchCountdown !== null) && (
+        <div className={styles.overlay}>
+          {autoSearchCountdown !== null ? (
+            <div className={styles.countdownOverlay}>
+              <div className={styles.countdownText}>{autoSearchCountdown}</div>
+              <div className={styles.encryptionBadge}>
+                <Shield size={16} className={styles.shieldIcon} />
+                <span className={styles.encryptionText}>Encryption Linked</span>
+              </div>
+              <button
+                onClick={handleCancelAutoSearch}
+                className={styles.terminateBtn}
+              >
+                Terminate Session
+              </button>
+            </div>
+          ) : (
+            <div className={styles.searchingOverlay}>
+              <div className={styles.spinnerContainer}>
+                <div className={styles.spinnerOuter} />
+                <div className={styles.spinnerInner} />
+              </div>
+              <div className={styles.synchronizingText}>Synchronizing</div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── 5. BACKGROUND AMBIENT ─────────────────────────────────────────── */}
-      <div className="cs-ambient-grid" />
-      <div className="cs-ambient-glow cs-glow-primary" />
-      <div className="cs-ambient-glow cs-glow-secondary" />
-
+      {/* ── REPORT MODAL ─── */}
+      {showReport && (
+        <ReportModal
+          partner={partner}
+          socket={socket}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 };
