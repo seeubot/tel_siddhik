@@ -13,7 +13,6 @@ import styles from './CallScreen.module.css';
 
 const CallScreen = ({
   partner = null,
-  roomId = "BR-772-XP",
   localVideoRef,
   remoteVideoRef,
   audioEnabled = true,
@@ -27,28 +26,52 @@ const CallScreen = ({
   onLeave = () => {},
   onCancelAutoSearch = () => {},
   onFindRandomPeer = () => {},
-  onReport = () => {},  // NEW: Report handler
+  onReport = () => {},
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
-  const mouseMoveTimerRef = useRef(null);
+  const hideTimerRef = useRef(null);
 
   const isRemoteConnected = !!partner && (partnerMedia?.video !== false);
 
-  // Auto-hide UI interaction logic
-  useEffect(() => {
-    const handleInteraction = () => {
-      setUiVisible(true);
-      clearTimeout(mouseMoveTimerRef.current);
-      mouseMoveTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
-    };
-    window.addEventListener('mousemove', handleInteraction);
-    window.addEventListener('touchstart', handleInteraction);
-    return () => {
-      window.removeEventListener('mousemove', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
-    };
+  // Touch/Click to toggle UI visibility
+  const handleScreenTap = useCallback(() => {
+    setUiVisible(prev => !prev);
   }, []);
+
+  // Auto-hide UI after 4 seconds of inactivity
+  useEffect(() => {
+    if (!uiVisible) return;
+    
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      setUiVisible(false);
+    }, 4000);
+
+    return () => clearTimeout(hideTimerRef.current);
+  }, [uiVisible]);
+
+  // Reset timer on user interaction
+  useEffect(() => {
+    const resetTimer = () => {
+      if (!uiVisible) {
+        setUiVisible(true);
+      }
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => {
+        setUiVisible(false);
+      }, 4000);
+    };
+
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('touchmove', resetTimer);
+    
+    return () => {
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('touchmove', resetTimer);
+      clearTimeout(hideTimerRef.current);
+    };
+  }, [uiVisible]);
 
   const handleNextClick = () => {
     if (isConnecting) return;
@@ -61,7 +84,7 @@ const CallScreen = ({
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onClick={handleScreenTap}>
       <div className={styles.noiseLayer} />
 
       {/* REMOTE VIEW */}
@@ -114,38 +137,13 @@ const CallScreen = ({
       </div>
 
       {/* CONTROL INTERFACE */}
-      <div className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}>
+      <div 
+        className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         
-        {/* Partner Info Bar */}
-        {partner && (
-          <div className={styles.partnerBar}>
-            <div className={styles.partnerInfo}>
-              <div className={styles.partnerAvatar}>
-                {(partner.userName || '?').charAt(0).toUpperCase()}
-              </div>
-              <span className={styles.partnerName}>
-                {partner.userName || 'Anonymous'}
-              </span>
-            </div>
-            <button 
-              onClick={onReport} 
-              className={styles.reportBtn}
-              title="Report User"
-            >
-              <Flag size={14} />
-              <span>Report</span>
-            </button>
-          </div>
-        )}
-
-        <div className={styles.statusPill}>
-          <div className={`${styles.statusDot} ${isRemoteConnected ? styles.statusConnected : styles.statusSearching}`} />
-          <span className={styles.statusText}>
-            {isRemoteConnected ? `Live Hub • ${roomId}` : 'Searching Mesh...'}
-          </span>
-          <div className={styles.statusDivider} />
-          <Activity size={12} className="text-white/20" />
-        </div>
+        {/* Connection Status Indicator */}
+        <div className={`${styles.statusIndicator} ${isRemoteConnected ? styles.statusConnected : styles.statusSearching}`} />
 
         <div className={styles.mainIsland}>
           {/* Media Controls */}
@@ -153,12 +151,14 @@ const CallScreen = ({
             <button 
               onClick={onToggleVideo}
               className={`${styles.controlBtn} ${!videoEnabled ? styles.btnDanger : styles.btnDefault}`}
+              aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
             >
               {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
             </button>
             <button 
               onClick={onToggleAudio}
               className={`${styles.controlBtn} ${!audioEnabled ? styles.btnDanger : styles.btnDefault}`}
+              aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
             >
               {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
             </button>
@@ -178,24 +178,40 @@ const CallScreen = ({
             <span>{isConnecting ? 'Wait' : 'Next'}</span>
           </button>
 
-          {/* Utility Controls */}
+          {/* Right Controls */}
           <div className={styles.controlsRight}>
-            {/* Report button in main island too (mobile-friendly) */}
+            {/* Mobile Report Button */}
             <button 
               onClick={onReport}
-              className={`${styles.controlBtn} ${styles.btnReport}`}
-              title="Report User"
+              className={styles.reportBtnMobile}
+              aria-label="Report user"
             >
-              <Flag size={19} />
+              <Flag size={18} />
             </button>
+            
+            {/* Leave Button */}
             <button 
               onClick={onLeave}
-              className={`${styles.controlBtn} ${styles.btnDanger} ${styles.btnLeave}`}
+              className={`${styles.controlBtn} ${styles.btnLeave}`}
+              aria-label="Leave call"
             >
               <PhoneOff size={20} />
             </button>
           </div>
         </div>
+
+        {/* Report Section - Only show when connected */}
+        {partner && (
+          <div className={styles.reportSection}>
+            <button 
+              onClick={onReport}
+              className={styles.reportBtn}
+            >
+              <Flag size={14} />
+              <span>Report User</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* OVERLAYS */}
