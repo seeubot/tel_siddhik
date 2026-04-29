@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles } from 'lucide-react';
+import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield } from 'lucide-react';
 import styles from './Lobby.module.css';
 
 /**
- * Lobby Component
- * Premium dating-style entrance UI with romantic/flirty aesthetics
+ * Lobby Component - Fully Responsive Dating App Style
  */
 export default function Lobby({
   oreyId, oreyIdExpiry,
@@ -19,7 +18,6 @@ export default function Lobby({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {
-      // Fallback
       const el = document.createElement('textarea');
       el.value = oreyId;
       document.body.appendChild(el);
@@ -33,14 +31,14 @@ export default function Lobby({
 
   const handleConnect = () => {
     const trimmed = targetId.trim().toUpperCase();
-    if (trimmed.length === 8) onConnectById(trimmed);
+    const formattedId = trimmed.startsWith('OREY-') ? trimmed : `OREY-${trimmed}`;
+    if (formattedId.length === 10) onConnectById(formattedId); // OREY-XXXXX = 10 chars
   };
 
   const expiryStr = oreyIdExpiry
     ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
 
-  // Flirty taglines that rotate
   const taglines = [
     "Your next favorite person is one click away",
     "Swipe right on serendipity",
@@ -48,28 +46,29 @@ export default function Lobby({
     "Real vibes. Real people. Real moments.",
     "Less swiping, more sparking ✨",
     "Your vibe attracts your tribe",
-    "Manifesting your meet-cute"
+    "Manifesting your meet-cute 💕"
   ];
   
   const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
 
   return (
     <div className={styles.root}>
-      {/* Animated background elements */}
+      {/* Animated background */}
       <div className={styles.gradientOrb1} />
       <div className={styles.gradientOrb2} />
-      <div className={styles.floatingHearts}>
-        <Heart className={styles.heart1} size={20} />
-        <Heart className={styles.heart2} size={16} />
-        <Heart className={styles.heart3} size={24} />
-        <Sparkles className={styles.sparkle1} size={16} />
-        <Sparkles className={styles.sparkle2} size={20} />
-      </div>
       <div className={styles.gridOverlay} />
+      
+      {/* Floating elements */}
+      <div className={styles.floatingElements}>
+        <Heart className={styles.floatingIcon1} size={16} />
+        <Heart className={styles.floatingIcon2} size={12} />
+        <Sparkles className={styles.floatingIcon3} size={14} />
+        <Sparkles className={styles.floatingIcon4} size={18} />
+      </div>
 
       <div className={styles.container}>
-        {/* Hero Section */}
-        <div className={styles.heroSection}>
+        {/* Logo & Hero */}
+        <div className={styles.hero}>
           <div className={styles.logoWrapper}>
             <div className={styles.logoGlow} />
             <h1 className={styles.logo}>
@@ -77,110 +76,101 @@ export default function Lobby({
             </h1>
           </div>
           
-          <p className={styles.mainTagline}>
-            {randomTagline}
-          </p>
+          <p className={styles.tagline}>{randomTagline}</p>
           
-          <div className={styles.subtitleWrapper}>
-            <span className={styles.subtitleDivider}>✦</span>
-            <p className={styles.subtitle}>
-              Mana People • Mana Vibes
-            </p>
-            <span className={styles.subtitleDivider}>✦</span>
+          <div className={styles.brandMotto}>
+            <span className={styles.divider}>✦</span>
+            <span>Mana People • Mana Vibes</span>
+            <span className={styles.divider}>✦</span>
           </div>
         </div>
 
-        {/* ID Card */}
-        <div className={styles.glassCard}>
+        {/* Your ID Card */}
+        <div className={styles.card}>
           <div className={styles.idSection}>
             <div className={styles.idHeader}>
-              <div className={styles.idBadge}>
-                <Sparkles size={14} />
+              <div className={styles.badge}>
+                <Sparkles size={12} />
                 <span>Your Connection Code</span>
               </div>
               {expiryStr && (
-                <span className={styles.expiryPill}>
+                <span className={styles.expiryBadge}>
                   ⏳ {expiryStr}
                 </span>
               )}
             </div>
             
             <div className={styles.idDisplay}>
-              <span className={styles.idNumber}>
-                {oreyId ? oreyId.match(/.{1,4}/g).join(' ') : '···· ····'}
-              </span>
+              <code className={styles.idText}>
+                {oreyId || 'OREY-·····'}
+              </code>
               <button 
-                className={`${styles.copyButton} ${copied ? styles.copied : ''}`} 
+                className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} 
                 onClick={copyId}
                 title="Copy ID"
               >
-                {copied ? <Check size={20} /> : <Copy size={20} />}
+                {copied ? <Check size={18} /> : <Copy size={18} />}
               </button>
             </div>
             
-            <p className={styles.idHint}>
-              Share this code with someone special ✨
-            </p>
+            <p className={styles.idHint}>Share this code with someone special ✨</p>
           </div>
         </div>
 
-        {/* Main Actions */}
-        <div className={styles.actionSection}>
+        {/* Main Action */}
+        <div className={styles.actions}>
           {!searching ? (
-            <button className={styles.discoverButton} onClick={onDiscover}>
-              <Heart size={24} fill="currentColor" className={styles.heartIcon} />
-              <span className={styles.buttonText}>
-                Find Your Match
-              </span>
-              <Sparkles size={20} className={styles.buttonSparkle} />
+            <button className={styles.discoverBtn} onClick={onDiscover}>
+              <Heart size={20} fill="currentColor" className={styles.heartBeat} />
+              <span>Find Your Match</span>
+              <Sparkles size={16} />
             </button>
           ) : (
             <div className={styles.searchingContainer}>
-              <div className={styles.searchingStatus}>
+              <div className={styles.searchingBox}>
                 <div className={styles.searchingAnimation}>
-                  <Loader2 size={24} className={styles.spinnerIcon} />
-                  <div className={styles.searchingDots}>
+                  <Loader2 size={20} className={styles.spinner} />
+                  <div className={styles.dots}>
                     <span>.</span><span>.</span><span>.</span>
                   </div>
                 </div>
-                <p className={styles.searchingText}>
-                  Finding your vibe match
-                </p>
-                <p className={styles.searchingSubtext}>
-                  Someone amazing is nearby...
-                </p>
+                <p className={styles.searchingTitle}>Finding your vibe match</p>
+                <p className={styles.searchingSub}>Someone amazing is nearby...</p>
               </div>
-              <button className={styles.cancelButton} onClick={onCancelSearch}>
-                Cancel
+              <button className={styles.cancelBtn} onClick={onCancelSearch}>
+                Cancel Search
               </button>
             </div>
           )}
         </div>
 
         {/* Direct Connect */}
-        <div className={styles.glassCard}>
-          <div className={styles.directSection}>
-            <div className={styles.directHeader}>
-              <Hash size={16} className={styles.hashIcon} />
+        <div className={styles.card}>
+          <div className={styles.connectSection}>
+            <div className={styles.connectHeader}>
+              <Hash size={14} className={styles.accentIcon} />
               <span>Have a code?</span>
             </div>
             
             <div className={styles.connectInputGroup}>
-              <input
-                className={styles.codeInput}
-                type="text"
-                placeholder="Enter 8-digit code"
-                maxLength={8}
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value.toUpperCase())}
-              />
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputPrefix}>OREY-</span>
+                <input
+                  className={styles.codeInput}
+                  type="text"
+                  placeholder="XXXXX"
+                  maxLength={5}
+                  value={targetId.replace('OREY-', '')}
+                  onChange={(e) => setTargetId(e.target.value.toUpperCase().replace('OREY-', ''))}
+                />
+              </div>
               <button
-                className={`${styles.connectButton} ${targetId.length === 8 ? styles.active : ''}`}
+                className={`${styles.connectBtn} ${targetId.length === 5 ? styles.connectBtnActive : ''}`}
                 onClick={handleConnect}
-                disabled={targetId.length !== 8}
+                disabled={targetId.length !== 5}
               >
                 Connect
-                <Heart size={16} />
+                <Heart size={14} />
               </button>
             </div>
             
@@ -192,9 +182,9 @@ export default function Lobby({
 
         {/* Footer */}
         <footer className={styles.footer}>
-          <div className={styles.footerContent}>
-            <span className={styles.footerIcon}>🔒</span>
-            <p>Encrypted • Private • Real Connections</p>
+          <div className={styles.footerRow}>
+            <Shield size={12} />
+            <span>Encrypted • Private • Real Connections</span>
           </div>
           <p className={styles.footerMotto}>
             No screenshots. No recordings. Just vibes.
