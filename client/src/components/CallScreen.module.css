@@ -236,7 +236,7 @@
   color: #f87171;
 }
 
-/* Partner Status Badges */
+/* Partner Muted Badge */
 .partnerMutedBadge {
   position: absolute;
   top: 1rem;
@@ -256,112 +256,6 @@
   font-size: 0.7rem;
   font-weight: 700;
   color: #f87171;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-/* Animated Heart Connection Badge */
-.heartBadge {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  backdrop-filter: blur(20px);
-  border-radius: 100px;
-  z-index: 10;
-  transition: all 0.5s ease;
-}
-
-.heartEmpty {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.heartFilling {
-  background: rgba(255, 45, 85, 0.1);
-  border: 1px solid rgba(255, 45, 85, 0.3);
-}
-
-.heartFull {
-  background: rgba(255, 45, 85, 0.15);
-  border: 1px solid rgba(255, 45, 85, 0.4);
-}
-
-.heartBroken {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.heartContainer {
-  position: relative;
-}
-
-.heartIcon {
-  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.heartIcon.empty {
-  color: rgba(255, 255, 255, 0.3);
-  animation: heartbeatEmpty 2s ease-in-out infinite;
-}
-
-.heartIcon.filling {
-  color: #FF2D55;
-  animation: heartFill 1.5s ease-out forwards;
-}
-
-.heartIcon.full {
-  color: #FF2D55;
-  animation: heartbeatFull 1.5s ease-in-out infinite;
-}
-
-.heartIcon.broken {
-  color: #ef4444;
-  animation: heartBreak 0.6s ease-out forwards;
-}
-
-@keyframes heartFill {
-  0% { 
-    transform: scale(1); 
-    fill: none;
-  }
-  50% {
-    transform: scale(1.3);
-    fill: rgba(255, 45, 85, 0.5);
-  }
-  100% {
-    transform: scale(1);
-    fill: currentColor;
-  }
-}
-
-@keyframes heartbeatFull {
-  0%, 100% { transform: scale(1); }
-  10% { transform: scale(1.15); }
-  20% { transform: scale(1); }
-  30% { transform: scale(1.15); }
-  40% { transform: scale(1); }
-}
-
-@keyframes heartbeatEmpty {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.1); opacity: 0.6; }
-}
-
-@keyframes heartBreak {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.2) rotate(0deg); }
-  60% { transform: scale(1) rotate(-10deg); opacity: 1; }
-  100% { transform: scale(0.8) rotate(0deg); opacity: 0.5; }
-}
-
-.heartText {
-  font-size: 0.7rem;
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -555,63 +449,40 @@
   transform: scale(0.95);
 }
 
-/* Next Match Button */
-.nextBtn {
-  position: relative;
+/* Skip Button - White Style */
+.skipBtn {
+  width: clamp(2.5rem, 10vw, 3rem);
+  height: clamp(2.5rem, 10vw, 3rem);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  height: clamp(2.5rem, 10vw, 3rem);
-  min-width: clamp(90px, 25vw, 120px);
-  padding: 0 clamp(0.75rem, 3vw, 1.25rem);
-  margin: 0 0.5rem;
-  border-radius: 30px;
-  background: linear-gradient(135deg, #FF2D55 0%, #FF6B8A 100%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: clamp(0.7rem, 2.5vw, 0.8rem);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(255, 45, 85, 0.3);
-  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 0.5rem;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
 }
 
-.nextBtn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
-  transform: translateX(-100%);
-  transition: transform 0.5s;
+.skipBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
-.nextBtn:hover:not(:disabled)::before {
-  transform: translateX(100%);
-}
-
-.nextBtn:hover:not(:disabled) {
-  box-shadow: 0 6px 30px rgba(255, 45, 85, 0.4);
-  transform: translateY(-1px);
-}
-
-.nextBtn:active:not(:disabled) {
+.skipBtn:active:not(:disabled) {
   transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.nextBtn:disabled {
+.skipBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-}
-
-.heartBeat {
-  animation: heartbeatFull 1.5s ease-in-out infinite;
 }
 
 .spinner {
@@ -1057,13 +928,7 @@
   .floatHeart2,
   .floatSparkle1,
   .floatSparkle2,
-  .orbitRing,
-  .heartIcon,
-  .heartBeat {
+  .orbitRing {
     animation: none !important;
-  }
-  
-  .heartIcon.filling {
-    fill: currentColor;
   }
 }
