@@ -2,13 +2,13 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
   Zap, PhoneOff, Loader, 
-  Flag, Shield, VolumeX
+  Flag, Shield, VolumeX, Heart, Sparkles
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
- * Orey! Pro - Call Screen Component
- * Refined peer-to-peer video interface with CSS Module support.
+ * Orey! - Call Screen Component
+ * Dating app themed video interface with romantic aesthetics
  */
 
 const CallScreen = ({
@@ -86,7 +86,18 @@ const CallScreen = ({
 
   return (
     <div className={styles.container} onClick={handleScreenTap}>
+      {/* Background Ambient Effects */}
+      <div className={styles.gradientOrb1} />
+      <div className={styles.gradientOrb2} />
       <div className={styles.noiseLayer} />
+      
+      {/* Floating Romantic Elements */}
+      <div className={styles.floatingElements}>
+        <Heart className={styles.floatHeart1} size={16} />
+        <Heart className={styles.floatHeart2} size={12} />
+        <Sparkles className={styles.floatSparkle1} size={14} />
+        <Sparkles className={styles.floatSparkle2} size={18} />
+      </div>
 
       {/* REMOTE VIEW */}
       <div className={styles.remoteView}>
@@ -102,13 +113,28 @@ const CallScreen = ({
         {isPartnerMuted && isRemoteConnected && (
           <div className={styles.partnerMutedBadge}>
             <VolumeX size={14} />
-            <span className={styles.partnerMutedText}>Muted</span>
+            <span className={styles.partnerMutedText}>Partner Muted</span>
+          </div>
+        )}
+
+        {/* Connection Status */}
+        {isRemoteConnected && !isPartnerMuted && (
+          <div className={styles.connectedBadge}>
+            <Heart size={12} className={styles.heartIcon} />
+            <span>Connected</span>
           </div>
         )}
 
         {!isRemoteConnected && !searching && (
           <div className={styles.placeholder}>
-            <div className={styles.brandText}>Orey!</div>
+            <div className={styles.logoWrapper}>
+              <div className={styles.logoGlow} />
+              <div className={styles.brandText}>Orey!</div>
+            </div>
+            <div className={styles.waitingText}>
+              <Sparkles size={16} className={styles.sparkleIcon} />
+              Waiting for someone special...
+            </div>
             <div className={styles.loadingDots}>
               <span className={styles.dot} />
               <span className={styles.dot} />
@@ -131,16 +157,19 @@ const CallScreen = ({
         
         {!videoEnabled && (
           <div className={styles.cameraOffOverlay}>
-            <div className={styles.cameraOffIcon}>
-              <VideoOff size={32} className="text-white/10" />
+            <div className={styles.cameraOffIconWrapper}>
+              <div className={styles.cameraOffIcon}>
+                <VideoOff size={28} />
+              </div>
             </div>
-            <span className={styles.cameraOffText}>Camera Suspended</span>
+            <span className={styles.cameraOffText}>Camera Off</span>
+            <p className={styles.cameraOffSubtext}>Turn on camera to share your vibe</p>
           </div>
         )}
 
-        {!audioEnabled && (
+        {!audioEnabled && videoEnabled && (
           <div className={styles.muteIndicator}>
-            <MicOff size={14} className="text-red-500" />
+            <MicOff size={14} />
           </div>
         )}
       </div>
@@ -171,18 +200,23 @@ const CallScreen = ({
 
           <div className={styles.divider} />
 
-          {/* Next / Skip Button */}
+          {/* Next / Find Match Button */}
           <button
             onClick={handleNextClick}
             disabled={isConnecting}
             className={styles.nextBtn}
           >
             {isConnecting ? (
-              <Loader size={16} className={styles.spinner} />
+              <>
+                <Loader size={16} className={styles.spinner} />
+                <span>Finding...</span>
+              </>
             ) : (
-              <Zap size={16} className={styles.zapIcon} />
+              <>
+                <Heart size={16} fill="currentColor" className={styles.heartBeat} />
+                <span>Next Match</span>
+              </>
             )}
-            <span>{isConnecting ? 'Wait' : 'Next'}</span>
           </button>
 
           <div className={styles.divider} />
@@ -193,7 +227,7 @@ const CallScreen = ({
             className={`${styles.controlBtn} ${styles.btnReport}`}
             aria-label="Report user"
           >
-            <Flag size={18} />
+            <Flag size={16} />
           </button>
 
           {/* Leave */}
@@ -202,7 +236,7 @@ const CallScreen = ({
             className={`${styles.controlBtn} ${styles.btnLeave}`}
             aria-label="Leave call"
           >
-            <PhoneOff size={18} />
+            <PhoneOff size={16} />
           </button>
         </div>
       </div>
@@ -210,24 +244,38 @@ const CallScreen = ({
       {/* OVERLAYS */}
       {(searching || autoSearchCountdown !== null) && (
         <div className={styles.overlay}>
+          <div className={styles.overlayGradient} />
+          
           {autoSearchCountdown !== null ? (
             <div className={styles.countdownOverlay}>
               <div className={styles.countdownText}>{autoSearchCountdown}</div>
               <div className={styles.encryptionBadge}>
-                <Shield size={16} className="text-pink-500" />
-                <span className={styles.encryptionText}>Encryption Linked</span>
+                <Shield size={16} className={styles.shieldIcon} />
+                <span className={styles.encryptionText}>Secure Connection Ready</span>
+                <Heart size={12} className={styles.heartSmall} />
               </div>
               <button onClick={onCancelAutoSearch} className={styles.terminateBtn}>
-                Terminate Session
+                Cancel
               </button>
             </div>
           ) : (
             <div className={styles.searchingOverlay}>
-              <div className={styles.spinnerContainer}>
-                <div className={styles.spinnerOuter} />
-                <div className={styles.spinnerInner} />
+              <div className={styles.searchingAnimation}>
+                <div className={styles.orbitingHearts}>
+                  <div className={styles.orbitRing}>
+                    <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
+                    <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
+                    <Heart size={14} className={styles.orbitHeart3} fill="currentColor" />
+                  </div>
+                  <div className={styles.spinnerCenter}>
+                    <Loader size={32} className={styles.spinnerIcon} />
+                  </div>
+                </div>
               </div>
-              <div className={styles.synchronizingText}>Synchronizing</div>
+              <div className={styles.searchingTextContainer}>
+                <div className={styles.synchronizingText}>Finding Your Match</div>
+                <p className={styles.searchingSubtext}>Someone amazing is nearby...</p>
+              </div>
             </div>
           )}
         </div>
