@@ -39,8 +39,8 @@ const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_SEARCH_DELAY_MS = 5000;
 const API_KEY = process.env.API_KEY || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
-const AUTO_BAN_THRESHOLD = 3; // 3 reports trigger auto-ban
-const HIGH_PRIORITY_BAN_THRESHOLD = 2; // 2 high-priority reports = permanent ban
+const AUTO_BAN_THRESHOLD = 3;
+const HIGH_PRIORITY_BAN_THRESHOLD = 2;
 const DEFAULT_BAN_DURATION_HOURS = 720;
 
 const VIDEO_QUALITY = {
@@ -67,8 +67,8 @@ const reports = new Map();
 const userReportCount = new Map();
 const userHighPriorityReportCount = new Map();
 const reporterHistory = new Map();
+const notificationSubscriptions = new Map();
 
-// Enhanced high-priority reasons for dating app safety
 const HIGH_PRIORITY_REASONS = [
   'Nudity / Sexual Content',
   'Sexual Harassment',
@@ -78,7 +78,6 @@ const HIGH_PRIORITY_REASONS = [
   'Child Safety Concern'
 ];
 
-// Regular report reasons
 const REGULAR_REASONS = [
   'Inappropriate Behavior',
   'Spam / Bot',
@@ -95,6 +94,7 @@ let notifications = [
     message: "Start video calling with friends using Orey-ID. Share your Orey-XXXXX code to connect!",
     type: "info",
     priority: "normal",
+    targetPlatform: "all",
     timestamp: new Date().toISOString(),
     actionUrl: "/welcome",
     icon: "🎉",
@@ -130,7 +130,6 @@ let appConfig = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function generateOreyId() { 
-  // Format: Orey-XXXXX (5 alphanumeric characters)
   return 'Orey-' + uuidv4().replace(/-/g, '').substring(0, 5).toUpperCase(); 
 }
 
@@ -259,7 +258,6 @@ function banDeviceAndDisconnect(deviceId, banInfo) {
   console.log(`📋 Ban reason: ${banInfo.reason}`);
   console.log(`⏰ Ban duration: ${banInfo.permanent ? 'PERMANENT' : `${banInfo.durationHours} hours`}`);
   
-  // Clean up queues and rooms for banned device
   for (const socketId of socketsToDisconnect) {
     removeFromQueue(socketId);
     cancelAutoSearch(socketId);
@@ -284,7 +282,6 @@ function banDeviceAndDisconnect(deviceId, banInfo) {
 }
 
 function validateOreyId(id) {
-  // Accept both formats: "Orey-XXXXX" or just "XXXXX"
   const cleanId = id.toUpperCase().trim();
   if (cleanId.startsWith('OREY-')) {
     return cleanId.length === 10 ? cleanId : null;
@@ -319,6 +316,7 @@ app.get('/health', (_req, res) => {
     bannedDevices: bannedDevices.size, 
     totalReports: reports.size,
     activeBans: [...bannedDevices.values()].filter(b => !b.expiresAt || b.expiresAt > Date.now()).length,
+    notificationSubscriptions: notificationSubscriptions.size,
     memory: process.memoryUsage().heapUsed / 1024 / 1024 
   });
 });
@@ -359,9 +357,26 @@ app.get('/api/version', (req, res) => {
   );
 });
 
+// ─── 🆕 Enhanced Notification Endpoints ─────────────────────────────────────
+
 app.get('/api/notifications', (req, res) => {
   const lastId = parseInt(req.query.after_id) || 0;
+  const deviceId = req.query.device_id;
+  const platform = req.query.platform || 'all';
+  
+  if (deviceId) {
+    notificationSubscriptions.set(deviceId, {
+      lastCheck: new Date().toISOString(),
+      platform: platform
+    });
+  }
+  
   let filtered = notifications.filter(n => n.id > lastId);
+  
+  if (platform !== 'all') {
+    filtered = filtered.filter(n => !n.targetPlatform || n.targetPlatform === platform || n.targetPlatform === 'all');
+  }
+  
   const now = new Date();
   filtered = filtered.filter(n => {
     if (n.expiresIn) { 
@@ -371,11 +386,63 @@ app.get('/api/notifications', (req, res) => {
     }
     return true;
   });
+  
   res.json({ 
+    success: true,
     notifications: filtered, 
-    total: notifications.length, 
-    unread: notifications.filter(n => !n.isRead).length, 
-    lastSync: new Date().toISOString() 
+    total: filtered.length, 
+    unread: filtered.filter(n => !n.isRead).length,
+    serverTime: new Date().toISOString(),
+    lastId: filtered.length > 0 ? Math.max(...filtered.map(n => n.id)) : lastId
+  });
+});
+
+app.get('/api/notifications/latest', verifyApiKey, (req, res) => {
+  const deviceId = req.query.device_id;
+  const lastCheck = req.query.last_check;
+  const platform = req.query.platform || 'android';
+  
+  if (!deviceId) {
+    return res.status(400).json({ error: 'device_id is required' });
+  }
+  
+  notificationSubscriptions.set(deviceId, {
+    lastCheck: new Date().toISOString(),
+    platform: platform,
+    lastSeen: lastCheck
+  });
+  
+  let relevantNotifications = notifications.filter(n => {
+    const notifTime = new Date(n.timestamp).getTime();
+    const lastCheckTime = lastCheck ? new Date(lastCheck).getTime() : 0;
+    return notifTime > lastCheckTime;
+  });
+  
+  const now = new Date();
+  relevantNotifications = relevantNotifications.filter(n => {
+    if (n.expiresIn) {
+      const expiry = new Date(n.timestamp);
+      expiry.setDate(expiry.getDate() + n.expiresIn);
+      return now <= expiry;
+    }
+    return true;
+  });
+  
+  relevantNotifications.sort((a, b) => {
+    if (a.priority === 'high' && b.priority !== 'high') return -1;
+    if (a.priority !== 'high' && b.priority === 'high') return 1;
+    return b.id - a.id;
+  });
+  
+  res.json({
+    success: true,
+    notifications: relevantNotifications,
+    count: relevantNotifications.length,
+    serverTime: new Date().toISOString(),
+    serverConfig: {
+      pollInterval: 15000,
+      maxNotifications: 10
+    }
   });
 });
 
@@ -503,14 +570,13 @@ app.post('/api/report', verifyApiKey, (req, res) => {
   let autoBanned = false, banInfo = null;
   const highPriorityCount = userHighPriorityReportCount.get(reportedDeviceId) || 0;
   
-  // Check auto-ban conditions
   const shouldAutoBan = (
-    (isHighPriority && highPriorityCount >= HIGH_PRIORITY_BAN_THRESHOLD) || // 2 high-priority reports
-    (!isHighPriority && currentCount >= AUTO_BAN_THRESHOLD) // 3 regular reports
+    (isHighPriority && highPriorityCount >= HIGH_PRIORITY_BAN_THRESHOLD) ||
+    (!isHighPriority && currentCount >= AUTO_BAN_THRESHOLD)
   );
   
   if (shouldAutoBan && appConfig.safety.autoBanEnabled) {
-    const banDuration = isHighPriority ? 0 : DEFAULT_BAN_DURATION_HOURS; // Permanent for high-priority
+    const banDuration = isHighPriority ? 0 : DEFAULT_BAN_DURATION_HOURS;
     banInfo = { 
       reason: isHighPriority 
         ? `Auto-banned (HIGH PRIORITY): ${highPriorityCount} reports for "${reason}"` 
@@ -524,7 +590,6 @@ app.post('/api/report', verifyApiKey, (req, res) => {
       reportIds: [] 
     };
     
-    // Update all related reports
     for (const [rId, r] of reports.entries()) { 
       if (r.reportedDeviceId === reportedDeviceId) { 
         banInfo.reportIds.push(rId); 
@@ -556,7 +621,7 @@ app.post('/api/report', verifyApiKey, (req, res) => {
   });
 });
 
-// ─── Admin Notification Endpoints ───────────────────────────────────────────
+// ─── 🆕 Admin Notification Endpoints ────────────────────────────────────────
 app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
   res.json({ 
     notifications, 
@@ -573,7 +638,7 @@ app.get('/admin/notifications', verifyAdminKey, (_req, res) => {
 });
 
 app.post('/admin/notifications', verifyAdminKey, (req, res) => {
-  const { title, message, type, priority, actionUrl, icon, imageUrl, expiresIn } = req.body;
+  const { title, message, type, priority, actionUrl, icon, imageUrl, expiresIn, targetPlatform } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
   
   const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1;
@@ -582,7 +647,8 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
     title, 
     message, 
     type: type || 'info', 
-    priority: priority || 'normal', 
+    priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all',
     timestamp: new Date().toISOString(), 
     actionUrl: actionUrl || '/', 
     icon: icon || '📢', 
@@ -599,6 +665,159 @@ app.post('/admin/notifications', verifyAdminKey, (req, res) => {
     notification: newNotification, 
     activeClients: io.engine.clientsCount 
   });
+});
+
+app.post('/admin/notifications/targeted', verifyAdminKey, (req, res) => {
+  const { title, message, type, priority, targetPlatform, targetDeviceIds, actionUrl, icon, imageUrl, expiresIn } = req.body;
+  
+  if (!title || !message) {
+    return res.status(400).json({ error: 'Title and message are required' });
+  }
+  
+  const newId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1;
+  const newNotification = { 
+    id: newId, 
+    title, 
+    message, 
+    type: type || 'info', 
+    priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all',
+    targetDeviceIds: targetDeviceIds || [],
+    timestamp: new Date().toISOString(), 
+    actionUrl: actionUrl || '/', 
+    icon: icon || '📢', 
+    imageUrl: imageUrl || null, 
+    isRead: false, 
+    expiresIn: expiresIn || 30 
+  };
+  
+  notifications.push(newNotification);
+  
+  if (targetDeviceIds && targetDeviceIds.length > 0) {
+    for (const [socketId, socket] of io.sockets.sockets) {
+      if (targetDeviceIds.includes(socket.data.deviceId)) {
+        socket.emit('new-notification', newNotification);
+      }
+    }
+    console.log(`📢 Targeted notification sent to ${targetDeviceIds.length} devices: "${title}"`);
+  } else {
+    io.emit('new-notification', newNotification);
+    console.log(`📢 Notification broadcast to all ${io.engine.clientsCount} clients: "${title}"`);
+  }
+  
+  res.json({ 
+    success: true, 
+    notification: newNotification,
+    targeted: targetDeviceIds && targetDeviceIds.length > 0,
+    activeClients: io.engine.clientsCount 
+  });
+});
+
+app.post('/admin/notifications/bulk', verifyAdminKey, (req, res) => {
+  const { notifications: newNotifications } = req.body;
+  
+  if (!newNotifications || !Array.isArray(newNotifications)) {
+    return res.status(400).json({ error: 'notifications array is required' });
+  }
+  
+  let lastId = notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) : 0;
+  const created = [];
+  
+  for (const notif of newNotifications) {
+    if (!notif.title || !notif.message) continue;
+    
+    lastId++;
+    const newNotification = {
+      id: lastId,
+      title: notif.title,
+      message: notif.message,
+      type: notif.type || 'info',
+      priority: notif.priority || 'normal',
+      targetPlatform: notif.targetPlatform || 'all',
+      timestamp: new Date().toISOString(),
+      actionUrl: notif.actionUrl || '/',
+      icon: notif.icon || '📢',
+      imageUrl: notif.imageUrl || null,
+      isRead: false,
+      expiresIn: notif.expiresIn || 30
+    };
+    
+    notifications.push(newNotification);
+    created.push(newNotification);
+  }
+  
+  io.emit('bulk-notifications', created);
+  console.log(`📢 ${created.length} bulk notifications sent to ${io.engine.clientsCount} clients`);
+  
+  res.json({
+    success: true,
+    created: created.length,
+    notifications: created
+  });
+});
+
+app.put('/api/notifications/:id/read', verifyApiKey, (req, res) => {
+  const id = parseInt(req.params.id);
+  const notification = notifications.find(n => n.id === id);
+  
+  if (!notification) {
+    return res.status(404).json({ error: 'Notification not found' });
+  }
+  
+  notification.isRead = true;
+  notification.readAt = new Date().toISOString();
+  notification.readBy = req.body.deviceId || 'unknown';
+  
+  res.json({
+    success: true,
+    notification: notification
+  });
+});
+
+app.put('/api/notifications/read-all', verifyApiKey, (req, res) => {
+  const deviceId = req.body.deviceId;
+  let marked = 0;
+  
+  notifications.forEach(n => {
+    if (!n.isRead) {
+      n.isRead = true;
+      n.readAt = new Date().toISOString();
+      n.readBy = deviceId || 'unknown';
+      marked++;
+    }
+  });
+  
+  res.json({
+    success: true,
+    markedAsRead: marked
+  });
+});
+
+app.get('/admin/notifications/stats', verifyAdminKey, (req, res) => {
+  const stats = {
+    total: notifications.length,
+    active: notifications.filter(n => {
+      if (n.expiresIn) {
+        const expiry = new Date(n.timestamp);
+        expiry.setDate(expiry.getDate() + n.expiresIn);
+        return new Date() <= expiry;
+      }
+      return true;
+    }).length,
+    unread: notifications.filter(n => !n.isRead).length,
+    byType: {},
+    byPriority: {},
+    subscriptions: notificationSubscriptions.size,
+    deliveredCount: 0
+  };
+  
+  notifications.forEach(n => {
+    stats.byType[n.type] = (stats.byType[n.type] || 0) + 1;
+    stats.byPriority[n.priority] = (stats.byPriority[n.priority] || 0) + 1;
+    if (n.isRead) stats.deliveredCount++;
+  });
+  
+  res.json(stats);
 });
 
 app.delete('/admin/notifications/:id', verifyAdminKey, (req, res) => {
@@ -754,7 +973,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
   try { deviceId = decodeURIComponent(deviceId); } catch (e) {}
   console.log(`🔓 Unban request for: "${deviceId}"`);
   
-  // Exact match
   if (bannedDevices.has(deviceId)) {
     bannedDevices.delete(deviceId); 
     userReportCount.delete(deviceId); 
@@ -763,7 +981,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
     return res.json({ success: true, message: 'Device unbanned successfully' });
   }
   
-  // Case-insensitive match
   for (const [fullId] of bannedDevices.entries()) {
     if (fullId.toLowerCase() === deviceId.toLowerCase()) {
       bannedDevices.delete(fullId); 
@@ -774,7 +991,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
     }
   }
   
-  // Partial match
   for (const [fullId] of bannedDevices.entries()) {
     if (fullId.includes(deviceId) || deviceId.includes(fullId)) {
       bannedDevices.delete(fullId); 
@@ -785,7 +1001,6 @@ app.delete('/admin/ban-device/:deviceId', verifyAdminKey, (req, res) => {
     }
   }
   
-  // Starts-with match (for truncated IDs)
   const cleanId = deviceId.replace(/\.\.\.$/, '').replace(/[^A-Za-z0-9\-]/g, '');
   for (const [fullId] of bannedDevices.entries()) {
     if (fullId.startsWith(cleanId)) {
@@ -841,12 +1056,20 @@ app.get('/admin/stats', verifyAdminKey, (_req, res) => {
     if (info.expiresAt && Date.now() > info.expiresAt) bannedDevices.delete(deviceId); 
   }
   
+  const activeSubscribers = [...notificationSubscriptions.entries()]
+    .filter(([_, data]) => {
+      const lastCheck = new Date(data.lastCheck).getTime();
+      return (Date.now() - lastCheck) < 60000;
+    }).length;
+  
   res.json({ 
     activeConnections: io.engine.clientsCount, 
     totalOreyIds: oreyIds.size, 
     activeRooms: rooms.size, 
     queueLength: randomQueue.length, 
-    totalNotifications: notifications.length, 
+    totalNotifications: notifications.length,
+    activeNotificationSubscribers: activeSubscribers,
+    totalNotificationSubscriptions: notificationSubscriptions.size,
     bannedDevices: bannedDevices.size, 
     totalReports: reports.size, 
     pendingReports: [...reports.values()].filter(r => r.status === 'pending').length, 
@@ -1110,6 +1333,8 @@ io.on('connection', (socket) => {
     });
   });
 
+  // ... (rest of socket handlers remain the same)
+
   socket.on('join-random', () => { 
     cancelAutoSearch(socket.id); 
     removeFromQueue(socket.id); 
@@ -1296,6 +1521,26 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── 🆕 Periodic Cleanup for Expired Notifications ──────────────────────────
+setInterval(() => {
+  const now = new Date();
+  const before = notifications.length;
+  
+  notifications = notifications.filter(n => {
+    if (n.expiresIn) {
+      const expiry = new Date(n.timestamp);
+      expiry.setDate(expiry.getDate() + n.expiresIn);
+      return now <= expiry;
+    }
+    return true;
+  });
+  
+  const cleaned = before - notifications.length;
+  if (cleaned > 0) {
+    console.log(`🧹 Cleaned ${cleaned} expired notifications`);
+  }
+}, 3600000); // Run every hour
+
 // ─── Start ──────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1308,5 +1553,7 @@ server.listen(PORT, () => {
   console.log(`🚫 Auto-Ban: ${AUTO_BAN_THRESHOLD} reports (regular) | ${HIGH_PRIORITY_BAN_THRESHOLD} reports (high-priority)`);
   console.log(`🔞 High-Priority Reasons: ${HIGH_PRIORITY_REASONS.join(', ')}`);
   console.log(`🛡️ Safety Features: ${appConfig.safety.autoBanEnabled ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`🔔 Notification System: ACTIVE`);
+  console.log(`📱 Background Service Polling: READY`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
