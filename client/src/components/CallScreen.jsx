@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
   Zap, PhoneOff, Loader, 
-  Flag, Shield, Activity
+  Flag, Shield, VolumeX
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -33,6 +33,7 @@ const CallScreen = ({
   const hideTimerRef = useRef(null);
 
   const isRemoteConnected = !!partner && (partnerMedia?.video !== false);
+  const isPartnerMuted = partner && !partnerMedia?.audio;
 
   // Touch/Click to toggle UI visibility
   const handleScreenTap = useCallback(() => {
@@ -97,6 +98,14 @@ const CallScreen = ({
           style={{ display: isRemoteConnected ? 'block' : 'none' }}
         />
         
+        {/* Partner Muted Indicator */}
+        {isPartnerMuted && isRemoteConnected && (
+          <div className={styles.partnerMutedBadge}>
+            <VolumeX size={14} />
+            <span className={styles.partnerMutedText}>Muted</span>
+          </div>
+        )}
+
         {!isRemoteConnected && !searching && (
           <div className={styles.placeholder}>
             <div className={styles.brandText}>Orey!</div>
@@ -141,28 +150,26 @@ const CallScreen = ({
         className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Connection Status Indicator */}
-        <div className={`${styles.statusIndicator} ${isRemoteConnected ? styles.statusConnected : styles.statusSearching}`} />
-
         <div className={styles.mainIsland}>
-          {/* Media Controls */}
-          <div className={styles.controlsLeft}>
-            <button 
-              onClick={onToggleVideo}
-              className={`${styles.controlBtn} ${!videoEnabled ? styles.btnDanger : styles.btnDefault}`}
-              aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-            >
-              {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-            </button>
-            <button 
-              onClick={onToggleAudio}
-              className={`${styles.controlBtn} ${!audioEnabled ? styles.btnDanger : styles.btnDefault}`}
-              aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-            >
-              {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
-            </button>
-          </div>
+          {/* Microphone */}
+          <button 
+            onClick={onToggleAudio}
+            className={`${styles.controlBtn} ${!audioEnabled ? styles.btnDanger : styles.btnDefault}`}
+            aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+          >
+            {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+          </button>
+
+          {/* Camera */}
+          <button 
+            onClick={onToggleVideo}
+            className={`${styles.controlBtn} ${!videoEnabled ? styles.btnDanger : styles.btnDefault}`}
+            aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+          >
+            {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+          </button>
+
+          <div className={styles.divider} />
 
           {/* Next / Skip Button */}
           <button
@@ -171,47 +178,33 @@ const CallScreen = ({
             className={styles.nextBtn}
           >
             {isConnecting ? (
-              <Loader size={18} className={styles.spinner} />
+              <Loader size={16} className={styles.spinner} />
             ) : (
-              <Zap size={18} className={styles.zapIcon} />
+              <Zap size={16} className={styles.zapIcon} />
             )}
             <span>{isConnecting ? 'Wait' : 'Next'}</span>
           </button>
 
-          {/* Right Controls */}
-          <div className={styles.controlsRight}>
-            {/* Mobile Report Button */}
-            <button 
-              onClick={onReport}
-              className={styles.reportBtnMobile}
-              aria-label="Report user"
-            >
-              <Flag size={18} />
-            </button>
-            
-            {/* Leave Button */}
-            <button 
-              onClick={onLeave}
-              className={`${styles.controlBtn} ${styles.btnLeave}`}
-              aria-label="Leave call"
-            >
-              <PhoneOff size={20} />
-            </button>
-          </div>
-        </div>
+          <div className={styles.divider} />
 
-        {/* Report Section - Only show when connected */}
-        {partner && (
-          <div className={styles.reportSection}>
-            <button 
-              onClick={onReport}
-              className={styles.reportBtn}
-            >
-              <Flag size={14} />
-              <span>Report User</span>
-            </button>
-          </div>
-        )}
+          {/* Report */}
+          <button 
+            onClick={onReport}
+            className={`${styles.controlBtn} ${styles.btnReport}`}
+            aria-label="Report user"
+          >
+            <Flag size={18} />
+          </button>
+
+          {/* Leave */}
+          <button 
+            onClick={onLeave}
+            className={`${styles.controlBtn} ${styles.btnLeave}`}
+            aria-label="Leave call"
+          >
+            <PhoneOff size={18} />
+          </button>
+        </div>
       </div>
 
       {/* OVERLAYS */}
