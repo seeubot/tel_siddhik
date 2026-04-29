@@ -1,22 +1,24 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  Zap, PhoneOff, Loader, 
+  PhoneOff, Loader, 
   Flag, Shield, VolumeX, Heart, Sparkles,
-  X, AlertTriangle, UserX, EyeOff, MessageCircle
+  X, AlertTriangle, UserX, EyeOff, SkipForward
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
 /**
  * Orey! - Call Screen Component
- * Dating app themed video interface with romantic aesthetics
+ * Simplified dating app themed video interface
  */
 
-const HIGH_PRIORITY_REASONS = [
+const REPORT_REASONS = [
   { id: 'nudity', label: 'Nudity / Sexual Content', icon: <EyeOff size={16} /> },
   { id: 'harassment', label: 'Sexual Harassment', icon: <AlertTriangle size={16} /> },
   { id: 'underage', label: 'Underage User', icon: <UserX size={16} /> },
   { id: 'violence', label: 'Violence / Threats', icon: <AlertTriangle size={16} /> },
+  { id: 'inappropriate', label: 'Inappropriate Behavior', icon: <AlertTriangle size={16} /> },
+  { id: 'spam', label: 'Spam / Fake Profile', icon: <UserX size={16} /> },
 ];
 
 const CallScreen = ({
@@ -37,39 +39,16 @@ const CallScreen = ({
   onReport = () => {},
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
-  const [heartState, setHeartState] = useState('empty'); // 'empty', 'filling', 'full', 'broken'
   const hideTimerRef = useRef(null);
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
-
-  // Heart animation states based on connection
-  useEffect(() => {
-    if (isRemoteConnected && !isPartnerVideoOff) {
-      setHeartState('filling');
-      const timer = setTimeout(() => setHeartState('full'), 1500);
-      return () => clearTimeout(timer);
-    } else if (isRemoteConnected && isPartnerVideoOff) {
-      setHeartState('full');
-    } else if (!isRemoteConnected && !searching) {
-      setHeartState('empty');
-    }
-  }, [isRemoteConnected, isPartnerVideoOff, searching]);
-
-  // Handle partner disconnect
-  useEffect(() => {
-    if (heartState === 'full' && !isRemoteConnected) {
-      setHeartState('broken');
-      const timer = setTimeout(() => setHeartState('empty'), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isRemoteConnected, heartState]);
 
   // Touch/Click to toggle UI visibility
   const handleScreenTap = useCallback(() => {
@@ -106,12 +85,12 @@ const CallScreen = ({
     };
   }, [uiVisible]);
 
-  const handleNextClick = () => {
-    if (isConnecting) return;
-    setIsConnecting(true);
+  const handleSkip = () => {
+    if (isSkipping) return;
+    setIsSkipping(true);
     onFindRandomPeer?.();
     setTimeout(() => {
-      setIsConnecting(false);
+      setIsSkipping(false);
       onSkip?.();
     }, 2000);
   };
@@ -126,11 +105,11 @@ const CallScreen = ({
   const handleSubmitReport = () => {
     if (!selectedReason) return;
     
-    const reason = HIGH_PRIORITY_REASONS.find(r => r.id === selectedReason);
+    const reason = REPORT_REASONS.find(r => r.id === selectedReason);
+    // Call the original onReport with the same format as before
     onReport?.({
       reason: reason?.label || selectedReason,
-      description: reportDescription,
-      isHighPriority: true
+      description: reportDescription
     });
     
     setReportSubmitted(true);
@@ -156,7 +135,6 @@ const CallScreen = ({
 
       {/* REMOTE VIEW */}
       <div className={styles.remoteView}>
-        {/* Show actual video or camera off state */}
         <video
           ref={remoteVideoRef}
           className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''}`}
@@ -187,25 +165,6 @@ const CallScreen = ({
           <div className={styles.partnerMutedBadge}>
             <VolumeX size={14} />
             <span className={styles.partnerMutedText}>Partner Muted</span>
-          </div>
-        )}
-
-        {/* Connection Status Badge */}
-        {isRemoteConnected && (
-          <div className={`${styles.heartBadge} ${styles[`heart${heartState.charAt(0).toUpperCase() + heartState.slice(1)}`]}`}>
-            <div className={styles.heartContainer}>
-              <Heart 
-                size={20} 
-                className={`${styles.heartIcon} ${styles[heartState]}`}
-                fill={heartState === 'full' ? 'currentColor' : 'none'}
-              />
-            </div>
-            <span className={styles.heartText}>
-              {heartState === 'full' && 'Connected'}
-              {heartState === 'filling' && 'Connecting...'}
-              {heartState === 'broken' && 'Disconnected'}
-              {heartState === 'empty' && 'Waiting'}
-            </span>
           </div>
         )}
 
@@ -282,22 +241,16 @@ const CallScreen = ({
 
           <div className={styles.divider} />
 
-          {/* Next Match Button */}
+          {/* Skip Button - White Style */}
           <button
-            onClick={handleNextClick}
-            disabled={isConnecting}
-            className={styles.nextBtn}
+            onClick={handleSkip}
+            disabled={isSkipping}
+            className={styles.skipBtn}
           >
-            {isConnecting ? (
-              <>
-                <Loader size={16} className={styles.spinner} />
-                <span>Finding...</span>
-              </>
+            {isSkipping ? (
+              <Loader size={16} className={styles.spinner} />
             ) : (
-              <>
-                <Heart size={16} fill="currentColor" className={styles.heartBeat} />
-                <span>Next</span>
-              </>
+              <SkipForward size={18} />
             )}
           </button>
 
@@ -345,7 +298,7 @@ const CallScreen = ({
                 </p>
 
                 <div className={styles.reasonsList}>
-                  {HIGH_PRIORITY_REASONS.map((reason) => (
+                  {REPORT_REASONS.map((reason) => (
                     <button
                       key={reason.id}
                       onClick={() => setSelectedReason(reason.id)}
