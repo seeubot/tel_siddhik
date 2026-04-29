@@ -1,24 +1,19 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, Loader, 
+  PhoneOff, Loader,
   Flag, Shield, VolumeX, Heart, Sparkles,
-  X, AlertTriangle, UserX, EyeOff
+  X, AlertTriangle, UserX, EyeOff, SkipForward
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
-/**
- * Orey! - Call Screen Component
- * Simplified dating app themed video interface
- */
-
 const REPORT_REASONS = [
-  { id: 'nudity', label: 'Nudity / Sexual Content', icon: <EyeOff size={16} /> },
-  { id: 'harassment', label: 'Sexual Harassment', icon: <AlertTriangle size={16} /> },
-  { id: 'underage', label: 'Underage User', icon: <UserX size={16} /> },
-  { id: 'violence', label: 'Violence / Threats', icon: <AlertTriangle size={16} /> },
-  { id: 'inappropriate', label: 'Inappropriate Behavior', icon: <AlertTriangle size={16} /> },
-  { id: 'spam', label: 'Spam / Fake Profile', icon: <UserX size={16} /> },
+  { id: 'nudity', label: 'Nudity or sexual content', icon: <EyeOff size={15} /> },
+  { id: 'harassment', label: 'Sexual harassment', icon: <AlertTriangle size={15} /> },
+  { id: 'underage', label: 'Appears to be underage', icon: <UserX size={15} /> },
+  { id: 'violence', label: 'Violence or threats', icon: <AlertTriangle size={15} /> },
+  { id: 'inappropriate', label: 'Inappropriate behavior', icon: <AlertTriangle size={15} /> },
+  { id: 'spam', label: 'Spam or fake profile', icon: <UserX size={15} /> },
 ];
 
 const CallScreen = ({
@@ -50,34 +45,25 @@ const CallScreen = ({
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Touch/Click to toggle UI visibility
   const handleScreenTap = useCallback(() => {
     setUiVisible(prev => !prev);
   }, []);
 
-  // Auto-hide UI after 4 seconds
   useEffect(() => {
     if (!uiVisible) return;
-    
     clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      setUiVisible(false);
-    }, 4000);
-
+    hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     return () => clearTimeout(hideTimerRef.current);
   }, [uiVisible]);
 
-  // Reset timer on interaction
   useEffect(() => {
     const resetTimer = () => {
       if (!uiVisible) setUiVisible(true);
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
-
     window.addEventListener('mousemove', resetTimer);
     window.addEventListener('touchmove', resetTimer);
-    
     return () => {
       window.removeEventListener('mousemove', resetTimer);
       window.removeEventListener('touchmove', resetTimer);
@@ -104,27 +90,20 @@ const CallScreen = ({
 
   const handleSubmitReport = () => {
     if (!selectedReason) return;
-    
     const reason = REPORT_REASONS.find(r => r.id === selectedReason);
-    onReport?.({
-      reason: reason?.label || selectedReason,
-      description: reportDescription
-    });
-    
+    onReport?.({ reason: reason?.label || selectedReason, description: reportDescription });
     setReportSubmitted(true);
-    setTimeout(() => {
-      setShowReportModal(false);
-    }, 2000);
+    setTimeout(() => setShowReportModal(false), 2200);
   };
 
   return (
     <div className={styles.container} onClick={handleScreenTap}>
-      {/* Background Effects */}
+      {/* Background */}
       <div className={styles.gradientOrb1} />
       <div className={styles.gradientOrb2} />
       <div className={styles.noiseLayer} />
-      
-      {/* Floating Elements */}
+
+      {/* Floating ambient hearts */}
       <div className={styles.floatingElements}>
         <Heart className={styles.floatHeart1} size={16} />
         <Heart className={styles.floatHeart2} size={12} />
@@ -132,38 +111,35 @@ const CallScreen = ({
         <Sparkles className={styles.floatSparkle2} size={18} />
       </div>
 
-      {/* REMOTE VIEW */}
+      {/* REMOTE VIDEO */}
       <div className={styles.remoteView}>
         <video
           ref={remoteVideoRef}
           className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''}`}
-          autoPlay 
+          autoPlay
           playsInline
           style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
         />
 
-        {/* Partner Camera Off Overlay */}
         {isRemoteConnected && isPartnerVideoOff && (
           <div className={styles.partnerCameraOff}>
             <div className={styles.cameraOffIconWrapper}>
               <VideoOff size={40} className={styles.cameraOffIconLarge} />
             </div>
-            <h3 className={styles.partnerCameraOffTitle}>Camera is Off</h3>
-            <p className={styles.partnerCameraOffText}>
-              Your match has turned off their camera
-            </p>
+            <h3 className={styles.partnerCameraOffTitle}>Camera off</h3>
+            <p className={styles.partnerCameraOffText}>Your match turned their camera off</p>
             <div className={styles.cameraOffStatus}>
               <span className={styles.statusDot} />
-              Still connected via audio
+              Audio still connected
             </div>
           </div>
         )}
 
-        {/* Partner Muted Indicator - Top Left */}
+        {/* Partner muted chip */}
         {isRemoteConnected && isPartnerMuted && (
-          <div className={styles.partnerMutedBadge}>
-            <VolumeX size={14} />
-            <span className={styles.partnerMutedText}>Partner Muted</span>
+          <div className={`${styles.statusChip} ${styles.chipLeft}`}>
+            <VolumeX size={13} />
+            <span>Their mic is off</span>
           </div>
         )}
 
@@ -175,7 +151,7 @@ const CallScreen = ({
             </div>
             <div className={styles.waitingText}>
               <Sparkles size={16} className={styles.sparkleIcon} />
-              Find your perfect match
+              Ready to meet someone new?
             </div>
             <div className={styles.loadingDots}>
               <span className={styles.dot} />
@@ -186,22 +162,22 @@ const CallScreen = ({
         )}
       </div>
 
-      {/* LOCAL VIEW */}
+      {/* LOCAL VIDEO */}
       <div className={styles.localView}>
         <video
           ref={localVideoRef}
           className={`${styles.videoBase} ${styles.mirrored}`}
-          autoPlay 
-          playsInline 
+          autoPlay
+          playsInline
           muted
           style={{ display: videoEnabled ? 'block' : 'none' }}
         />
-        
-        {/* Local Mute Indicator - Top Right */}
+
+        {/* You muted chip */}
         {!audioEnabled && (
-          <div className={styles.localMutedBadge}>
-            <MicOff size={14} />
-            <span className={styles.localMutedText}>You are muted</span>
+          <div className={`${styles.statusChip} ${styles.chipRight}`}>
+            <MicOff size={13} />
+            <span>Your mic is off</span>
           </div>
         )}
 
@@ -210,141 +186,148 @@ const CallScreen = ({
             <div className={styles.cameraOffIconWrapper}>
               <VideoOff size={28} className={styles.cameraOffIconSmall} />
             </div>
-            <span className={styles.cameraOffText}>Your Camera is Off</span>
+            <span className={styles.cameraOffText}>Camera off</span>
             <p className={styles.cameraOffSubtext}>Turn on to share your vibe</p>
           </div>
         )}
       </div>
 
-      {/* CONTROL INTERFACE - Only one report button */}
-      <div 
-        className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}
-        onClick={(e) => e.stopPropagation()}
+      {/* ── CONTROL BAR ── */}
+      <div
+        className={`${styles.controlBar} ${!uiVisible ? styles.controlBarHidden : ''}`}
+        onClick={e => e.stopPropagation()}
       >
-        <div className={styles.mainIsland}>
-          {/* Microphone */}
-          <button 
-            onClick={onToggleAudio}
-            className={`${styles.controlBtn} ${!audioEnabled ? styles.btnDanger : styles.btnDefault}`}
-            aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-          >
-            {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-          </button>
-
-          {/* Camera */}
-          <button 
-            onClick={onToggleVideo}
-            className={`${styles.controlBtn} ${!videoEnabled ? styles.btnDanger : styles.btnDefault}`}
-            aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-          >
-            {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-          </button>
-
-          <div className={styles.divider} />
-
-          {/* Skip Button - Text style */}
+        {/* Left cluster */}
+        <div className={styles.cluster}>
           <button
-            onClick={handleSkip}
-            disabled={isSkipping}
-            className={styles.skipBtn}
+            onClick={onToggleAudio}
+            className={`${styles.iconBtn} ${!audioEnabled ? styles.iconBtnDanger : ''}`}
+            aria-label={audioEnabled ? 'Mute mic' : 'Unmute mic'}
           >
-            {isSkipping ? (
-              <>
-                <Loader size={14} className={styles.spinner} />
-                <span>Skip</span>
-              </>
-            ) : (
-              <span>Skip</span>
-            )}
+            <span className={styles.iconWrap}>
+              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+            </span>
+            <span className={styles.btnLabel}>{audioEnabled ? 'Mute' : 'Unmute'}</span>
           </button>
 
-          <div className={styles.divider} />
+          <button
+            onClick={onToggleVideo}
+            className={`${styles.iconBtn} ${!videoEnabled ? styles.iconBtnDanger : ''}`}
+            aria-label={videoEnabled ? 'Stop video' : 'Start video'}
+          >
+            <span className={styles.iconWrap}>
+              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+            </span>
+            <span className={styles.btnLabel}>{videoEnabled ? 'Camera' : 'No cam'}</span>
+          </button>
+        </div>
 
-          {/* Report - Single button */}
-          <button 
+        {/* Center: Next pill (prominent CTA) */}
+        <button
+          onClick={handleSkip}
+          disabled={isSkipping}
+          className={styles.nextPill}
+        >
+          {isSkipping ? (
+            <>
+              <Loader size={17} className={styles.spinner} />
+              <span>Finding…</span>
+            </>
+          ) : (
+            <>
+              <SkipForward size={17} />
+              <span>Next</span>
+            </>
+          )}
+        </button>
+
+        {/* Right cluster */}
+        <div className={styles.cluster}>
+          <button
             onClick={handleReportClick}
-            className={`${styles.controlBtn} ${styles.btnReport}`}
-            aria-label="Report user"
+            className={`${styles.iconBtn} ${styles.iconBtnFlag}`}
+            aria-label="Report this person"
           >
-            <Flag size={16} />
+            <span className={styles.iconWrap}>
+              <Flag size={17} />
+            </span>
+            <span className={styles.btnLabel}>Report</span>
           </button>
 
-          {/* Leave */}
-          <button 
+          <button
             onClick={onLeave}
-            className={`${styles.controlBtn} ${styles.btnLeave}`}
-            aria-label="Leave call"
+            className={styles.endBtn}
+            aria-label="End call"
           >
-            <PhoneOff size={16} />
+            <span className={styles.iconWrap}>
+              <PhoneOff size={18} />
+            </span>
+            <span className={styles.btnLabel}>End</span>
           </button>
         </div>
       </div>
 
-      {/* REPORT MODAL - Only one */}
+      {/* ── REPORT MODAL ── */}
       {showReportModal && (
-        <div className={styles.modalOverlay} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalOverlay} onClick={e => e.stopPropagation()}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <Shield size={20} className={styles.modalShield} />
-              <h2 className={styles.modalTitle}>Report User</h2>
-              <button 
-                onClick={() => setShowReportModal(false)}
-                className={styles.modalClose}
-              >
-                <X size={20} />
+              <Shield size={19} className={styles.modalShield} />
+              <h2 className={styles.modalTitle}>Report this person</h2>
+              <button onClick={() => setShowReportModal(false)} className={styles.modalClose}>
+                <X size={18} />
               </button>
             </div>
 
             {!reportSubmitted ? (
               <>
                 <p className={styles.modalSubtitle}>
-                  Your safety is our priority. All reports are anonymous.
+                  All reports are reviewed privately. Pick what best describes the situation.
                 </p>
 
-                <div className={styles.reasonsList}>
-                  {REPORT_REASONS.map((reason) => (
+                <div className={styles.reasonsGrid}>
+                  {REPORT_REASONS.map(reason => (
                     <button
                       key={reason.id}
                       onClick={() => setSelectedReason(reason.id)}
-                      className={`${styles.reasonBtn} ${selectedReason === reason.id ? styles.reasonSelected : ''}`}
+                      className={`${styles.reasonChip} ${selectedReason === reason.id ? styles.reasonChipSelected : ''}`}
                     >
-                      <span className={styles.reasonIcon}>{reason.icon}</span>
-                      <span className={styles.reasonLabel}>{reason.label}</span>
+                      <span className={styles.reasonChipIcon}>{reason.icon}</span>
+                      <span>{reason.label}</span>
                     </button>
                   ))}
                 </div>
 
                 <textarea
                   value={reportDescription}
-                  onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder="Additional details (optional)..."
-                  className={styles.reportInput}
+                  onChange={e => setReportDescription(e.target.value)}
+                  placeholder="Anything else we should know? (optional)"
+                  className={styles.reportTextarea}
                   rows={3}
                 />
 
                 <div className={styles.modalActions}>
-                  <button
-                    onClick={() => setShowReportModal(false)}
-                    className={styles.cancelReportBtn}
-                  >
+                  <button onClick={() => setShowReportModal(false)} className={styles.cancelBtn}>
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmitReport}
                     disabled={!selectedReason}
-                    className={styles.submitReportBtn}
+                    className={styles.submitBtn}
                   >
                     <Flag size={14} />
-                    Submit Report
+                    Send report
                   </button>
                 </div>
               </>
             ) : (
               <div className={styles.reportSuccess}>
-                <Shield size={48} className={styles.successIcon} />
-                <h3 className={styles.successTitle}>Report Submitted</h3>
+                <div className={styles.successIconRing}>
+                  <Shield size={30} />
+                </div>
+                <h3 className={styles.successTitle}>Report received</h3>
                 <p className={styles.successText}>
-                  Thank you for helping keep Orey safe. We'll review this report immediately.
+                  Thanks for helping keep Orey safe. We'll review this right away.
                 </p>
               </div>
             )}
@@ -352,17 +335,17 @@ const CallScreen = ({
         </div>
       )}
 
-      {/* OVERLAYS */}
+      {/* ── OVERLAYS ── */}
       {(searching || autoSearchCountdown !== null) && (
         <div className={styles.overlay}>
           <div className={styles.overlayGradient} />
-          
+
           {autoSearchCountdown !== null ? (
             <div className={styles.countdownOverlay}>
               <div className={styles.countdownText}>{autoSearchCountdown}</div>
               <div className={styles.encryptionBadge}>
-                <Shield size={16} className={styles.shieldIcon} />
-                <span className={styles.encryptionText}>Secure Connection Ready</span>
+                <Shield size={15} className={styles.shieldIcon} />
+                <span className={styles.encryptionText}>Secure connection ready</span>
               </div>
               <button onClick={onCancelAutoSearch} className={styles.terminateBtn}>
                 Cancel
@@ -370,21 +353,19 @@ const CallScreen = ({
             </div>
           ) : (
             <div className={styles.searchingOverlay}>
-              <div className={styles.searchingAnimation}>
-                <div className={styles.orbitingHearts}>
-                  <div className={styles.orbitRing}>
-                    <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
-                    <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
-                    <Heart size={14} className={styles.orbitHeart3} fill="currentColor" />
-                  </div>
-                  <div className={styles.spinnerCenter}>
-                    <Loader size={32} className={styles.spinnerIcon} />
-                  </div>
+              <div className={styles.orbitingHearts}>
+                <div className={styles.orbitRing}>
+                  <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
+                  <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
+                  <Heart size={14} className={styles.orbitHeart3} fill="currentColor" />
+                </div>
+                <div className={styles.spinnerCenter}>
+                  <Loader size={30} className={styles.spinnerIcon} />
                 </div>
               </div>
               <div className={styles.searchingTextContainer}>
-                <div className={styles.synchronizingText}>Finding Your Match</div>
-                <p className={styles.searchingSubtext}>Someone amazing is nearby...</p>
+                <div className={styles.synchronizingText}>Looking for your match</div>
+                <p className={styles.searchingSubtext}>Someone great is just around the corner…</p>
               </div>
             </div>
           )}
