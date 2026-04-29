@@ -3,7 +3,7 @@ import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, Loader, 
   Flag, Shield, VolumeX, Heart, Sparkles,
-  X, AlertTriangle, UserX, EyeOff, SkipForward
+  X, AlertTriangle, UserX, EyeOff
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -106,7 +106,6 @@ const CallScreen = ({
     if (!selectedReason) return;
     
     const reason = REPORT_REASONS.find(r => r.id === selectedReason);
-    // Call the original onReport with the same format as before
     onReport?.({
       reason: reason?.label || selectedReason,
       description: reportDescription
@@ -159,8 +158,8 @@ const CallScreen = ({
             </div>
           </div>
         )}
-        
-        {/* Partner Muted Indicator */}
+
+        {/* Partner Muted Indicator - Top Left */}
         {isRemoteConnected && isPartnerMuted && (
           <div className={styles.partnerMutedBadge}>
             <VolumeX size={14} />
@@ -198,6 +197,14 @@ const CallScreen = ({
           style={{ display: videoEnabled ? 'block' : 'none' }}
         />
         
+        {/* Local Mute Indicator - Top Right */}
+        {!audioEnabled && (
+          <div className={styles.localMutedBadge}>
+            <MicOff size={14} />
+            <span className={styles.localMutedText}>You are muted</span>
+          </div>
+        )}
+
         {!videoEnabled && (
           <div className={styles.localCameraOff}>
             <div className={styles.cameraOffIconWrapper}>
@@ -207,15 +214,9 @@ const CallScreen = ({
             <p className={styles.cameraOffSubtext}>Turn on to share your vibe</p>
           </div>
         )}
-
-        {!audioEnabled && videoEnabled && (
-          <div className={styles.muteIndicator}>
-            <MicOff size={14} />
-          </div>
-        )}
       </div>
 
-      {/* CONTROL INTERFACE */}
+      {/* CONTROL INTERFACE - Only one report button */}
       <div 
         className={`${styles.controlWrapper} ${!uiVisible ? styles.uiHidden : ''}`}
         onClick={(e) => e.stopPropagation()}
@@ -241,22 +242,25 @@ const CallScreen = ({
 
           <div className={styles.divider} />
 
-          {/* Skip Button - White Style */}
+          {/* Skip Button - Text style */}
           <button
             onClick={handleSkip}
             disabled={isSkipping}
             className={styles.skipBtn}
           >
             {isSkipping ? (
-              <Loader size={16} className={styles.spinner} />
+              <>
+                <Loader size={14} className={styles.spinner} />
+                <span>Skip</span>
+              </>
             ) : (
-              <SkipForward size={18} />
+              <span>Skip</span>
             )}
           </button>
 
           <div className={styles.divider} />
 
-          {/* Report */}
+          {/* Report - Single button */}
           <button 
             onClick={handleReportClick}
             className={`${styles.controlBtn} ${styles.btnReport}`}
@@ -276,7 +280,7 @@ const CallScreen = ({
         </div>
       </div>
 
-      {/* REPORT MODAL */}
+      {/* REPORT MODAL - Only one */}
       {showReportModal && (
         <div className={styles.modalOverlay} onClick={(e) => e.stopPropagation()}>
           <div className={styles.modal}>
