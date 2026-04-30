@@ -1,148 +1,196 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Copy, Check, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield } from 'lucide-react';
 import styles from './Lobby.module.css';
 
 /**
- * Orey! Lobby Component
- * Handlers connection logic to switch to Video Call Screen.
+ * Lobby Component - Fully Responsive Dating App Style
  */
-const Lobby = ({ oreyId, oreyIdExpiry, onConnectById }) => {
+export default function Lobby({
+  oreyId, oreyIdExpiry,
+  searching,
+  onDiscover, onCancelSearch, onConnectById,
+}) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
-  const [timeLeft, setTimeLeft] = useState('00:00');
-  const [lineIdx, setLineIdx] = useState(0);
 
-  const pickupLines = [
-    "Your vibe is calling.",
-    "The universe wants a link.",
-    "Ready for a connection?",
-    "Don't let the spark expire.",
-    "One code away from magic.",
-    "Find your frequency."
-  ];
-
-  // Rotate pickup lines
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLineIdx(prev => (prev + 1) % pickupLines.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Update Expiry Countdown
-  useEffect(() => {
-    const updateClock = () => {
-      const diff = oreyIdExpiry - Date.now();
-      if (diff <= 0) {
-        setTimeLeft('Expired');
-      } else {
-        const mins = Math.floor((diff / 1000 / 60) % 60);
-        const secs = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${mins}m ${secs.toString().padStart(2, '0')}s`);
-      }
-    };
-    
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, [oreyIdExpiry]);
-
-  // Fast ID Input Handler
-  const handleInput = (e) => {
-    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (val.length <= 5) setTargetId(val);
-  };
-
-  // Launch the Video Call
-  const triggerCall = useCallback(() => {
-    if (targetId.length === 5) {
-      // Logic: Prepend OREY- and pass to parent handler to switch screen
-      onConnectById(`OREY-${targetId}`);
-    }
-  }, [targetId, onConnectById]);
-
-  const copyId = async () => {
-    try {
-      await navigator.clipboard.writeText(oreyId);
+  const copyId = () => {
+    navigator.clipboard.writeText(oreyId).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback for some environments
-      const textArea = document.createElement("textarea");
-      textArea.value = oreyId;
-      document.body.appendChild(textArea);
-      textArea.select();
+    }).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = oreyId;
+      document.body.appendChild(el);
+      el.select();
       document.execCommand('copy');
-      document.body.removeChild(textArea);
+      document.body.removeChild(el);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
+    });
   };
+
+  const handleConnect = () => {
+    const trimmed = targetId.trim().toUpperCase();
+    const formattedId = trimmed.startsWith('OREY-') ? trimmed : `OREY-${trimmed}`;
+    if (formattedId.length === 10) onConnectById(formattedId); // OREY-XXXXX = 10 chars
+  };
+
+  const expiryStr = oreyIdExpiry
+    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
+
+  const taglines = [
+    "Your next favorite person is one click away",
+    "Swipe right on serendipity",
+    "Where chemistry meets connection",
+    "Real vibes. Real people. Real moments.",
+    "Less swiping, more sparking ✨",
+    "Your vibe attracts your tribe",
+    "Manifesting your meet-cute 💕"
+  ];
+  
+  const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
 
   return (
-    <div className={styles.container}>
-      <div className={styles.background}>
-        <div className={styles.glowBlue} />
-        <div className={styles.glowPurple} />
+    <div className={styles.root}>
+      {/* Animated background */}
+      <div className={styles.gradientOrb1} />
+      <div className={styles.gradientOrb2} />
+      <div className={styles.gridOverlay} />
+      
+      {/* Floating elements */}
+      <div className={styles.floatingElements}>
+        <Heart className={styles.floatingIcon1} size={16} />
+        <Heart className={styles.floatingIcon2} size={12} />
+        <Sparkles className={styles.floatingIcon3} size={14} />
+        <Sparkles className={styles.floatingIcon4} size={18} />
       </div>
 
-      <div className={styles.content}>
-        <header className={styles.header}>
-          <div className={styles.logoBox}>OREY!</div>
-          <div className={styles.pickupLine} key={lineIdx}>
-            {pickupLines[lineIdx]}
-          </div>
-        </header>
-
-        <div className={styles.idCard}>
-          <div className={styles.idRow}>
-            <div>
-              <span className={styles.idLabel}>Your Key</span>
-              <h2 className={styles.idValue}>{oreyId?.split('-')[1] || '-----'}</h2>
-            </div>
-            <div className={styles.expiryBadge}>
-              <Clock size={12} />
-              <span>{timeLeft}</span>
-            </div>
+      <div className={styles.container}>
+        {/* Logo & Hero */}
+        <div className={styles.hero}>
+          <div className={styles.logoWrapper}>
+            <div className={styles.logoGlow} />
+            <h1 className={styles.logo}>
+              Orey<span className={styles.logoAccent}>!</span>
+            </h1>
           </div>
           
-          <button 
-            onClick={copyId}
-            className={`${styles.copyBtn} ${copied ? styles.copyBtnSuccess : ''}`}
-          >
-            {copied ? <Check size={18} /> : <Copy size={18} />}
-            {copied ? 'Linked!' : 'Copy Key'}
-          </button>
+          <p className={styles.tagline}>{randomTagline}</p>
+          
+          <div className={styles.brandMotto}>
+            <span className={styles.divider}>✦</span>
+            <span>Mana People • Mana Vibes</span>
+            <span className={styles.divider}>✦</span>
+          </div>
         </div>
 
-        <div className={styles.joinSection}>
-          <input 
-            type="text"
-            className={styles.inputField}
-            placeholder="ENTER KEY..."
-            value={targetId}
-            onChange={handleInput}
-            onKeyDown={(e) => e.key === 'Enter' && triggerCall()}
-          />
-          <button 
-            className={styles.joinBtn}
-            disabled={targetId.length !== 5}
-            onClick={triggerCall}
-            aria-label="Join Call"
-          >
-            <ArrowRight size={28} strokeWidth={3} />
-          </button>
+        {/* Your ID Card */}
+        <div className={styles.card}>
+          <div className={styles.idSection}>
+            <div className={styles.idHeader}>
+              <div className={styles.badge}>
+                <Sparkles size={12} />
+                <span>Your Connection Code</span>
+              </div>
+              {expiryStr && (
+                <span className={styles.expiryBadge}>
+                  ⏳ {expiryStr}
+                </span>
+              )}
+            </div>
+            
+            <div className={styles.idDisplay}>
+              <code className={styles.idText}>
+                {oreyId || 'OREY-·····'}
+              </code>
+              <button 
+                className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} 
+                onClick={copyId}
+                title="Copy ID"
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+            
+            <p className={styles.idHint}>Share this code with someone special ✨</p>
+          </div>
         </div>
 
-        <footer className={styles.footer} style={{ marginTop: '1rem', opacity: 0.4 }}>
-          <Sparkles size={12} />
-          <span>Secured Session</span>
+        {/* Main Action */}
+        <div className={styles.actions}>
+          {!searching ? (
+            <button className={styles.discoverBtn} onClick={onDiscover}>
+              <Heart size={20} fill="currentColor" className={styles.heartBeat} />
+              <span>Find Your Match</span>
+              <Sparkles size={16} />
+            </button>
+          ) : (
+            <div className={styles.searchingContainer}>
+              <div className={styles.searchingBox}>
+                <div className={styles.searchingAnimation}>
+                  <Loader2 size={20} className={styles.spinner} />
+                  <div className={styles.dots}>
+                    <span>.</span><span>.</span><span>.</span>
+                  </div>
+                </div>
+                <p className={styles.searchingTitle}>Finding your vibe match</p>
+                <p className={styles.searchingSub}>Someone amazing is nearby...</p>
+              </div>
+              <button className={styles.cancelBtn} onClick={onCancelSearch}>
+                Cancel Search
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Direct Connect */}
+        <div className={styles.card}>
+          <div className={styles.connectSection}>
+            <div className={styles.connectHeader}>
+              <Hash size={14} className={styles.accentIcon} />
+              <span>Have a code?</span>
+            </div>
+            
+            <div className={styles.connectInputGroup}>
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputPrefix}>OREY-</span>
+                <input
+                  className={styles.codeInput}
+                  type="text"
+                  placeholder="XXXXX"
+                  maxLength={5}
+                  value={targetId.replace('OREY-', '')}
+                  onChange={(e) => setTargetId(e.target.value.toUpperCase().replace('OREY-', ''))}
+                />
+              </div>
+              <button
+                className={`${styles.connectBtn} ${targetId.length === 5 ? styles.connectBtnActive : ''}`}
+                onClick={handleConnect}
+                disabled={targetId.length !== 5}
+              >
+                Connect
+                <Heart size={14} />
+              </button>
+            </div>
+            
+            <p className={styles.connectHint}>
+              Connect directly with someone you already vibe with
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className={styles.footer}>
+          <div className={styles.footerRow}>
+            <Shield size={12} />
+            <span>Encrypted • Private • Real Connections</span>
+          </div>
+          <p className={styles.footerMotto}>
+            No screenshots. No recordings. Just vibes.
+          </p>
         </footer>
       </div>
     </div>
   );
-};
-
-export default Lobby;
-
+}
