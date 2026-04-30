@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, Loader,
@@ -23,6 +23,8 @@ const CallScreen = ({
   audioEnabled = true,
   videoEnabled = true,
   partnerMedia = { video: true, audio: true },
+  localStream = null,
+  partnerStream = null,
   searching = false,
   autoSearchCountdown = null,
   onToggleAudio = () => {},
@@ -39,16 +41,28 @@ const CallScreen = ({
   const [selectedReason, setSelectedReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
   const hideTimerRef = useRef(null);
+  const skipTimerRef = useRef(null);
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  const handleScreenTap = useCallback(() => {
-    setUiVisible(prev => !prev);
-  }, []);
+  // Handle video stream sources
+  useEffect(() => {
+    if (remoteVideoRef.current && partnerStream) {
+      remoteVideoRef.current.srcObject = partnerStream;
+    }
+  }, [partnerStream, remoteVideoRef]);
 
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, localVideoRef]);
+
+  // Auto-hide UI controls
   useEffect(() => {
     if (!uiVisible) return;
     clearTimeout(hideTimerRef.current);
@@ -56,60 +70,109 @@ const CallScreen = ({
     return () => clearTimeout(hideTimerRef.current);
   }, [uiVisible]);
 
+  // Handle user activity to show/hide controls
   useEffect(() => {
     const resetTimer = () => {
       if (!uiVisible) setUiVisible(true);
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('touchmove', resetTimer);
+
+    const events = ['mousemove', 'touchstart', 'touchmove', 'scroll'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
     return () => {
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('touchmove', resetTimer);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
       clearTimeout(hideTimerRef.current);
     };
   }, [uiVisible]);
 
-  const handleSkip = () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(hideTimerRef.current);
+      clearTimeout(skipTimerRef.current);
+    };
+  }, []);
+
+  const handleScreenTap = useCallback(() => {
+    setUiVisible(prev => !prev);
+  }, []);
+
+  const handleSkip = useCallback(() => {
     if (isSkipping) return;
     setIsSkipping(true);
     onFindRandomPeer?.();
-    setTimeout(() => {
+    
+    skipTimerRef.current = setTimeout(() => {
       setIsSkipping(false);
       onSkip?.();
     }, 2000);
-  };
+  }, [isSkipping, onFindRandomPeer, onSkip]);
 
-  const handleReportClick = () => {
+  const handleReportClick = useCallback(() => {
     setShowReportModal(true);
     setReportSubmitted(false);
     setSelectedReason('');
     setReportDescription('');
-  };
+    setIsReporting(false);
+  }, []);
 
-  const handleSubmitReport = () => {
-    if (!selectedReason) return;
-    const reason = REPORT_REASONS.find(r => r.id === selectedReason);
-    onReport?.({ reason: reason?.label || selectedReason, description: reportDescription });
-    setReportSubmitted(true);
-    setTimeout(() => setShowReportModal(false), 2200);
-  };
+  const handleCloseModal = useCallback(() => {
+    setShowReportModal(false);
+  }, []);
+
+  const handleSubmitReport = useCallback(async () => {
+    if (!selectedReason || isReporting) return;
+    
+    setIsReporting(true);
+    try {
+      const reason = REPORT_REASONS.find(r => r.id === selectedReason);
+      await onReport?.({ 
+        reason: reason?.label || selectedReason, 
+        description: reportDescription 
+      });
+      setReportSubmitted(true);
+      setTimeout(() => setShowReportModal(false), 2200);
+    } catch (error) {
+      console.error('Failed to submit report:', error);
+      // You could show an error state here
+    } finally {
+      setIsReporting(false);
+    }
+  }, [selectedReason, reportDescription, isReporting, onReport]);
+
+  // Memoized floating elements
+  const floatingElements = useMemo(() => (
+    <div className={styles.floatingElements}>
+      <Heart className={styles.floatHeart1} size={16} aria-hidden="true" />
+      <Heart className={styles.floatHeart2} size={12} aria-hidden="true" />
+      <Sparkles className={styles.floatSparkle1} size={14} aria-hidden="true" />
+      <Sparkles className={styles.floatSparkle2} size={18} aria-hidden="true" />
+    </div>
+  ), []);
+
+  // Memoized background effects
+  const backgroundEffects = useMemo(() => (
+    <>
+      <div className={styles.gradientOrb1} aria-hidden="true" />
+      <div className={styles.gradientOrb2} aria-hidden="true" />
+      <div className={styles.noiseLayer} aria-hidden="true" />
+    </>
+  ), []);
 
   return (
-    <div className={styles.container} onClick={handleScreenTap}>
-      {/* Background */}
-      <div className={styles.gradientOrb1} />
-      <div className={styles.gradientOrb2} />
-      <div className={styles.noiseLayer} />
-
-      {/* Floating ambient hearts */}
-      <div className={styles.floatingElements}>
-        <Heart className={styles.floatHeart1} size={16} />
-        <Heart className={styles.floatHeart2} size={12} />
-        <Sparkles className={styles.floatSparkle1} size={14} />
-        <Sparkles className={styles.floatSparkle2} size={18} />
-      </div>
+    <div 
+      className={styles.container} 
+      onClick={handleScreenTap}
+      role="main"
+      aria-label="Video call screen"
+    >
+      {/* Background Effects */}
+      {backgroundEffects}
+      
+      {/* Floating ambient elements */}
+      {floatingElements}
 
       {/* REMOTE VIDEO */}
       <div className={styles.remoteView}>
@@ -119,17 +182,18 @@ const CallScreen = ({
           autoPlay
           playsInline
           style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
+          aria-label="Remote video stream"
         />
 
         {isRemoteConnected && isPartnerVideoOff && (
           <div className={styles.partnerCameraOff}>
             <div className={styles.cameraOffIconWrapper}>
-              <VideoOff size={40} className={styles.cameraOffIconLarge} />
+              <VideoOff size={40} className={styles.cameraOffIconLarge} aria-hidden="true" />
             </div>
             <h3 className={styles.partnerCameraOffTitle}>Camera off</h3>
             <p className={styles.partnerCameraOffText}>Your match turned their camera off</p>
             <div className={styles.cameraOffStatus}>
-              <span className={styles.statusDot} />
+              <span className={styles.statusDot} aria-hidden="true" />
               Audio still connected
             </div>
           </div>
@@ -137,8 +201,8 @@ const CallScreen = ({
 
         {/* Partner muted chip */}
         {isRemoteConnected && isPartnerMuted && (
-          <div className={`${styles.statusChip} ${styles.chipLeft}`}>
-            <VolumeX size={13} />
+          <div className={`${styles.statusChip} ${styles.chipLeft}`} role="status">
+            <VolumeX size={13} aria-hidden="true" />
             <span>Their mic is off</span>
           </div>
         )}
@@ -146,14 +210,14 @@ const CallScreen = ({
         {!isRemoteConnected && !searching && (
           <div className={styles.placeholder}>
             <div className={styles.logoWrapper}>
-              <div className={styles.logoGlow} />
-              <div className={styles.brandText}>Orey!</div>
+              <div className={styles.logoGlow} aria-hidden="true" />
+              <div className={styles.brandText} aria-label="Orey">Orey!</div>
             </div>
             <div className={styles.waitingText}>
-              <Sparkles size={16} className={styles.sparkleIcon} />
+              <Sparkles size={16} className={styles.sparkleIcon} aria-hidden="true" />
               Ready to meet someone new?
             </div>
-            <div className={styles.loadingDots}>
+            <div className={styles.loadingDots} aria-label="Loading">
               <span className={styles.dot} />
               <span className={styles.dot} />
               <span className={styles.dot} />
@@ -171,12 +235,13 @@ const CallScreen = ({
           playsInline
           muted
           style={{ display: videoEnabled ? 'block' : 'none' }}
+          aria-label="Local video stream"
         />
 
         {/* You muted chip */}
         {!audioEnabled && (
-          <div className={`${styles.statusChip} ${styles.chipRight}`}>
-            <MicOff size={13} />
+          <div className={`${styles.statusChip} ${styles.chipRight}`} role="status">
+            <MicOff size={13} aria-hidden="true" />
             <span>Your mic is off</span>
           </div>
         )}
@@ -184,7 +249,7 @@ const CallScreen = ({
         {!videoEnabled && (
           <div className={styles.localCameraOff}>
             <div className={styles.cameraOffIconWrapper}>
-              <VideoOff size={28} className={styles.cameraOffIconSmall} />
+              <VideoOff size={28} className={styles.cameraOffIconSmall} aria-hidden="true" />
             </div>
             <span className={styles.cameraOffText}>Camera off</span>
             <p className={styles.cameraOffSubtext}>Turn on to share your vibe</p>
@@ -196,16 +261,19 @@ const CallScreen = ({
       <div
         className={`${styles.controlBar} ${!uiVisible ? styles.controlBarHidden : ''}`}
         onClick={e => e.stopPropagation()}
+        role="toolbar"
+        aria-label="Call controls"
       >
         {/* Left cluster */}
         <div className={styles.cluster}>
           <button
             onClick={onToggleAudio}
             className={`${styles.iconBtn} ${!audioEnabled ? styles.iconBtnDanger : ''}`}
-            aria-label={audioEnabled ? 'Mute mic' : 'Unmute mic'}
+            aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+            aria-pressed={!audioEnabled}
           >
             <span className={styles.iconWrap}>
-              {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+              {audioEnabled ? <Mic size={18} aria-hidden="true" /> : <MicOff size={18} aria-hidden="true" />}
             </span>
             <span className={styles.btnLabel}>{audioEnabled ? 'Mute' : 'Unmute'}</span>
           </button>
@@ -214,9 +282,10 @@ const CallScreen = ({
             onClick={onToggleVideo}
             className={`${styles.iconBtn} ${!videoEnabled ? styles.iconBtnDanger : ''}`}
             aria-label={videoEnabled ? 'Stop video' : 'Start video'}
+            aria-pressed={!videoEnabled}
           >
             <span className={styles.iconWrap}>
-              {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+              {videoEnabled ? <Video size={18} aria-hidden="true" /> : <VideoOff size={18} aria-hidden="true" />}
             </span>
             <span className={styles.btnLabel}>{videoEnabled ? 'Camera' : 'No cam'}</span>
           </button>
@@ -227,15 +296,16 @@ const CallScreen = ({
           onClick={handleSkip}
           disabled={isSkipping}
           className={styles.nextPill}
+          aria-label={isSkipping ? 'Finding next match' : 'Skip to next match'}
         >
           {isSkipping ? (
             <>
-              <Loader size={17} className={styles.spinner} />
+              <Loader size={17} className={styles.spinner} aria-hidden="true" />
               <span>Finding…</span>
             </>
           ) : (
             <>
-              <SkipForward size={17} />
+              <SkipForward size={17} aria-hidden="true" />
               <span>Next</span>
             </>
           )}
@@ -249,7 +319,7 @@ const CallScreen = ({
             aria-label="Report this person"
           >
             <span className={styles.iconWrap}>
-              <Flag size={17} />
+              <Flag size={17} aria-hidden="true" />
             </span>
             <span className={styles.btnLabel}>Report</span>
           </button>
@@ -260,7 +330,7 @@ const CallScreen = ({
             aria-label="End call"
           >
             <span className={styles.iconWrap}>
-              <PhoneOff size={18} />
+              <PhoneOff size={18} aria-hidden="true" />
             </span>
             <span className={styles.btnLabel}>End</span>
           </button>
@@ -269,13 +339,25 @@ const CallScreen = ({
 
       {/* ── REPORT MODAL ── */}
       {showReportModal && (
-        <div className={styles.modalOverlay} onClick={e => e.stopPropagation()}>
+        <div 
+          className={styles.modalOverlay} 
+          onClick={e => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-modal-title"
+        >
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <Shield size={19} className={styles.modalShield} />
-              <h2 className={styles.modalTitle}>Report this person</h2>
-              <button onClick={() => setShowReportModal(false)} className={styles.modalClose}>
-                <X size={18} />
+              <Shield size={19} className={styles.modalShield} aria-hidden="true" />
+              <h2 id="report-modal-title" className={styles.modalTitle}>
+                Report this person
+              </h2>
+              <button 
+                onClick={handleCloseModal} 
+                className={styles.modalClose}
+                aria-label="Close report modal"
+              >
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -285,14 +367,18 @@ const CallScreen = ({
                   All reports are reviewed privately. Pick what best describes the situation.
                 </p>
 
-                <div className={styles.reasonsGrid}>
+                <div className={styles.reasonsGrid} role="radiogroup" aria-label="Report reasons">
                   {REPORT_REASONS.map(reason => (
                     <button
                       key={reason.id}
                       onClick={() => setSelectedReason(reason.id)}
                       className={`${styles.reasonChip} ${selectedReason === reason.id ? styles.reasonChipSelected : ''}`}
+                      role="radio"
+                      aria-checked={selectedReason === reason.id}
                     >
-                      <span className={styles.reasonChipIcon}>{reason.icon}</span>
+                      <span className={styles.reasonChipIcon} aria-hidden="true">
+                        {reason.icon}
+                      </span>
                       <span>{reason.label}</span>
                     </button>
                   ))}
@@ -304,25 +390,36 @@ const CallScreen = ({
                   placeholder="Anything else we should know? (optional)"
                   className={styles.reportTextarea}
                   rows={3}
+                  aria-label="Additional report details"
+                  maxLength={500}
                 />
 
                 <div className={styles.modalActions}>
-                  <button onClick={() => setShowReportModal(false)} className={styles.cancelBtn}>
+                  <button 
+                    onClick={handleCloseModal} 
+                    className={styles.cancelBtn}
+                    disabled={isReporting}
+                  >
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmitReport}
-                    disabled={!selectedReason}
+                    disabled={!selectedReason || isReporting}
                     className={styles.submitBtn}
+                    aria-label="Submit report"
                   >
-                    <Flag size={14} />
-                    Send report
+                    {isReporting ? (
+                      <Loader size={14} className={styles.spinner} aria-hidden="true" />
+                    ) : (
+                      <Flag size={14} aria-hidden="true" />
+                    )}
+                    {isReporting ? 'Sending...' : 'Send report'}
                   </button>
                 </div>
               </>
             ) : (
               <div className={styles.reportSuccess}>
-                <div className={styles.successIconRing}>
+                <div className={styles.successIconRing} aria-hidden="true">
                   <Shield size={30} />
                 </div>
                 <h3 className={styles.successTitle}>Report received</h3>
@@ -337,23 +434,29 @@ const CallScreen = ({
 
       {/* ── OVERLAYS ── */}
       {(searching || autoSearchCountdown !== null) && (
-        <div className={styles.overlay}>
-          <div className={styles.overlayGradient} />
+        <div className={styles.overlay} role="alert" aria-live="polite">
+          <div className={styles.overlayGradient} aria-hidden="true" />
 
           {autoSearchCountdown !== null ? (
             <div className={styles.countdownOverlay}>
-              <div className={styles.countdownText}>{autoSearchCountdown}</div>
+              <div className={styles.countdownText} aria-label={`${autoSearchCountdown} seconds`}>
+                {autoSearchCountdown}
+              </div>
               <div className={styles.encryptionBadge}>
-                <Shield size={15} className={styles.shieldIcon} />
+                <Shield size={15} className={styles.shieldIcon} aria-hidden="true" />
                 <span className={styles.encryptionText}>Secure connection ready</span>
               </div>
-              <button onClick={onCancelAutoSearch} className={styles.terminateBtn}>
+              <button 
+                onClick={onCancelAutoSearch} 
+                className={styles.terminateBtn}
+                aria-label="Cancel auto search"
+              >
                 Cancel
               </button>
             </div>
           ) : (
             <div className={styles.searchingOverlay}>
-              <div className={styles.orbitingHearts}>
+              <div className={styles.orbitingHearts} aria-hidden="true">
                 <div className={styles.orbitRing}>
                   <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
                   <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
@@ -365,7 +468,9 @@ const CallScreen = ({
               </div>
               <div className={styles.searchingTextContainer}>
                 <div className={styles.synchronizingText}>Looking for your match</div>
-                <p className={styles.searchingSubtext}>Someone great is just around the corner…</p>
+                <p className={styles.searchingSubtext}>
+                  Someone great is just around the corner…
+                </p>
               </div>
             </div>
           )}
