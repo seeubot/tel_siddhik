@@ -182,6 +182,12 @@
   transform: scaleX(-1);
 }
 
+/* Video blur for blur feature */
+.videoBlur {
+  filter: blur(20px) brightness(0.7);
+  transition: filter 0.3s ease;
+}
+
 /* ── STATUS CHIPS (muted indicators) ── */
 .statusChip {
   position: absolute;
@@ -442,7 +448,7 @@
   pointer-events: none;
 }
 
-/* Side clusters (mic/cam on left, report/end on right) */
+/* Side clusters (mic/cam on left, blur/end on right) */
 .cluster {
   display: flex;
   align-items: center;
@@ -498,15 +504,16 @@
   color: #fca5a5;
 }
 
-/* Report button subtle accent */
-.iconBtnFlag {
-  color: rgba(239, 68, 68, 0.45);
+/* Blur button active state */
+.iconBtnActive {
+  background: rgba(255, 45, 85, 0.15);
+  border-color: rgba(255, 45, 85, 0.35);
+  color: #FF2D55;
 }
 
-.iconBtnFlag:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+.iconBtnActive:hover {
+  background: rgba(255, 45, 85, 0.25);
+  color: #FF6B8A;
 }
 
 /* Icon slot */
@@ -619,7 +626,7 @@
 }
 
 /* ════════════════════════════════════════════
-   REPORT MODAL
+   BLUR CONFIRMATION MODAL
    ════════════════════════════════════════════ */
 .modalOverlay {
   position: fixed;
@@ -646,14 +653,13 @@
 
 .modal {
   width: 100%;
-  max-width: 420px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 400px;
   background: linear-gradient(160deg, #161622 0%, #120f1c 100%);
   border: 1px solid rgba(255, 45, 85, 0.12);
   border-radius: 28px;
   padding: 1.5rem;
   animation: slideUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
 }
 
 @keyframes slideUp {
@@ -667,126 +673,31 @@
   }
 }
 
-.modalHeader {
-  display: flex;
+.modalIcon {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.modalShield {
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 45, 85, 0.1);
+  border: 1px solid rgba(255, 45, 85, 0.2);
   color: #FF2D55;
+  margin-bottom: 1rem;
 }
 
 .modalTitle {
-  flex: 1;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #fff;
-  margin: 0;
+  margin: 0 0 0.5rem;
 }
 
-.modalClose {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.45);
-  cursor: pointer;
-  transition: all 0.2s;
-  outline: none;
-}
-
-.modalClose:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.modalClose:focus-visible {
-  outline: 2px solid rgba(255, 45, 85, 0.5);
-  outline-offset: 2px;
-}
-
-.modalSubtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.38);
-  margin: 0 0 1rem;
-  line-height: 1.5;
-}
-
-/* Chip-style reason grid (2 per row) */
-.reasonsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 1rem;
-}
-
-.reasonChip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0.65rem 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.18s;
-  text-align: left;
-  outline: none;
-}
-
-.reasonChip:hover {
-  background: rgba(255, 45, 85, 0.07);
-  border-color: rgba(255, 45, 85, 0.2);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.reasonChip:focus-visible {
-  outline: 2px solid rgba(255, 45, 85, 0.5);
-  outline-offset: 2px;
-}
-
-.reasonChipSelected {
-  background: rgba(255, 45, 85, 0.12);
-  border-color: #FF2D55;
-  color: #FF6B8A;
-}
-
-.reasonChipIcon {
-  display: flex;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-.reportTextarea {
-  width: 100%;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  color: #fff;
+.modalText {
   font-size: 0.85rem;
-  resize: none;
-  margin-bottom: 1rem;
-  outline: none;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.reportTextarea::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.reportTextarea:focus {
-  border-color: rgba(255, 45, 85, 0.3);
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
 }
 
 .modalActions {
@@ -794,7 +705,7 @@
   gap: 0.75rem;
 }
 
-.cancelBtn {
+.modalCancelBtn {
   flex: 1;
   padding: 0.75rem;
   background: rgba(255, 255, 255, 0.05);
@@ -808,24 +719,15 @@
   outline: none;
 }
 
-.cancelBtn:hover {
+.modalCancelBtn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
-.cancelBtn:focus-visible {
-  outline: 2px solid rgba(255, 45, 85, 0.5);
-  outline-offset: 2px;
-}
-
-.submitBtn {
+.modalConfirmBtn {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
   padding: 0.75rem;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, #FF2D55, #FF6B8A);
   border: none;
   border-radius: 14px;
   color: #fff;
@@ -836,51 +738,9 @@
   outline: none;
 }
 
-.submitBtn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-.submitBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.submitBtn:focus-visible {
-  outline: 2px solid rgba(239, 68, 68, 0.5);
-  outline-offset: 2px;
-}
-
-/* Success state */
-.reportSuccess {
-  text-align: center;
-  padding: 1.5rem 0;
-}
-
-.successIconRing {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: rgba(255, 45, 85, 0.1);
-  border: 1px solid rgba(255, 45, 85, 0.2);
-  color: #FF2D55;
-  margin-bottom: 1.25rem;
-}
-
-.successTitle {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #fff;
-  margin: 0 0 0.5rem;
-}
-
-.successText {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin: 0;
-  line-height: 1.5;
+.modalConfirmBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 45, 85, 0.3);
 }
 
 /* ── OVERLAYS ── */
@@ -1077,20 +937,41 @@
   margin: 0;
 }
 
+/* Blur indicator on remote video */
+.blurIndicator {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 100px;
+  font-size: 0.75rem;
+  color: #FF2D55;
+  z-index: 10;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 480px) {
   .modal {
     padding: 1.25rem;
     border-radius: 22px;
-  }
-
-  .reasonsGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .reasonChip {
-    font-size: 0.82rem;
-    padding: 0.6rem 0.75rem;
+    margin: 1rem;
   }
 
   /* On very small screens collapse labels */
@@ -1114,14 +995,6 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .modal {
     max-height: 80vh;
-  }
-  
-  .reasonsGrid {
-    gap: 6px;
-  }
-  
-  .reasonChip {
-    padding: 0.5rem 0.75rem;
   }
   
   .controlBar {
