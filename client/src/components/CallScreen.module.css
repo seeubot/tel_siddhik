@@ -1,3 +1,5 @@
+/* CallScreen.module.css */
+
 .container {
   position: fixed;
   inset: 0;
@@ -10,7 +12,7 @@
   color: #fff;
   width: 100vw;
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
+  height: 100dvh;
 }
 
 /* Partner Viewport */
@@ -18,7 +20,7 @@
   position: relative;
   flex: 1.4;
   width: 100%;
-  min-height: 0; /* Important for flex children */
+  min-height: 0;
   z-index: 10;
   overflow: hidden;
   background: radial-gradient(ellipse at center, #18181b 0%, #09090b 100%);
@@ -47,14 +49,15 @@
   letter-spacing: -0.05em;
 }
 
+/* Video Wrapper with Drag */
 .videoWrapper {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 300px; /* Minimum height to ensure visibility */
+  min-height: 300px;
   cursor: grab;
   will-change: transform, opacity;
-  background-color: #18181b; /* Fallback background */
+  background-color: #18181b;
 }
 
 .videoWrapper:active {
@@ -66,7 +69,7 @@
   height: 100%;
   object-fit: cover;
   background-color: #09090b;
-  display: block; /* Ensure block display */
+  display: block;
 }
 
 /* User Viewport */
@@ -74,7 +77,7 @@
   position: relative;
   flex: 1;
   width: 100%;
-  min-height: 200px; /* Minimum height */
+  min-height: 200px;
   background-color: #09090b;
   z-index: 10;
   display: flex;
@@ -192,6 +195,7 @@
   padding-right: 0.25rem;
 }
 
+/* Next Button */
 .nextButton {
   flex: 2.5;
   margin: 0 0.75rem;
@@ -211,6 +215,26 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.nextButton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  transition: transform 0.3s ease;
+  transform: translateX(-100%);
+}
+
+.nextButton:hover::after {
+  transform: translateX(100%);
 }
 
 .nextButton:hover:not(:disabled) {
@@ -225,6 +249,7 @@
 .nextButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Helper Buttons */
@@ -244,13 +269,24 @@
   color: #fff;
 }
 
+.flexBtn:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+}
+
 @media (min-width: 640px) {
   .flexBtn {
     min-width: 48px;
     height: 3rem;
   }
+  
+  .nextButton {
+    height: 3rem;
+    font-size: 0.625rem;
+  }
 }
 
+/* Button States */
 .btnHardwareActive {
   background-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
@@ -266,10 +302,25 @@
   color: #fff;
   border-color: #f87171;
   box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2);
+  animation: pulseDanger 2s ease-in-out infinite;
+}
+
+@keyframes pulseDanger {
+  0%, 100% {
+    box-shadow: 
+      0 10px 15px -3px rgba(239, 68, 68, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 10px 25px -3px rgba(239, 68, 68, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
 }
 
 .btnDanger:hover {
   background-color: #dc2626;
+  transform: scale(1.05);
 }
 
 .btnAccent {
@@ -281,36 +332,58 @@
 
 .btnAccent:hover {
   background-color: #4338ca;
+  transform: scale(1.05);
 }
 
 .btnPhone {
   background-color: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.3);
+  position: relative;
 }
 
 .btnPhone:hover {
   background-color: rgba(239, 68, 68, 0.3);
+  transform: scale(1.05);
 }
 
 .btnPhone:active {
   background-color: #ef4444;
   color: #fff;
+  transform: scale(0.95);
 }
 
-/* Loading screen */
-.loadingContainer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #09090b;
-  z-index: 20;
+/* Loading Spinner Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Connection indicator */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Status Pill Animation */
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.statusPill {
+  animation: floatUp 0.3s ease-out;
+}
+
+/* Connection Quality Indicator */
 .connectionIndicator {
   position: absolute;
   top: 1rem;
@@ -329,23 +402,76 @@
   z-index: 40;
 }
 
-/* Status pill animation */
-@keyframes floatUp {
+/* Partner Info Bar */
+.partnerInfo {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  border-radius: 9999px;
+  padding: 0.375rem 1rem;
+  z-index: 40;
+}
+
+/* Loading Screen */
+.loadingContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #09090b;
+  z-index: 20;
+}
+
+/* Pulsing Heart Animation */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Shimmer Loading Effect */
+@keyframes shimmer {
   0% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
+    background-position: -200% 0;
   }
   100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    background-position: 200% 0;
   }
 }
 
-.statusPill {
-  animation: floatUp 0.3s ease-out;
+.loadingShimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(24, 24, 27, 0.8) 0%,
+    rgba(39, 39, 42, 0.8) 50%,
+    rgba(24, 24, 27, 0.8) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }
 
-/* Responsive */
+/* Online Count */
+.onlineCount {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 1rem;
+}
+
+/* Responsive Design */
 @media (max-width: 640px) {
   .branding {
     top: 1rem;
@@ -365,5 +491,130 @@
   .nextButton {
     height: 3rem;
     font-size: 0.625rem;
+  }
+  
+  .flexBtn {
+    min-width: 40px;
+    height: 40px;
+  }
+}
+
+/* Landscape mode optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+  .controlDockWrapper {
+    bottom: 0.5rem;
+  }
+  
+  .controlDock {
+    padding: 0.375rem;
+  }
+  
+  .nextButton {
+    height: 2.5rem;
+  }
+  
+  .flexBtn {
+    min-width: 36px;
+    height: 36px;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .controlDock {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .btnDanger {
+    border: 2px solid #fff;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .btnDanger {
+    animation: none;
+  }
+  
+  .nextButton::after {
+    display: none;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode optimization */
+@media (prefers-color-scheme: dark) {
+  .controlDock {
+    background-color: rgba(24, 24, 27, 0.98);
+  }
+}
+
+/* Fullscreen API support */
+.container:fullscreen {
+  background-color: #000;
+}
+
+.container:-webkit-full-screen {
+  background-color: #000;
+}
+
+/* Custom Scrollbar */
+.container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Text Selection */
+.noSelect {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+}
+
+/* Utility classes */
+.hidden {
+  display: none;
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+.fadeIn {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
