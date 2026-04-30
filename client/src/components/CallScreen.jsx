@@ -2,19 +2,10 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, Loader,
-  Flag, Shield, VolumeX, Heart, Sparkles,
-  X, AlertTriangle, UserX, EyeOff, SkipForward
+  Shield, VolumeX, Heart, Sparkles,
+  Eye, EyeOff, SkipForward
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
-
-const REPORT_REASONS = [
-  { id: 'nudity', label: 'Nudity or sexual content', icon: <EyeOff size={15} /> },
-  { id: 'harassment', label: 'Sexual harassment', icon: <AlertTriangle size={15} /> },
-  { id: 'underage', label: 'Appears to be underage', icon: <UserX size={15} /> },
-  { id: 'violence', label: 'Violence or threats', icon: <AlertTriangle size={15} /> },
-  { id: 'inappropriate', label: 'Inappropriate behavior', icon: <AlertTriangle size={15} /> },
-  { id: 'spam', label: 'Spam or fake profile', icon: <UserX size={15} /> },
-];
 
 const CallScreen = ({
   partner = null,
@@ -33,34 +24,78 @@ const CallScreen = ({
   onLeave = () => {},
   onCancelAutoSearch = () => {},
   onFindRandomPeer = () => {},
-  onReport = () => {},
+  onBlurToggle = () => {},
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [isSkipping, setIsSkipping] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [selectedReason, setSelectedReason] = useState('');
-  const [reportDescription, setReportDescription] = useState('');
-  const [reportSubmitted, setReportSubmitted] = useState(false);
-  const [isReporting, setIsReporting] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(false);
+  const [showBlurConfirm, setShowBlurConfirm] = useState(false);
   const hideTimerRef = useRef(null);
   const skipTimerRef = useRef(null);
+  const localStreamRef = useRef(localStream);
+  const partnerStreamRef = useRef(partnerStream);
+
+  // Update refs when streams change
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  useEffect(() => {
+    partnerStreamRef.current = partnerStream;
+  }, [partnerStream]);
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Handle video stream sources
+  // Handle video stream sources with proper cleanup
   useEffect(() => {
     if (remoteVideoRef.current && partnerStream) {
-      remoteVideoRef.current.srcObject = partnerStream;
+      const videoElement = remoteVideoRef.current;
+      videoElement.srcObject = partnerStream;
+      
+      return () => {
+        if (videoElement.srcObject === partnerStream) {
+          videoElement.srcObject = null;
+        }
+      };
     }
   }, [partnerStream, remoteVideoRef]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+      const videoElement = localVideoRef.current;
+      videoElement.srcObject = localStream;
+      
+      return () => {
+        if (videoElement.srcObject === localStream) {
+          videoElement.srcObject = null;
+        }
+      };
     }
   }, [localStream, localVideoRef]);
+
+  // Cleanup tracks on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+      }
+      if (partnerStreamRef.current) {
+        partnerStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+      }
+      clearTimeout(hideTimerRef.current);
+      clearTimeout(skipTimerRef.current);
+    };
+  }, []);
 
   // Auto-hide UI controls
   useEffect(() => {
@@ -78,7 +113,7 @@ const CallScreen = ({
       hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
 
-    const events = ['mousemove', 'touchstart', 'touchmove', 'scroll'];
+    const events = ['mousemove', 'touchstart', 'touchmove', 'scroll', 'keydown'];
     events.forEach(event => window.addEventListener(event, resetTimer));
 
     return () => {
@@ -87,13 +122,36 @@ const CallScreen = ({
     };
   }, [uiVisible]);
 
-  // Cleanup on unmount
+  // Keyboard shortcuts
   useEffect(() => {
-    return () => {
-      clearTimeout(hideTimerRef.current);
-      clearTimeout(skipTimerRef.current);
+    const handleKeyPress = (e) => {
+      // Don't trigger if typing in an input
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+      
+      switch(e.key) {
+        case 'm':
+          onToggleAudio?.();
+          break;
+        case 'v':
+          onToggleVideo?.();
+          break;
+        case 'n':
+          handleSkip();
+          break;
+        case 'b':
+          handleBlurClick();
+          break;
+        case 'Escape':
+          if (showBlurConfirm) setShowBlurConfirm(false);
+          break;
+        default:
+          break;
+      }
     };
-  }, []);
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [onToggleAudio, onToggleVideo, showBlurConfirm]);
 
   const handleScreenTap = useCallback(() => {
     setUiVisible(prev => !prev);
@@ -104,43 +162,35 @@ const CallScreen = ({
     setIsSkipping(true);
     onFindRandomPeer?.();
     
+    // Clear any existing timer
+    if (skipTimerRef.current) {
+      clearTimeout(skipTimerRef.current);
+    }
+    
     skipTimerRef.current = setTimeout(() => {
       setIsSkipping(false);
       onSkip?.();
     }, 2000);
   }, [isSkipping, onFindRandomPeer, onSkip]);
 
-  const handleReportClick = useCallback(() => {
-    setShowReportModal(true);
-    setReportSubmitted(false);
-    setSelectedReason('');
-    setReportDescription('');
-    setIsReporting(false);
+  const handleBlurClick = useCallback(() => {
+    setShowBlurConfirm(true);
   }, []);
 
-  const handleCloseModal = useCallback(() => {
-    setShowReportModal(false);
-  }, []);
-
-  const handleSubmitReport = useCallback(async () => {
-    if (!selectedReason || isReporting) return;
+  const handleConfirmBlur = useCallback(async () => {
+    const newBlurState = !isBlurred;
+    setIsBlurred(newBlurState);
+    setShowBlurConfirm(false);
     
-    setIsReporting(true);
-    try {
-      const reason = REPORT_REASONS.find(r => r.id === selectedReason);
-      await onReport?.({ 
-        reason: reason?.label || selectedReason, 
-        description: reportDescription 
-      });
-      setReportSubmitted(true);
-      setTimeout(() => setShowReportModal(false), 2200);
-    } catch (error) {
-      console.error('Failed to submit report:', error);
-      // You could show an error state here
-    } finally {
-      setIsReporting(false);
+    // Call the parent handler if provided
+    if (onBlurToggle) {
+      await onBlurToggle(newBlurState);
     }
-  }, [selectedReason, reportDescription, isReporting, onReport]);
+  }, [isBlurred, onBlurToggle]);
+
+  const handleCancelBlur = useCallback(() => {
+    setShowBlurConfirm(false);
+  }, []);
 
   // Memoized floating elements
   const floatingElements = useMemo(() => (
@@ -178,12 +228,20 @@ const CallScreen = ({
       <div className={styles.remoteView}>
         <video
           ref={remoteVideoRef}
-          className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''}`}
+          className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''} ${isBlurred ? styles.videoBlur : ''}`}
           autoPlay
           playsInline
           style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
           aria-label="Remote video stream"
         />
+
+        {/* Blur indicator */}
+        {isBlurred && isRemoteConnected && !isPartnerVideoOff && (
+          <div className={styles.blurIndicator} role="status">
+            <EyeOff size={14} aria-hidden="true" />
+            <span>Video blurred</span>
+          </div>
+        )}
 
         {isRemoteConnected && isPartnerVideoOff && (
           <div className={styles.partnerCameraOff}>
@@ -314,14 +372,15 @@ const CallScreen = ({
         {/* Right cluster */}
         <div className={styles.cluster}>
           <button
-            onClick={handleReportClick}
-            className={`${styles.iconBtn} ${styles.iconBtnFlag}`}
-            aria-label="Report this person"
+            onClick={handleBlurClick}
+            className={`${styles.iconBtn} ${isBlurred ? styles.iconBtnActive : ''}`}
+            aria-label={isBlurred ? 'Remove video blur' : 'Blur video'}
+            aria-pressed={isBlurred}
           >
             <span className={styles.iconWrap}>
-              <Flag size={17} aria-hidden="true" />
+              {isBlurred ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
             </span>
-            <span className={styles.btnLabel}>Report</span>
+            <span className={styles.btnLabel}>{isBlurred ? 'Unblur' : 'Blur'}</span>
           </button>
 
           <button
@@ -337,97 +396,42 @@ const CallScreen = ({
         </div>
       </div>
 
-      {/* ── REPORT MODAL ── */}
-      {showReportModal && (
+      {/* ── BLUR CONFIRMATION MODAL ── */}
+      {showBlurConfirm && (
         <div 
           className={styles.modalOverlay} 
           onClick={e => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="report-modal-title"
+          aria-labelledby="blur-modal-title"
         >
           <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <Shield size={19} className={styles.modalShield} aria-hidden="true" />
-              <h2 id="report-modal-title" className={styles.modalTitle}>
-                Report this person
-              </h2>
+            <div className={styles.modalIcon} aria-hidden="true">
+              {isBlurred ? <Eye size={28} /> : <EyeOff size={28} />}
+            </div>
+            <h2 id="blur-modal-title" className={styles.modalTitle}>
+              {isBlurred ? 'Remove video blur?' : 'Blur your video?'}
+            </h2>
+            <p className={styles.modalText}>
+              {isBlurred 
+                ? 'The other person will be able to see you clearly again.'
+                : 'The other person will see a blurred version of your video. You can unblur anytime.'}
+            </p>
+            <div className={styles.modalActions}>
               <button 
-                onClick={handleCloseModal} 
-                className={styles.modalClose}
-                aria-label="Close report modal"
+                onClick={handleCancelBlur} 
+                className={styles.modalCancelBtn}
               >
-                <X size={18} aria-hidden="true" />
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBlur}
+                className={styles.modalConfirmBtn}
+                aria-label={isBlurred ? 'Confirm remove blur' : 'Confirm blur'}
+              >
+                {isBlurred ? 'Remove Blur' : 'Apply Blur'}
               </button>
             </div>
-
-            {!reportSubmitted ? (
-              <>
-                <p className={styles.modalSubtitle}>
-                  All reports are reviewed privately. Pick what best describes the situation.
-                </p>
-
-                <div className={styles.reasonsGrid} role="radiogroup" aria-label="Report reasons">
-                  {REPORT_REASONS.map(reason => (
-                    <button
-                      key={reason.id}
-                      onClick={() => setSelectedReason(reason.id)}
-                      className={`${styles.reasonChip} ${selectedReason === reason.id ? styles.reasonChipSelected : ''}`}
-                      role="radio"
-                      aria-checked={selectedReason === reason.id}
-                    >
-                      <span className={styles.reasonChipIcon} aria-hidden="true">
-                        {reason.icon}
-                      </span>
-                      <span>{reason.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <textarea
-                  value={reportDescription}
-                  onChange={e => setReportDescription(e.target.value)}
-                  placeholder="Anything else we should know? (optional)"
-                  className={styles.reportTextarea}
-                  rows={3}
-                  aria-label="Additional report details"
-                  maxLength={500}
-                />
-
-                <div className={styles.modalActions}>
-                  <button 
-                    onClick={handleCloseModal} 
-                    className={styles.cancelBtn}
-                    disabled={isReporting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitReport}
-                    disabled={!selectedReason || isReporting}
-                    className={styles.submitBtn}
-                    aria-label="Submit report"
-                  >
-                    {isReporting ? (
-                      <Loader size={14} className={styles.spinner} aria-hidden="true" />
-                    ) : (
-                      <Flag size={14} aria-hidden="true" />
-                    )}
-                    {isReporting ? 'Sending...' : 'Send report'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className={styles.reportSuccess}>
-                <div className={styles.successIconRing} aria-hidden="true">
-                  <Shield size={30} />
-                </div>
-                <h3 className={styles.successTitle}>Report received</h3>
-                <p className={styles.successText}>
-                  Thanks for helping keep Orey safe. We'll review this right away.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       )}
