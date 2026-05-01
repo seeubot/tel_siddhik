@@ -6,7 +6,7 @@ import {
   Eye, EyeOff, SkipForward, MoreHorizontal,
   User
 } from 'lucide-react';
-import './App.css';
+import './CallScreen.module.css';
 
 const CallScreen = ({
   partner = null,
