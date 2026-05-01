@@ -4,631 +4,582 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orey Admin Central</title>
+    <title>Orey | Admin Control Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.263.1/lucide-react.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(229, 231, 235, 0.5);
-        }
-        .status-pulse {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.5; }
-            70% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.5; }
-        }
-        .sidebar-link.active {
-            background: #f3f4f6;
-            border-right: 4px solid #3b82f6;
-            color: #1d4ed8;
-        }
-        [v-cloak] { display: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-link.active { background: #3b82f6; color: white; }
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
+        .log-line { font-family: 'Fira Code', monospace; font-size: 0.75rem; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
+<body class="overflow-hidden">
 
-    <div id="app" class="flex flex-col md:flex-row min-h-screen">
-        <!-- Sidebar -->
-        <aside class="w-full md:w-64 bg-white border-r border-gray-200 flex-shrink-0">
-            <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg">
-                        <i class="fas fa-shield-halved fa-lg"></i>
-                    </div>
-                    <h1 class="text-xl font-bold tracking-tight">Orey Admin</h1>
-                </div>
-                <div class="mt-4">
-                    <input type="password" id="adminKey" placeholder="Enter Admin Secret" 
-                           class="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
+<div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+    <div class="w-full max-w-md glass-card p-8 rounded-2xl shadow-2xl">
+        <div class="flex flex-col items-center mb-8">
+            <div class="bg-blue-600 p-3 rounded-xl mb-4 shadow-lg shadow-blue-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-            
-            <nav class="mt-4">
-                <button onclick="switchTab('dashboard')" class="sidebar-link w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50 active" id="tab-dashboard">
-                    <i class="fas fa-chart-line w-6"></i> Dashboard
-                </button>
-                <button onclick="switchTab('notifications')" class="sidebar-link w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50" id="tab-notifications">
-                    <i class="fas fa-bell w-6"></i> Notifications
-                </button>
-                <button onclick="switchTab('reports')" class="sidebar-link w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50" id="tab-reports">
-                    <i class="fas fa-flag w-6"></i> Reports 
-                    <span id="badge-reports" class="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
-                </button>
-                <button onclick="switchTab('bans')" class="sidebar-link w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50" id="tab-bans">
-                    <i class="fas fa-user-slash w-6"></i> Ban Management
-                </button>
-                <button onclick="switchTab('settings')" class="sidebar-link w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50" id="tab-settings">
-                    <i class="fas fa-cog w-6"></i> System Config
-                </button>
-            </nav>
-
-            <div class="mt-auto p-6 border-t border-gray-100">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-gray-400">Server Status</span>
-                    <div id="server-dot" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                </div>
+            <h1 class="text-2xl font-bold text-white">Orey Admin Portal</h1>
+            <p class="text-slate-400 text-sm">Restricted Access Environment</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Admin Secret Key</label>
+                <input type="password" id="admin-key" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Enter ADMIN_KEY">
             </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
-            
-            <!-- Dashboard Section -->
-            <section id="content-dashboard" class="tab-content">
-                <header class="mb-8">
-                    <h2 class="text-2xl font-bold">System Overview</h2>
-                    <p class="text-gray-500">Real-time performance and user metrics.</p>
-                </header>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="glass-panel p-6 rounded-2xl shadow-sm">
-                        <div class="text-blue-600 mb-2"><i class="fas fa-users text-2xl"></i></div>
-                        <div class="text-2xl font-bold" id="stat-connections">0</div>
-                        <div class="text-sm text-gray-500">Active Connections</div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-2xl shadow-sm">
-                        <div class="text-green-600 mb-2"><i class="fas fa-door-open text-2xl"></i></div>
-                        <div class="text-2xl font-bold" id="stat-rooms">0</div>
-                        <div class="text-sm text-gray-500">Live Rooms</div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-2xl shadow-sm">
-                        <div class="text-red-600 mb-2"><i class="fas fa-exclamation-circle text-2xl"></i></div>
-                        <div class="text-2xl font-bold" id="stat-reports">0</div>
-                        <div class="text-sm text-gray-500">Pending Reports</div>
-                    </div>
-                    <div class="glass-panel p-6 rounded-2xl shadow-sm">
-                        <div class="text-purple-600 mb-2"><i class="fas fa-microchip text-2xl"></i></div>
-                        <div class="text-2xl font-bold" id="stat-memory">0 MB</div>
-                        <div class="text-sm text-gray-500">Memory Usage</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold mb-4 flex items-center">
-                            <i class="fas fa-shield-heart mr-2 text-blue-500"></i> Safety Health
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Auto-Ban System</span>
-                                <span id="stat-autoban" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold uppercase">Enabled</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">Active Bans</span>
-                                <span id="stat-bans" class="font-mono font-bold">0</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600">High Priority Threshold</span>
-                                <span id="stat-hp-thresh" class="font-mono font-bold">2</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 class="font-bold mb-4">Server Uptime</h3>
-                        <div class="text-4xl font-mono text-gray-700" id="stat-uptime">00:00:00</div>
-                        <div class="mt-4 text-xs text-gray-400">Total runtime since last restart</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Notifications Section -->
-            <section id="content-notifications" class="tab-content hidden">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold">Push Notifications</h2>
-                        <p class="text-gray-500">Broadcast messages to your users.</p>
-                    </div>
-                    <button onclick="openModal('notificationModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition">
-                        <i class="fas fa-plus mr-2"></i> Create Notification
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 text-gray-500 text-sm uppercase">
-                            <tr>
-                                <th class="px-6 py-4 font-semibold">Content</th>
-                                <th class="px-6 py-4 font-semibold">Type/Priority</th>
-                                <th class="px-6 py-4 font-semibold">Stats</th>
-                                <th class="px-6 py-4 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="notifications-table-body" class="divide-y divide-gray-100">
-                            <!-- JS populated -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Reports Section -->
-            <section id="content-reports" class="tab-content hidden">
-                <h2 class="text-2xl font-bold mb-2">User Reports</h2>
-                <div class="flex space-x-4 mb-6">
-                    <button onclick="fetchReports('pending')" class="px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-700">Pending</button>
-                    <button onclick="fetchReports('auto_banned')" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Auto-Banned</button>
-                    <button onclick="fetchReports()" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">All History</button>
-                </div>
-
-                <div id="reports-list" class="space-y-4">
-                    <!-- JS populated -->
-                </div>
-            </section>
-
-            <!-- Ban Management Section -->
-            <section id="content-bans" class="tab-content hidden">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-2xl font-bold">Banned Devices</h2>
-                    <div class="flex space-x-2">
-                        <input type="text" id="manualBanId" placeholder="Device ID" class="border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-400">
-                        <button onclick="manualBan()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Ban Device</button>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-                            <tr>
-                                <th class="px-6 py-4">Device Reference</th>
-                                <th class="px-6 py-4">Reason</th>
-                                <th class="px-6 py-4">Expiry</th>
-                                <th class="px-6 py-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bans-table-body" class="divide-y divide-gray-100">
-                            <!-- JS populated -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- System Config Section -->
-            <section id="content-settings" class="tab-content hidden">
-                <h2 class="text-2xl font-bold mb-8">System Configuration</h2>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Maintenance -->
-                    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fas fa-tools mr-2 text-orange-500"></i> Maintenance Mode</h3>
-                        <div class="space-y-4">
-                            <label class="flex items-center space-x-3">
-                                <input type="checkbox" id="maintenanceToggle" class="w-5 h-5 rounded text-blue-600">
-                                <span class="text-gray-700">Enable Maintenance Mode</span>
-                            </label>
-                            <textarea id="maintenanceMsg" placeholder="Maintenance Message..." class="w-full border rounded-lg p-3 text-sm h-24 outline-none focus:ring-2 focus:ring-orange-400"></textarea>
-                            <button onclick="updateMaintenance()" class="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-black transition">Apply Status</button>
-                        </div>
-                    </div>
-
-                    <!-- Safety Config -->
-                    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fas fa-user-shield mr-2 text-blue-500"></i> Safety Controls</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-xs text-gray-400 block mb-1">Auto-Ban Thresh (Reg)</label>
-                                <input type="number" id="cfgAutoBanThresh" class="w-full border rounded p-2">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-400 block mb-1">HP Threshold</label>
-                                <input type="number" id="cfgHPThresh" class="w-full border rounded p-2">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="flex items-center space-x-3 mt-2">
-                                    <input type="checkbox" id="cfgAutoBanEnabled" class="w-4 h-4">
-                                    <span class="text-sm">Master Auto-Ban Switch</span>
-                                </label>
-                            </div>
-                            <button onclick="updateSafety()" class="col-span-2 mt-2 bg-blue-600 text-white py-2 rounded-lg">Save Safety Policy</button>
-                        </div>
-                    </div>
-
-                    <!-- Video Quality -->
-                    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4 flex items-center"><i class="fas fa-video mr-2 text-green-500"></i> Stream Quality</h3>
-                        <div class="space-y-4">
-                            <select id="cfgVideoQuality" class="w-full border rounded p-2">
-                                <option value="low">Low Quality (Save Bandwidth)</option>
-                                <option value="medium">Medium (Standard)</option>
-                                <option value="high">High (Broadband)</option>
-                                <option value="hd">HD (Premium)</option>
-                            </select>
-                            <div class="flex items-center justify-between">
-                                <label class="text-sm">Auto Adjust Bitrate</label>
-                                <input type="checkbox" id="cfgAutoAdjust" class="w-5 h-5">
-                            </div>
-                            <button onclick="updateVideo()" class="w-full bg-green-600 text-white py-2 rounded-lg">Update RTC Config</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <div id="notificationModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h3 class="text-xl font-bold">New Notification</h3>
-                <button onclick="closeModal('notificationModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">2FA TOTP Token</label>
+                <input type="text" id="totp-token" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-center tracking-[0.5em] font-bold" placeholder="000000" maxlength="6">
             </div>
-            <div class="p-6 space-y-4">
-                <input type="text" id="notifTitle" placeholder="Title (e.g. Update Available)" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
-                <textarea id="notifMsg" placeholder="Notification Message Body..." class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500 h-24"></textarea>
-                <div class="grid grid-cols-2 gap-4">
-                    <select id="notifType" class="border rounded-lg p-2">
-                        <option value="info">Info (Blue)</option>
-                        <option value="warning">Warning (Yellow)</option>
-                        <option value="critical">Critical (Red)</option>
-                        <option value="success">Success (Green)</option>
-                    </select>
-                    <select id="notifPriority" class="border rounded-lg p-2">
-                        <option value="normal">Normal Priority</option>
-                        <option value="high">High Priority (Flash)</option>
-                    </select>
-                </div>
-                <input type="text" id="notifIcon" placeholder="Emoji Icon (e.g. 📢)" class="w-full border rounded-lg p-2">
-                <input type="text" id="notifUrl" placeholder="Action URL (optional)" class="w-full border rounded-lg p-2">
-            </div>
-            <div class="p-6 bg-gray-50 flex space-x-3">
-                <button onclick="closeModal('notificationModal')" class="flex-1 px-4 py-2 border rounded-lg hover:bg-white transition">Cancel</button>
-                <button onclick="submitNotification()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Send Now</button>
-            </div>
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]">
+                Authenticate
+            </button>
         </div>
     </div>
+</div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        let currentTab = 'dashboard';
-        let statsInterval = null;
+<div id="app-content" class="hidden h-screen flex flex-col md:flex-row">
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">O</div>
+            <span class="text-xl font-bold tracking-tight">Orey Panel</span>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button onclick="switchTab('dashboard')" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium hover:bg-slate-800">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+            </button>
+            <button onclick="switchTab('reports')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
+                <i data-lucide="flag" class="w-4 h-4"></i> Reports <span id="report-badge" class="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">3</span>
+            </button>
+            <button onclick="switchTab('bans')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
+                <i data-lucide="ban" class="w-4 h-4"></i> Ban Management
+            </button>
+            <button onclick="switchTab('notifications')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
+                <i data-lucide="bell" class="w-4 h-4"></i> Push System
+            </button>
+            <button onclick="switchTab('settings')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
+                <i data-lucide="settings" class="w-4 h-4"></i> Server Settings
+            </button>
+        </nav>
+        <div class="p-4 bg-slate-950 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="status-dot bg-green-500 animate-pulse"></span>
+                <span class="text-xs text-slate-400 uppercase font-bold tracking-widest">Server Healthy</span>
+            </div>
+            <button onclick="logout()" class="w-full text-left text-xs text-red-400 hover:text-red-300 font-medium px-2">Logout Session</button>
+        </div>
+    </aside>
 
-        // --- Core Fetch Wrapper ---
-        async function apiRequest(endpoint, method = 'GET', body = null) {
-            const adminKey = document.getElementById('adminKey').value;
-            const options = {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-key': adminKey
-                }
-            };
-            if (body) options.body = JSON.stringify(body);
-
-            try {
-                const response = await fetch(`${API_BASE}${endpoint}`, options);
-                if (response.status === 401 || response.status === 403) {
-                    showToast('Invalid Admin Key', 'error');
-                    return null;
-                }
-                return await response.json();
-            } catch (error) {
-                console.error(`API Error: ${endpoint}`, error);
-                showToast('Connection failed', 'error');
-                return null;
-            }
-        }
-
-        // --- Tab Management ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`content-${tabId}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            
-            currentTab = tabId;
-            loadTabData(tabId);
-        }
-
-        function loadTabData(tabId) {
-            switch(tabId) {
-                case 'dashboard': fetchStats(); break;
-                case 'notifications': fetchNotifications(); break;
-                case 'reports': fetchReports('pending'); break;
-                case 'bans': fetchBans(); break;
-                case 'settings': fetchSettings(); break;
-            }
-        }
-
-        // --- Dashboard & Stats ---
-        async function fetchStats() {
-            const data = await apiRequest('/admin/stats');
-            if (!data) return;
-
-            document.getElementById('stat-connections').innerText = data.activeConnections;
-            document.getElementById('stat-rooms').innerText = data.activeRooms;
-            document.getElementById('stat-reports').innerText = data.pendingReports;
-            document.getElementById('stat-memory').innerText = Math.round(data.memoryMB) + ' MB';
-            document.getElementById('stat-autoban').innerText = data.safetySettings.autoBanEnabled ? 'Enabled' : 'Disabled';
-            document.getElementById('stat-autoban').className = data.safetySettings.autoBanEnabled 
-                ? 'px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold'
-                : 'px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-bold';
-            document.getElementById('stat-bans').innerText = data.bannedDevices;
-            document.getElementById('stat-hp-thresh').innerText = data.safetySettings.highPriorityThreshold;
-            
-            // Format uptime
-            const uptime = Math.floor(data.uptime);
-            const hrs = String(Math.floor(uptime / 3600)).padStart(2, '0');
-            const mins = String(Math.floor((uptime % 3600) / 60)).padStart(2, '0');
-            const secs = String(uptime % 60).padStart(2, '0');
-            document.getElementById('stat-uptime').innerText = `${hrs}:${mins}:${secs}`;
-
-            const badge = document.getElementById('badge-reports');
-            if (data.pendingReports > 0) {
-                badge.innerText = data.pendingReports;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-
-            document.getElementById('server-dot').className = 'w-2 h-2 rounded-full bg-green-500 status-pulse';
-        }
-
-        // --- Notifications ---
-        async function fetchNotifications() {
-            const data = await apiRequest('/admin/notifications');
-            if (!data) return;
-            
-            const tbody = document.getElementById('notifications-table-body');
-            tbody.innerHTML = data.notifications.reverse().map(n => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4">
-                        <div class="flex items-center">
-                            <span class="text-2xl mr-3">${n.icon || '📢'}</span>
-                            <div>
-                                <div class="font-bold text-gray-800">${n.title}</div>
-                                <div class="text-xs text-gray-400 truncate w-48">${n.message}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex flex-col space-y-1">
-                            <span class="text-[10px] uppercase font-bold text-blue-500">${n.type}</span>
-                            <span class="text-xs ${n.priority === 'high' ? 'text-red-500 font-bold' : 'text-gray-400'}">${n.priority}</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-xs text-gray-500">
-                            ID: ${n.id}<br>
-                            ${new Date(n.timestamp).toLocaleDateString()}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <button onclick="deleteNotification(${n.id})" class="text-red-400 hover:text-red-600 transition">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('') || '<tr><td colspan="4" class="p-8 text-center text-gray-400 italic">No notifications found</td></tr>';
-        }
-
-        async function submitNotification() {
-            const payload = {
-                title: document.getElementById('notifTitle').value,
-                message: document.getElementById('notifMsg').value,
-                type: document.getElementById('notifType').value,
-                priority: document.getElementById('notifPriority').value,
-                icon: document.getElementById('notifIcon').value,
-                actionUrl: document.getElementById('notifUrl').value,
-                expiresIn: 30
-            };
-
-            if (!payload.title || !payload.message) return showToast('Title and Message required');
-
-            const res = await apiRequest('/admin/notifications', 'POST', payload);
-            if (res) {
-                showToast('Notification broadcast sent!');
-                closeModal('notificationModal');
-                fetchNotifications();
-            }
-        }
-
-        async function deleteNotification(id) {
-            if (!confirm('Permanently delete this notification?')) return;
-            const res = await apiRequest(`/admin/notifications/${id}`, 'DELETE');
-            if (res) fetchNotifications();
-        }
-
-        // --- Reports ---
-        async function fetchReports(statusFilter = '') {
-            const endpoint = statusFilter ? `/admin/reports?status=${statusFilter}` : '/admin/reports';
-            const data = await apiRequest(endpoint);
-            if (!data) return;
-
-            const container = document.getElementById('reports-list');
-            container.innerHTML = data.reports.map(r => `
-                <div class="bg-white p-5 rounded-2xl border ${r.isHighPriority ? 'border-red-200 bg-red-50/20' : 'border-gray-200'} shadow-sm">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <div class="flex items-center space-x-2">
-                                ${r.isHighPriority ? '<span class="px-2 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded uppercase">Critical</span>' : ''}
-                                <span class="text-xs font-mono text-gray-400">#${r.id}</span>
-                            </div>
-                            <h4 class="font-bold text-lg mt-1">${r.reason}</h4>
-                            <p class="text-sm text-gray-600 italic">"${r.description || 'No detailed description provided.'}"</p>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs font-bold text-gray-400 uppercase">Status</div>
-                            <div class="text-sm font-bold ${r.status === 'pending' ? 'text-orange-500' : 'text-green-500'} uppercase">${r.status}</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 text-xs text-gray-500 mb-4 bg-gray-50 p-3 rounded-lg">
-                        <div><span class="block text-gray-400 uppercase text-[10px]">Reported Device</span> <span class="font-mono text-blue-600">${r.reportedDeviceId.substring(0, 15)}...</span></div>
-                        <div><span class="block text-gray-400 uppercase text-[10px]">Timestamp</span> ${new Date(r.timestamp).toLocaleString()}</div>
-                    </div>
-                    ${r.status === 'pending' ? `
-                        <div class="flex space-x-2">
-                            <button onclick="takeReportAction('${r.id}', 'ban')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition flex-1">Ban Device</button>
-                            <button onclick="takeReportAction('${r.id}', 'warn')" class="bg-orange-400 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-500 transition flex-1">Send Warning</button>
-                            <button onclick="takeReportAction('${r.id}', 'dismiss')" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-300 transition flex-1">Dismiss</button>
-                        </div>
-                    ` : `
-                        <div class="text-xs text-gray-400 border-t pt-3">
-                            <i class="fas fa-check-circle mr-1"></i> Resolution Notes: ${r.reviewNotes || 'Automated or dismissed without notes.'}
-                        </div>
-                    `}
+    <!-- Main View -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-950">
+        <!-- Header -->
+        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-900/50">
+            <div class="flex items-center gap-4 text-sm text-slate-400">
+                <span id="breadcrumb-active">Dashboard Overview</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="flex flex-col text-right">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Uptime</span>
+                    <span id="uptime-val" class="text-xs font-mono text-blue-400">00:00:00</span>
                 </div>
-            `).join('') || '<div class="p-12 text-center text-gray-400">No reports matching this criteria.</div>';
-        }
+                <div class="h-8 w-px bg-slate-800"></div>
+                <div class="flex items-center gap-2">
+                    <div class="text-right">
+                        <p class="text-xs font-bold">Admin Root</p>
+                        <p class="text-[10px] text-slate-500">Full Access</p>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-        async function takeReportAction(reportId, action) {
-            const notes = prompt(`Enter notes for this ${action}:`);
-            if (notes === null) return;
-
-            const res = await apiRequest(`/admin/reports/${reportId}/action`, 'POST', {
-                action,
-                notes,
-                banDuration: action === 'ban' ? 720 : 0
-            });
-            if (res) fetchReports('pending');
-        }
-
-        // --- Bans ---
-        async function fetchBans() {
-            const data = await apiRequest('/admin/banned-devices');
-            if (!data) return;
-
-            const tbody = document.getElementById('bans-table-body');
-            tbody.innerHTML = data.bannedDevices.map(b => `
-                <tr class="hover:bg-red-50/30 transition">
-                    <td class="px-6 py-4">
-                        <div class="font-mono text-xs text-gray-600">${b.deviceId}</div>
-                        <div class="text-[10px] text-gray-400 mt-1 uppercase">${b.source} Source</div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm font-medium text-gray-700">${b.reason}</div>
-                    </td>
-                    <td class="px-6 py-4 text-xs">
-                        ${b.permanent ? '<span class="text-red-600 font-bold uppercase">Permanent</span>' : 
-                          `<span class="text-gray-500">${new Date(b.expiresAt).toLocaleDateString()}</span>`}
-                    </td>
-                    <td class="px-6 py-4">
-                        <button onclick="unbanDevice('${encodeURIComponent(b.deviceId)}')" class="text-blue-500 hover:text-blue-700 font-bold text-xs uppercase">
-                            <i class="fas fa-unlock mr-1"></i> Lift Ban
-                        </button>
-                    </td>
-                </tr>
-            `).join('') || '<tr><td colspan="4" class="p-8 text-center text-gray-400 italic">No active bans</td></tr>';
-        }
-
-        async function manualBan() {
-            const id = document.getElementById('manualBanId').value;
-            if (!id) return;
-            const res = await apiRequest('/admin/ban-device', 'POST', {
-                deviceId: id,
-                reason: 'Manual Administrative Ban',
-                durationHours: 720
-            });
-            if (res) {
-                showToast('Device banned successfully');
-                document.getElementById('manualBanId').value = '';
-                fetchBans();
-            }
-        }
-
-        async function unbanDevice(encodedId) {
-            if (!confirm('Lift this ban immediately?')) return;
-            const res = await apiRequest(`/admin/ban-device/${encodedId}`, 'DELETE');
-            if (res) {
-                showToast('Ban removed');
-                fetchBans();
-            }
-        }
-
-        // --- Settings ---
-        async function fetchSettings() {
-            const data = await apiRequest('/admin/stats'); // Re-using stats for config
-            if (!data) return;
-
-            const safety = data.safetySettings;
-            document.getElementById('cfgAutoBanEnabled').checked = safety.autoBanEnabled;
-            document.getElementById('cfgAutoBanThresh').value = safety.autoBanThreshold;
-            document.getElementById('cfgHPThresh').value = safety.highPriorityThreshold;
+        <!-- Content Area -->
+        <div id="tab-container" class="flex-1 overflow-y-auto p-8">
             
-            // Note: Since maintenance isn't directly in stats summary, we'd ideally have a /config route
-            // But we can trigger update to see current state
-        }
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Sockets</span>
+                            <i data-lucide="zap" class="w-4 h-4 text-blue-400"></i>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-sockets" class="text-3xl font-bold">1,248</span>
+                            <span class="text-xs text-green-400 flex items-center">+4% <i data-lucide="trending-up" class="w-3 h-3 ml-1"></i></span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Live Rooms</span>
+                            <i data-lucide="video" class="w-4 h-4 text-purple-400"></i>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-rooms" class="text-3xl font-bold">624</span>
+                            <span class="text-xs text-slate-500">1.2 avg user/room</span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Reports</span>
+                            <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-reports" class="text-3xl font-bold">12</span>
+                            <span class="text-xs text-red-400 font-medium">Needs Attention</span>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Banned Devices</span>
+                            <i data-lucide="shield-x" class="w-4 h-4 text-orange-400"></i>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-bans" class="text-3xl font-bold">482</span>
+                            <span class="text-xs text-slate-500">32 permanent</span>
+                        </div>
+                    </div>
+                </div>
 
-        async function updateSafety() {
-            const payload = {
-                autoBanEnabled: document.getElementById('cfgAutoBanEnabled').checked,
-                autoBanThreshold: parseInt(document.getElementById('cfgAutoBanThresh').value),
-                highPriorityThreshold: parseInt(document.getElementById('cfgHPThresh').value)
-            };
-            const res = await apiRequest('/admin/safety-settings', 'PUT', payload);
-            if (res) showToast('Safety policies updated');
-        }
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 glass-card rounded-2xl overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                            <h3 class="text-sm font-bold flex items-center gap-2"><i data-lucide="terminal" class="w-4 h-4 text-blue-400"></i> Server Live Logs</h3>
+                            <button onclick="clearLogs()" class="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300">Clear</button>
+                        </div>
+                        <div id="log-container" class="flex-1 p-4 bg-slate-950/50 font-mono text-xs overflow-y-auto space-y-1">
+                            <!-- Logs injected here -->
+                        </div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6 h-[400px]">
+                        <h3 class="text-sm font-bold mb-6 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-green-400"></i> Memory Usage</h3>
+                        <canvas id="memoryChart"></canvas>
+                        <div class="mt-8 space-y-4">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">Heap Total</span>
+                                <span class="font-mono">148.5 MB</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-1.5 rounded-full">
+                                <div class="bg-blue-500 h-1.5 rounded-full" style="width: 65%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">External</span>
+                                <span class="font-mono">12.2 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        async function updateMaintenance() {
-            const payload = {
-                enabled: document.getElementById('maintenanceToggle').checked,
-                message: document.getElementById('maintenanceMsg').value
-            };
-            const res = await apiRequest('/admin/maintenance', 'POST', payload);
-            if (res) showToast(`Maintenance ${payload.enabled ? 'ON' : 'OFF'}`);
-        }
+            <!-- Reports Tab -->
+            <section id="tab-reports" class="hidden space-y-6">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h2 class="text-2xl font-bold">User Reports</h2>
+                        <p class="text-sm text-slate-400">Review flagged community activity</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select class="bg-slate-900 border border-slate-800 rounded-lg text-xs px-3 py-2 outline-none">
+                            <option>All Reports</option>
+                            <option>Pending Only</option>
+                            <option>High Priority</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/80 border-b border-slate-800 text-slate-400 text-xs">
+                            <tr>
+                                <th class="px-6 py-4 font-bold uppercase">Report ID</th>
+                                <th class="px-6 py-4 font-bold uppercase">Reported Device</th>
+                                <th class="px-6 py-4 font-bold uppercase">Reason</th>
+                                <th class="px-6 py-4 font-bold uppercase">Status</th>
+                                <th class="px-6 py-4 font-bold uppercase text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-tbody" class="divide-y divide-slate-800">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-        async function updateVideo() {
-            const payload = {
-                default: document.getElementById('cfgVideoQuality').value,
-                autoAdjust: document.getElementById('cfgAutoAdjust').checked
-            };
-            const res = await apiRequest('/admin/video-quality', 'PUT', payload);
-            if (res) showToast('Global RTC quality updated');
-        }
+            <!-- Notifications Tab -->
+            <section id="tab-notifications" class="hidden space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card p-6 rounded-2xl space-y-6">
+                        <h3 class="font-bold flex items-center gap-2"><i data-lucide="megaphone" class="w-4 h-4 text-yellow-400"></i> Broadcast Notification</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Title</label>
+                                <input id="notif-title" type="text" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500" placeholder="New Update Available">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Message</label>
+                                <textarea id="notif-msg" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500 resize-none" placeholder="We have added new features..."></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Type</label>
+                                    <select id="notif-type" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
+                                        <option value="info">Info</option>
+                                        <option value="success">Success</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Priority</label>
+                                    <select id="notif-priority" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
+                                        <option value="normal">Normal</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button onclick="sendNotification()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="send" class="w-4 h-4"></i> Dispatch Notification
+                            </button>
+                        </div>
+                    </div>
+                    <div class="glass-card rounded-2xl flex flex-col">
+                        <div class="p-6 border-b border-slate-800">
+                            <h3 class="font-bold">Recent History</h3>
+                        </div>
+                        <div id="notif-history" class="flex-1 p-6 space-y-4 overflow-y-auto max-h-[400px]">
+                            <!-- History items injected -->
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        // --- Helpers ---
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+            <!-- Settings Tab -->
+            <section id="tab-settings" class="hidden space-y-8">
+                <div class="max-w-3xl space-y-6">
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i> Safety Configuration</h3>
+                        <div class="space-y-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">Automatic Banning</p>
+                                    <p class="text-xs text-slate-400">Ban users automatically based on report thresholds</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked class="sr-only peer" id="toggle-autoban">
+                                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Regular Threshold</label>
+                                    <input type="number" value="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">High Priority Threshold</label>
+                                    <input type="number" value="2" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        function showToast(msg, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 ${type === 'success' ? 'bg-gray-800' : 'bg-red-600'} text-white px-6 py-3 rounded-xl shadow-2xl z-[100] transition-all transform translate-y-10 opacity-0`;
-            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle text-green-400' : 'fa-exclamation-triangle'} mr-2"></i> ${msg}`;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 100);
-            
-            setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 500);
-            }, 3000);
-        }
+                    <div class="glass-card p-6 rounded-2xl">
+                        <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="hammer" class="w-4 h-4 text-orange-400"></i> Maintenance Mode</h3>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium">Global Maintenance Lock</p>
+                                <p class="text-xs text-slate-400">Disconnect all current users and show a maintenance splash screen</p>
+                            </div>
+                            <button onclick="toggleMaintenance()" id="maint-btn" class="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800 px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                                Activate Mode
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        // Auto-refresh stats when on dashboard
+        </div>
+    </main>
+</div>
+
+<div id="toast-container" class="fixed bottom-6 right-6 z-[100] space-y-3"></div>
+
+<script>
+    // --- Mock Backend State ---
+    const STATE = {
+        authenticated: false,
+        adminKey: '',
+        totp: '',
+        uptime: 0,
+        logs: [],
+        reports: [
+            { id: '8f2a1b', device: 'DEVICE-192-X', reason: 'Nudity / Sexual Content', priority: 'high', status: 'pending' },
+            { id: 'c3e9a0', device: 'DEVICE-441-A', reason: 'Harassment', priority: 'normal', status: 'pending' },
+            { id: 'f1d2b8', device: 'DEVICE-008-Z', reason: 'Spam / Bot', priority: 'normal', status: 'pending' }
+        ],
+        bans: [],
+        notifHistory: []
+    };
+
+    // --- Initialization ---
+    window.onload = () => {
+        lucide.createIcons();
+        initChart();
+        setInterval(updateUptime, 1000);
+        
+        // Push initial logs
+        log('system', 'Orey Core v1.4.0 initialization...');
+        log('db', 'MongoDB Cluster connected (5 nodes active)');
+        log('socket', 'Socket.io engine heartbeat detected');
+        
+        // Random log generation for effect
         setInterval(() => {
-            if (currentTab === 'dashboard') fetchStats();
-        }, 5000);
+            if(!STATE.authenticated) return;
+            const events = [
+                {t: 'socket', m: 'New user joined room R-7821'},
+                {t: 'match', m: 'Auto-matching session initiated (2 peers)'},
+                {t: 'api', m: 'Device register: Samsung SM-G960F'},
+                {t: 'socket', m: 'Client disconnected: Latency timeout'}
+            ];
+            const evt = events[Math.floor(Math.random() * events.length)];
+            log(evt.t, evt.m);
+        }, 4000);
+    };
 
-        // Initial load
-        window.onload = () => {
-            fetchStats();
+    function login() {
+        const key = document.getElementById('admin-key').value;
+        const totp = document.getElementById('totp-token').value;
+
+        if (key.length > 5 && totp.length === 6) {
+            STATE.authenticated = true;
+            STATE.adminKey = key;
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            showToast('Success', 'Secure administrative session established', 'success');
+            renderReports();
+        } else {
+            showToast('Auth Failed', 'Invalid administrative credentials or token', 'error');
+        }
+    }
+
+    function logout() {
+        location.reload();
+    }
+
+    function switchTab(tabId) {
+        // Update UI links
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.classList.remove('active', 'text-white');
+            link.classList.add('text-slate-400');
+        });
+        const activeLink = Array.from(document.querySelectorAll('.sidebar-link')).find(l => l.getAttribute('onclick').includes(tabId));
+        activeLink.classList.add('active', 'text-white');
+        activeLink.classList.remove('text-slate-400');
+
+        // Update sections
+        document.querySelectorAll('#tab-container section').forEach(sec => sec.classList.add('hidden'));
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        
+        document.getElementById('breadcrumb-active').innerText = tabId.charAt(0).toUpperCase() + tabId.slice(1) + (tabId === 'dashboard' ? ' Overview' : '');
+    }
+
+    // --- Features ---
+
+    function log(type, message) {
+        const container = document.getElementById('log-container');
+        const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        const colors = {
+            system: 'text-blue-400',
+            db: 'text-green-400',
+            socket: 'text-purple-400',
+            match: 'text-yellow-400',
+            api: 'text-slate-400'
         };
-    </script>
+        
+        const line = document.createElement('div');
+        line.className = 'log-line border-l-2 border-slate-800 pl-2 hover:bg-slate-900 transition-colors';
+        line.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="${colors[type] || 'text-slate-400'} font-bold uppercase mr-2 text-[10px]">${type}:</span> ${message}`;
+        
+        container.appendChild(line);
+        container.scrollTop = container.scrollHeight;
+        
+        if (container.children.length > 100) container.removeChild(container.firstChild);
+    }
+
+    function clearLogs() {
+        document.getElementById('log-container').innerHTML = '';
+        log('system', 'Log buffer cleared by administrator');
+    }
+
+    function renderReports() {
+        const tbody = document.getElementById('reports-tbody');
+        tbody.innerHTML = '';
+        
+        STATE.reports.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-900/50 transition-colors';
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-mono text-xs text-blue-400">#${r.id}</td>
+                <td class="px-6 py-4">
+                    <p class="font-medium">${r.device}</p>
+                    <p class="text-[10px] text-slate-500">Android 13 | IP: 182.xx.xx.xx</p>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 rounded text-[10px] font-bold ${r.priority === 'high' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-slate-800 text-slate-400'}">${r.reason}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <span class="status-dot bg-yellow-500"></span>
+                        <span class="text-xs text-slate-400 capitalize">${r.status}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                        <button onclick="handleReport('${r.id}', 'ban')" class="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors" title="Ban Device"><i data-lucide="user-x" class="w-4 h-4"></i></button>
+                        <button onclick="handleReport('${r.id}', 'dismiss')" class="p-2 hover:bg-slate-800 text-slate-400 rounded-lg transition-colors" title="Dismiss"><i data-lucide="check" class="w-4 h-4"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+        document.getElementById('report-badge').innerText = STATE.reports.length;
+    }
+
+    function handleReport(id, action) {
+        const idx = STATE.reports.findIndex(r => r.id === id);
+        const r = STATE.reports[idx];
+        if (action === 'ban') {
+            log('safety', `Manual BAN issued for ${r.device} following report #${id}`);
+            showToast('User Banned', `Device ${r.device} has been permanently restricted.`, 'warning');
+        } else {
+            showToast('Report Dismissed', `No violation found for report #${id}.`, 'info');
+        }
+        STATE.reports.splice(idx, 1);
+        renderReports();
+    }
+
+    function sendNotification() {
+        const title = document.getElementById('notif-title').value;
+        const msg = document.getElementById('notif-msg').value;
+        const type = document.getElementById('notif-type').value;
+
+        if (!title || !msg) return showToast('Error', 'Title and message required', 'error');
+
+        const notif = { title, msg, type, time: new Date().toLocaleTimeString() };
+        STATE.notifHistory.unshift(notif);
+        
+        // Add to history UI
+        const history = document.getElementById('notif-history');
+        const div = document.createElement('div');
+        div.className = 'glass-card p-4 rounded-xl border-l-4 ' + (type === 'critical' ? 'border-red-500' : 'border-blue-500');
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-1">
+                <h4 class="text-xs font-bold uppercase text-slate-400">${notif.title}</h4>
+                <span class="text-[10px] text-slate-600">${notif.time}</span>
+            </div>
+            <p class="text-sm">${notif.msg}</p>
+        `;
+        history.prepend(div);
+        
+        log('api', `Broadcast notification dispatched: ${title}`);
+        showToast('Sent', 'Notification delivered to all active clients', 'success');
+        
+        document.getElementById('notif-title').value = '';
+        document.getElementById('notif-msg').value = '';
+    }
+
+    function toggleMaintenance() {
+        const btn = document.getElementById('maint-btn');
+        const isActive = btn.classList.contains('bg-red-600');
+        
+        if (!isActive) {
+            btn.className = "bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all";
+            btn.innerText = "Deactivate Mode";
+            log('system', 'MAINTENANCE MODE ENABLED - Connections locked');
+            showToast('Locked', 'Server is now in maintenance mode', 'warning');
+        } else {
+            btn.className = "bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800 px-4 py-2 rounded-lg text-sm font-bold transition-all";
+            btn.innerText = "Activate Mode";
+            log('system', 'Server live - maintenance mode disabled');
+            showToast('Online', 'Server is now accepting connections', 'success');
+        }
+    }
+
+    // --- Utils ---
+
+    function showToast(title, msg, type) {
+        const container = document.getElementById('toast-container');
+        const colors = {
+            success: 'bg-green-600',
+            error: 'bg-red-600',
+            warning: 'bg-orange-600',
+            info: 'bg-blue-600'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = `${colors[type]} p-4 rounded-xl shadow-lg w-72 transform translate-y-20 transition-all duration-300 opacity-0`;
+        toast.innerHTML = `<h5 class="font-bold text-sm">${title}</h5><p class="text-xs opacity-90">${msg}</p>`;
+        
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.remove('translate-y-20', 'opacity-0');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-full');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    function updateUptime() {
+        STATE.uptime++;
+        const h = Math.floor(STATE.uptime / 3600).toString().padStart(2, '0');
+        const m = Math.floor((STATE.uptime % 3600) / 60).toString().padStart(2, '0');
+        const s = (STATE.uptime % 60).toString().padStart(2, '0');
+        document.getElementById('uptime-val').innerText = `${h}:${m}:${s}`;
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('memoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(10).fill(''),
+                datasets: [{
+                    label: 'Memory',
+                    data: [65, 59, 80, 81, 56, 55, 40, 70, 75, 65],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { 
+                        grid: { color: '#1e293b' },
+                        ticks: { color: '#64748b', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+</script>
 </body>
 </html>
+
