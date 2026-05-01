@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>Orey Admin Panel</title>
+  <title>Orey Admin Panel - Secure</title>
   <style>
     * {
       margin: 0;
@@ -14,9 +14,49 @@
     body {
       background: #0b0f17;
       color: #e2e8f0;
-      display: flex;
-      flex-direction: column;
       min-height: 100vh;
+    }
+    
+    /* Login Screen */
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    .login-box {
+      background: #1e293b;
+      padding: 2.5rem;
+      border-radius: 24px;
+      border: 1px solid #334155;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .login-box h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #3b82f6;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .login-box p {
+      color: #94a3b8;
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    .login-box button {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.8rem;
+      font-size: 1rem;
+    }
+    
+    /* Dashboard */
+    .dashboard {
+      display: none;
     }
     .container {
       max-width: 1400px;
@@ -33,6 +73,9 @@
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .logo {
       display: flex;
@@ -50,17 +93,22 @@
       font-size: 0.9rem;
       color: white;
     }
-    .admin-tag {
-      background: #1e293b;
-      padding: 0.4rem 1.2rem;
-      border-radius: 30px;
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .session-timer {
+      background: #0f172a;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
       color: #94a3b8;
-      font-size: 0.9rem;
       border: 1px solid #334155;
     }
     .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1.25rem;
       margin: 1.75rem 0;
     }
@@ -69,7 +117,6 @@
       border-radius: 20px;
       padding: 1.4rem;
       border: 1px solid #334155;
-      backdrop-filter: blur(10px);
       transition: all 0.2s;
     }
     .stat-card:hover {
@@ -77,15 +124,17 @@
       transform: translateY(-2px);
     }
     .stat-label {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      font-weight: 600;
     }
     .stat-value {
-      font-size: 2.3rem;
+      font-size: 2.2rem;
       font-weight: 700;
       margin: 0.4rem 0 0.2rem;
+      color: #f1f5f9;
     }
     .stat-desc {
       font-size: 0.8rem;
@@ -106,6 +155,11 @@
       gap: 0.5rem;
       color: #f1f5f9;
     }
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.8rem;
+      color: #cbd5e1;
+    }
     .flex-row {
       display: flex;
       flex-wrap: wrap;
@@ -123,23 +177,37 @@
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      transition: background 0.2s;
+      transition: all 0.2s;
       font-size: 0.9rem;
       border: 1px solid #2563eb;
+    }
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
     }
     button.secondary {
       background: #334155;
       border-color: #475569;
     }
-    button.danger {
-      background: #b91c1c;
-      border-color: #dc2626;
+    button.secondary:hover {
+      background: #475569;
     }
-    button:hover {
-      background: #2563eb;
+    button.danger {
+      background: #dc2626;
+      border-color: #b91c1c;
     }
     button.danger:hover {
-      background: #991b1b;
+      background: #b91c1c;
+    }
+    button.logout-btn {
+      background: #475569;
+      border-color: #64748b;
+    }
+    button.logout-btn:hover {
+      background: #64748b;
     }
     input, select, textarea {
       background: #0f172a;
@@ -151,9 +219,17 @@
       outline: none;
       width: 100%;
       margin-bottom: 0.8rem;
+      transition: border-color 0.2s;
     }
     input:focus, select:focus, textarea:focus {
       border-color: #3b82f6;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+      font-weight: 500;
     }
     .table-wrapper {
       overflow-x: auto;
@@ -170,6 +246,7 @@
       background: #0f172a;
       color: #94a3b8;
       font-weight: 600;
+      white-space: nowrap;
     }
     td {
       padding: 0.8rem;
@@ -181,151 +258,460 @@
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 600;
+      white-space: nowrap;
     }
     .badge.active { background: #16a34a; color: white; }
-    .badge.pending { background: #ea580c; }
-    .badge.banned { background: #b91c1c; color: white; }
-    .badge.high { background: #7e22ce; }
+    .badge.pending { background: #ea580c; color: white; }
+    .badge.banned { background: #dc2626; color: white; }
+    .badge.high { background: #7e22ce; color: white; }
+    .badge.dismissed { background: #64748b; color: white; }
     .toast {
       position: fixed;
       bottom: 20px;
       right: 20px;
       background: #1e293b;
-      border: 1px solid #3b82f6;
-      padding: 0.9rem 1.5rem;
+      border: 2px solid #3b82f6;
+      padding: 1rem 1.5rem;
       border-radius: 20px;
       color: white;
       z-index: 9999;
       display: none;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      font-weight: 500;
     }
-    .config-section {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.2rem;
+    .toast.error {
+      border-color: #dc2626;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .error-message {
+      background: rgba(220, 38, 38, 0.2);
+      border: 1px solid #dc2626;
+      color: #fca5a5;
+      padding: 0.8rem;
+      border-radius: 12px;
+      margin-top: 1rem;
+      display: none;
     }
     hr {
       border-color: #334155;
       margin: 1.2rem 0;
     }
+    @media (max-width: 768px) {
+      header {
+        padding: 1rem;
+      }
+      .logo {
+        font-size: 1.3rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">🔷 OREY <span>ADMIN</span></div>
-    <div class="admin-tag" id="connectionStatus">🟡 Connecting...</div>
-  </header>
-  <div class="container">
-    <!-- Stats Grid -->
-    <div class="dashboard-grid" id="statsGrid">
-      <div class="stat-card"><div class="stat-label">Active Connections</div><div class="stat-value" id="activeConn">-</div></div>
-      <div class="stat-card"><div class="stat-label">Active Rooms</div><div class="stat-value" id="activeRooms">-</div></div>
-      <div class="stat-card"><div class="stat-label">Banned Devices</div><div class="stat-value" id="bannedCount">-</div></div>
-      <div class="stat-card"><div class="stat-label">Pending Reports</div><div class="stat-value" id="pendingReports">-</div></div>
+  <!-- Login Screen -->
+  <div class="login-container" id="loginScreen">
+    <div class="login-box">
+      <h1>🔷 OREY Admin</h1>
+      <p>Enter your admin key to access the control panel</p>
+      <input type="password" id="adminKeyInput" placeholder="Enter admin key" autocomplete="off" />
+      <button onclick="login()">🔐 Login to Dashboard</button>
+      <div class="error-message" id="loginError"></div>
+      <p style="margin-top:1.2rem; font-size:0.8rem; color:#64748b; text-align:center;">
+        Session expires after 2 hours of inactivity
+      </p>
     </div>
+  </div>
 
-    <!-- Reports Section -->
-    <div class="panel">
-      <h2>🚨 Reports</h2>
-      <div class="flex-row" style="margin-bottom:1rem;">
-        <button onclick="loadReports()">🔄 Refresh</button>
-        <select id="reportFilter" onchange="loadReports()" style="width:auto; margin:0;">
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="auto_banned">Auto Banned</option>
-          <option value="banned">Banned</option>
-          <option value="dismissed">Dismissed</option>
-        </select>
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <header>
+      <div class="logo">🔷 OREY <span>ADMIN</span></div>
+      <div class="header-right">
+        <span class="session-timer" id="sessionTimer">Session: --:--</span>
+        <span style="color:#16a34a; font-size:0.9rem;">● Connected</span>
+        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
       </div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>ID</th><th>Reported Device</th><th>Reason</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="reportsTable"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Banned Devices -->
-    <div class="panel">
-      <h2>🛑 Banned Devices</h2>
-      <div class="flex-row">
-        <button onclick="loadBannedDevices()">Refresh</button>
-        <input type="text" id="banDeviceId" placeholder="Device ID to ban" style="width:250px; margin:0;">
-        <input type="text" id="banReason" placeholder="Reason" style="width:180px; margin:0;">
-        <input type="number" id="banDuration" placeholder="Hours (0=permanent)" style="width:120px; margin:0;" value="720">
-        <button class="danger" onclick="banDevice()">Ban Device</button>
-      </div>
-      <div class="table-wrapper" style="margin-top:1rem;">
-        <table>
-          <thead><tr><th>Device ID</th><th>Reason</th><th>Expires</th><th>Source</th><th>Unban</th></tr></thead>
-          <tbody id="bannedTable"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Notifications -->
-    <div class="panel">
-      <h2>📢 Send Notification</h2>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-        <input type="text" id="notifTitle" placeholder="Title" />
-        <input type="text" id="notifMessage" placeholder="Message" />
-        <select id="notifType"><option value="info">Info</option><option value="warning">Warning</option><option value="alert">Alert</option></select>
-        <input type="text" id="notifImageUrl" placeholder="Image URL (optional)" />
-        <input type="text" id="notifActionUrl" value="/" placeholder="Action URL" />
-        <input type="number" id="notifExpiresIn" value="30" placeholder="Expires in days" />
-      </div>
-      <button onclick="sendNotification()" style="margin-top:1rem;">📤 Send Broadcast</button>
-    </div>
-
-    <!-- Server Config -->
-    <div class="panel">
-      <h2>⚙️ Server Configuration</h2>
-      <div class="config-section">
-        <div>
-          <label>Maintenance Mode</label>
-          <select id="maintEnabled" onchange="updateMaintenance()">
-            <option value="false">Disabled</option><option value="true">Enabled</option>
-          </select>
-          <input type="text" id="maintMessage" placeholder="Maintenance message" onchange="updateMaintenance()" />
+    </header>
+    <div class="container">
+      <!-- Stats Grid -->
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-label">📡 Active Connections</div>
+          <div class="stat-value" id="activeConn">-</div>
+          <div class="stat-desc">Live users online</div>
         </div>
-        <div>
-          <label>Default Video Quality</label>
-          <select id="videoQualityDefault" onchange="updateVideoQuality()">
-            <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="hd">HD</option>
-          </select>
-          <label>Auto Adjust <input type="checkbox" id="autoAdjust" checked onchange="updateVideoQuality()"></label>
+        <div class="stat-card">
+          <div class="stat-label">🎥 Active Rooms</div>
+          <div class="stat-value" id="activeRooms">-</div>
+          <div class="stat-desc">Ongoing video calls</div>
         </div>
-        <div>
-          <label>Auto Ban Threshold</label>
-          <input type="number" id="autoBanThreshold" value="3" onchange="updateSafety()" />
-          <label>High Priority Threshold</label>
-          <input type="number" id="highPriorityThreshold" value="2" onchange="updateSafety()" />
+        <div class="stat-card">
+          <div class="stat-label">🚫 Banned Devices</div>
+          <div class="stat-value" id="bannedCount">-</div>
+          <div class="stat-desc">Total banned</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🚨 Pending Reports</div>
+          <div class="stat-value" id="pendingReports">-</div>
+          <div class="stat-desc">Needs review</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">📢 Notifications</div>
+          <div class="stat-value" id="notifCount">-</div>
+          <div class="stat-desc">Active notifications</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔐 Active Sessions</div>
+          <div class="stat-value" id="adminSessions">-</div>
+          <div class="stat-desc">Admin sessions</div>
+        </div>
+      </div>
+
+      <!-- Reports Section -->
+      <div class="panel">
+        <h2>🚨 Reports Management</h2>
+        <div class="flex-row" style="margin-bottom:1rem;">
+          <button onclick="loadReports()">🔄 Refresh</button>
+          <select id="reportFilter" onchange="loadReports()" style="width:auto; margin:0;">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="auto_banned">Auto Banned</option>
+            <option value="banned">Banned</option>
+            <option value="dismissed">Dismissed</option>
+            <option value="warned">Warned</option>
+          </select>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>Reported Device</th>
+                <th>Reason</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTable">
+              <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading reports...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Banned Devices -->
+      <div class="panel">
+        <h2>🛑 Ban Management</h2>
+        <div class="flex-row" style="margin-bottom:1rem;">
+          <input type="text" id="banDeviceId" placeholder="Device ID to ban" style="width:250px; margin:0;" />
+          <input type="text" id="banReason" placeholder="Reason for ban" style="width:200px; margin:0;" />
+          <input type="number" id="banDuration" placeholder="Hours (0=permanent)" style="width:130px; margin:0;" value="720" />
+          <button class="danger" onclick="banDevice()">⛔ Ban Device</button>
+          <button onclick="loadBannedDevices()">🔄 Refresh</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Device ID</th>
+                <th>Reason</th>
+                <th>Expires</th>
+                <th>Source</th>
+                <th>Unban</th>
+              </tr>
+            </thead>
+            <tbody id="bannedTable">
+              <tr><td colspan="5" style="text-align:center; color:#64748b;">Loading banned devices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Notification System -->
+      <div class="panel">
+        <h2>📢 Push Notifications</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
+          <div>
+            <label>Title *</label>
+            <input type="text" id="notifTitle" placeholder="Notification title" />
+          </div>
+          <div>
+            <label>Message *</label>
+            <input type="text" id="notifMessage" placeholder="Notification message" />
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="notifType">
+              <option value="info">ℹ️ Info</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="alert">🚨 Alert</option>
+              <option value="success">✅ Success</option>
+            </select>
+          </div>
+          <div>
+            <label>Priority</label>
+            <select id="notifPriority">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div>
+            <label>Image URL (optional)</label>
+            <input type="text" id="notifImageUrl" placeholder="https://example.com/image.jpg" />
+          </div>
+          <div>
+            <label>Action URL</label>
+            <input type="text" id="notifActionUrl" value="/" placeholder="/welcome" />
+          </div>
+          <div>
+            <label>Expires In (days)</label>
+            <input type="number" id="notifExpiresIn" value="30" min="1" max="365" />
+          </div>
+          <div>
+            <label>Target Platform</label>
+            <select id="notifPlatform">
+              <option value="all">All Platforms</option>
+              <option value="android">Android</option>
+              <option value="ios">iOS</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex-row" style="margin-top:1rem;">
+          <button onclick="sendNotification()">📤 Send Broadcast</button>
+          <button class="secondary" onclick="loadNotifications()">📋 View All Notifications</button>
+        </div>
+        <div class="table-wrapper" style="margin-top:1rem; display:none;" id="notificationsTableWrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody id="notificationsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Server Configuration -->
+      <div class="panel">
+        <h2>⚙️ Server Configuration</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem;">
+          <div>
+            <h3>🔧 Maintenance</h3>
+            <label>Mode</label>
+            <select id="maintEnabled" onchange="updateMaintenance()">
+              <option value="false">Disabled</option>
+              <option value="true">Enabled</option>
+            </select>
+            <label>Message</label>
+            <input type="text" id="maintMessage" placeholder="Maintenance message" onchange="updateMaintenance()" />
+          </div>
+          <div>
+            <h3>📹 Video Quality</h3>
+            <label>Default Quality</label>
+            <select id="videoQualityDefault" onchange="updateVideoQuality()">
+              <option value="low">Low (150 kbps)</option>
+              <option value="medium" selected>Medium (500 kbps)</option>
+              <option value="high">High (1.5 Mbps)</option>
+              <option value="hd">HD (4 Mbps)</option>
+            </select>
+            <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem;">
+              <input type="checkbox" id="autoAdjust" checked onchange="updateVideoQuality()" style="width:auto; margin:0;" />
+              Auto-adjust quality
+            </label>
+          </div>
+          <div>
+            <h3>🛡️ Safety Settings</h3>
+            <label>Auto-ban threshold (reports)</label>
+            <input type="number" id="autoBanThreshold" value="3" min="1" max="100" onchange="updateSafety()" />
+            <label>High-priority threshold</label>
+            <input type="number" id="highPriorityThreshold" value="2" min="1" max="100" onchange="updateSafety()" />
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <div id="toast" class="toast">✅ Action completed</div>
+  
+  <div id="toast" class="toast"></div>
 
   <script>
-    const ADMIN_KEY = 'maya@1660440'; // Match server ADMIN_KEY
     const BASE = window.location.origin;
-    
-    function toast(msg) {
+    let sessionToken = localStorage.getItem('orey_admin_session');
+    let sessionExpiry = localStorage.getItem('orey_session_expiry');
+    let sessionTimerInterval = null;
+
+    // Check for existing session on load
+    function checkSession() {
+      if (sessionToken && sessionExpiry) {
+        const expiry = new Date(sessionExpiry).getTime();
+        if (Date.now() < expiry - 60000) { // 1 minute buffer
+          showDashboard();
+          updateSessionTimer();
+          return true;
+        } else {
+          clearSession();
+        }
+      }
+      return false;
+    }
+
+    function clearSession() {
+      sessionToken = null;
+      sessionExpiry = null;
+      localStorage.removeItem('orey_admin_session');
+      localStorage.removeItem('orey_session_expiry');
+      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+    }
+
+    function showToast(msg, isError = false) {
       const t = document.getElementById('toast');
       t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '');
       t.style.display = 'block';
-      setTimeout(() => t.style.display = 'none', 3000);
+      setTimeout(() => t.style.display = 'none', 4000);
     }
 
     async function apiCall(url, method = 'GET', body = null) {
-      const headers = { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' };
+      const headers = { 
+        'x-session-token': sessionToken,
+        'Content-Type': 'application/json' 
+      };
       const options = { method, headers };
       if (body) options.body = JSON.stringify(body);
+      
       const res = await fetch(url, options);
+      
+      if (res.status === 401) {
+        clearSession();
+        showLoginScreen();
+        throw new Error('Session expired. Please login again.');
+      }
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Request failed' }));
         throw new Error(err.error || 'Error');
       }
+      
       return res.json();
+    }
+
+    function showLoginScreen() {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('adminKeyInput').value = '';
+      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+    }
+
+    function showDashboard() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadAllData();
+    }
+
+    async function login() {
+      const adminKey = document.getElementById('adminKeyInput').value.trim();
+      const errorDiv = document.getElementById('loginError');
+      
+      if (!adminKey) {
+        errorDiv.textContent = 'Please enter admin key';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminKey })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Invalid admin key';
+          errorDiv.style.display = 'block';
+          return;
+        }
+
+        sessionToken = data.sessionToken;
+        sessionExpiry = data.expiresAt;
+        
+        localStorage.setItem('orey_admin_session', sessionToken);
+        localStorage.setItem('orey_session_expiry', sessionExpiry);
+        
+        showDashboard();
+        updateSessionTimer();
+        showToast('✅ Login successful! Session valid for 2 hours');
+      } catch (err) {
+        errorDiv.textContent = 'Connection error. Check server status.';
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    async function logout() {
+      try {
+        if (sessionToken) {
+          await fetch(`${BASE}/admin/logout`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-session-token': sessionToken 
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore errors during logout
+      }
+      
+      clearSession();
+      showLoginScreen();
+      showToast('👋 Logged out successfully');
+    }
+
+    function updateSessionTimer() {
+      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+      
+      sessionTimerInterval = setInterval(() => {
+        const expiry = new Date(sessionExpiry).getTime();
+        const remaining = expiry - Date.now();
+        
+        if (remaining <= 0) {
+          clearSession();
+          showLoginScreen();
+          showToast('⏰ Session expired. Please login again.', true);
+          return;
+        }
+        
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        const timerEl = document.getElementById('sessionTimer');
+        if (timerEl) {
+          timerEl.textContent = `Session: ${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+      }, 1000);
+    }
+
+    // Dashboard Functions
+    async function loadAllData() {
+      await Promise.allSettled([
+        loadStats(),
+        loadReports(),
+        loadBannedDevices(),
+      ]);
     }
 
     async function loadStats() {
@@ -335,136 +721,274 @@
         document.getElementById('activeRooms').textContent = data.activeRooms || 0;
         document.getElementById('bannedCount').textContent = data.bannedDevices || 0;
         document.getElementById('pendingReports').textContent = data.pendingReports || 0;
-        document.getElementById('connectionStatus').innerHTML = '🟢 Connected';
+        document.getElementById('notifCount').textContent = data.totalNotifications || 0;
+        document.getElementById('adminSessions').textContent = data.activeAdminSessions || 0;
       } catch (e) {
-        document.getElementById('connectionStatus').innerHTML = '🔴 Offline';
+        console.error('Stats error:', e);
       }
     }
 
     async function loadReports() {
-      const status = document.getElementById('reportFilter').value;
+      const status = document.getElementById('reportFilter')?.value || '';
       let url = `${BASE}/admin/reports`;
       if (status) url += `?status=${status}`;
+      
       try {
         const data = await apiCall(url);
         const tbody = document.getElementById('reportsTable');
+        if (!tbody) return;
+        
+        if (data.reports.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No reports found</td></tr>';
+          return;
+        }
+        
         tbody.innerHTML = '';
-        data.reports.slice(0, 30).forEach(r => {
+        data.reports.slice(0, 50).forEach(r => {
           const tr = document.createElement('tr');
+          const statusBadge = r.status === 'pending' ? 'pending' : 
+                            r.status === 'banned' || r.status === 'auto_banned' ? 'banned' : 
+                            'dismissed';
+          
           tr.innerHTML = `
-            <td>${r.id?.substring(0,8)}</td>
-            <td>${(r.reportedDeviceId || '').substring(0,14)}...</td>
+            <td><small>${r.id?.substring(0, 8)}</small></td>
+            <td><small>${(r.reportedDeviceId || '').substring(0, 14)}...</small></td>
             <td>${r.reason}</td>
             <td><span class="badge ${r.isHighPriority ? 'high' : ''}">${r.isHighPriority ? 'HIGH' : 'normal'}</span></td>
-            <td><span class="badge ${r.status === 'pending' ? 'pending' : 'banned'}">${r.status}</span></td>
+            <td><span class="badge ${statusBadge}">${r.status}</span></td>
             <td>
-              ${r.status === 'pending' ? `<button onclick="actOnReport('${r.id}','ban')">Ban</button>
-              <button class="secondary" onclick="actOnReport('${r.id}','dismiss')">Dismiss</button>` : 'Reviewed'}
+              ${r.status === 'pending' ? `
+                <button onclick="actOnReport('${r.id}', 'ban')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Ban</button>
+                <button class="secondary" onclick="actOnReport('${r.id}', 'dismiss')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Dismiss</button>
+                <button class="secondary" onclick="actOnReport('${r.id}', 'warn')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Warn</button>
+              ` : 'Reviewed'}
             </td>`;
           tbody.appendChild(tr);
         });
-      } catch (e) { toast('Failed to load reports'); }
+      } catch (e) {
+        showToast('Failed to load reports', true);
+      }
     }
 
     async function actOnReport(reportId, action) {
+      if (!confirm(`Are you sure you want to ${action} this report?`)) return;
+      
       try {
         await apiCall(`${BASE}/admin/reports/${reportId}/action`, 'POST', { action });
-        toast(`Report ${action} successful`);
+        showToast(`Report ${action}ned successfully`);
         loadReports();
         loadStats();
-      } catch (e) { toast(e.message); }
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
     async function loadBannedDevices() {
       try {
         const data = await apiCall(`${BASE}/admin/banned-devices`);
         const tbody = document.getElementById('bannedTable');
+        if (!tbody) return;
+        
+        if (data.bannedDevices.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No banned devices</td></tr>';
+          return;
+        }
+        
         tbody.innerHTML = '';
         data.bannedDevices.forEach(b => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${b.deviceId.substring(0,16)}...</td>
+            <td><small>${b.deviceId.substring(0, 16)}...</small></td>
             <td>${b.reason}</td>
-            <td>${b.permanent ? 'Permanent' : b.expiresAt ? new Date(b.expiresAt).toLocaleDateString() : 'N/A'}</td>
-            <td>${b.source}</td>
-            <td><button class="danger" onclick="unbanDevice('${encodeURIComponent(b.deviceId)}')">Unban</button></td>`;
+            <td>${b.permanent ? '🔴 Permanent' : b.expiresAt ? new Date(b.expiresAt).toLocaleDateString() : 'N/A'}</td>
+            <td><span class="badge">${b.source}</span></td>
+            <td><button class="danger" onclick="unbanDevice('${encodeURIComponent(b.deviceId)}')" style="padding:0.3rem 0.7rem;">Unban</button></td>`;
           tbody.appendChild(tr);
         });
-      } catch (e) { toast('Failed to load bans'); }
+      } catch (e) {
+        showToast('Failed to load banned devices', true);
+      }
     }
 
     async function banDevice() {
       const deviceId = document.getElementById('banDeviceId').value.trim();
-      const reason = document.getElementById('banReason').value.trim() || 'Manual ban';
+      const reason = document.getElementById('banReason').value.trim() || 'Manual ban by admin';
       const duration = parseInt(document.getElementById('banDuration').value) || 0;
-      if (!deviceId) return toast('Device ID required');
+      
+      if (!deviceId) {
+        showToast('Device ID is required', true);
+        return;
+      }
+      
+      if (!confirm(`Ban device: ${deviceId.substring(0, 16)}...?`)) return;
+      
       try {
-        await apiCall(`${BASE}/admin/ban-device`, 'POST', { deviceId, reason, durationHours: duration || null });
-        toast('Device banned');
+        await apiCall(`${BASE}/admin/ban-device`, 'POST', { 
+          deviceId, 
+          reason, 
+          durationHours: duration || 0 
+        });
+        showToast('✅ Device banned successfully');
         loadBannedDevices();
         loadStats();
-      } catch (e) { toast(e.message); }
+        document.getElementById('banDeviceId').value = '';
+        document.getElementById('banReason').value = '';
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
     async function unbanDevice(encodedId) {
+      if (!confirm('Are you sure you want to unban this device?')) return;
+      
       try {
         await apiCall(`${BASE}/admin/ban-device/${encodedId}`, 'DELETE');
-        toast('Device unbanned');
+        showToast('✅ Device unbanned successfully');
         loadBannedDevices();
-      } catch (e) { toast(e.message); }
+        loadStats();
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
     async function sendNotification() {
       const title = document.getElementById('notifTitle').value.trim();
       const message = document.getElementById('notifMessage').value.trim();
-      if (!title || !message) return toast('Title and message required');
+      
+      if (!title || !message) {
+        showToast('Title and message are required', true);
+        return;
+      }
+      
       const body = {
-        title, message,
+        title,
+        message,
         type: document.getElementById('notifType').value,
+        priority: document.getElementById('notifPriority').value,
         imageUrl: document.getElementById('notifImageUrl').value || null,
-        actionUrl: document.getElementById('notifActionUrl').value,
-        expiresIn: parseInt(document.getElementById('notifExpiresIn').value) || 30
+        actionUrl: document.getElementById('notifActionUrl').value || '/',
+        expiresIn: parseInt(document.getElementById('notifExpiresIn').value) || 30,
+        targetPlatform: document.getElementById('notifPlatform').value,
       };
+      
       try {
-        await apiCall(`${BASE}/admin/notifications`, 'POST', body);
-        toast('Notification sent!');
-      } catch (e) { toast(e.message); }
+        const result = await apiCall(`${BASE}/admin/notifications`, 'POST', body);
+        showToast(`✅ Notification sent to ${result.activeClients} active clients`);
+        
+        // Clear form
+        document.getElementById('notifTitle').value = '';
+        document.getElementById('notifMessage').value = '';
+        loadStats();
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
+    async function loadNotifications() {
+      const wrapper = document.getElementById('notificationsTableWrapper');
+      const tbody = document.getElementById('notificationsTable');
+      
+      if (wrapper.style.display === 'none') {
+        try {
+          const data = await apiCall(`${BASE}/admin/notifications`);
+          
+          if (data.notifications.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No notifications</td></tr>';
+          } else {
+            tbody.innerHTML = '';
+            data.notifications.slice(0, 20).forEach(n => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>#${n.id}</td>
+                <td>${n.title}</td>
+                <td><span class="badge">${n.type}</span></td>
+                <td>${n.isRead ? '✅ Read' : '📬 Unread'}</td>
+                <td>${new Date(n.timestamp).toLocaleDateString()}</td>
+                <td><button class="danger" onclick="deleteNotification(${n.id})" style="padding:0.2rem 0.5rem;">🗑️</button></td>`;
+              tbody.appendChild(tr);
+            });
+          }
+          
+          wrapper.style.display = 'block';
+        } catch (e) {
+          showToast('Failed to load notifications', true);
+        }
+      } else {
+        wrapper.style.display = 'none';
+      }
+    }
+
+    async function deleteNotification(id) {
+      if (!confirm('Delete this notification?')) return;
+      
+      try {
+        await apiCall(`${BASE}/admin/notifications/${id}`, 'DELETE');
+        showToast('Notification deleted');
+        loadNotifications();
+        loadStats();
+      } catch (e) {
+        showToast(e.message, true);
+      }
+    }
+
+    // Configuration Functions
     async function updateMaintenance() {
       const enabled = document.getElementById('maintEnabled').value === 'true';
       const message = document.getElementById('maintMessage').value;
+      
       try {
         await apiCall(`${BASE}/admin/maintenance`, 'POST', { enabled, message });
-        toast('Maintenance updated');
-      } catch (e) { toast(e.message); }
+        showToast('Maintenance settings updated');
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
     async function updateVideoQuality() {
       const def = document.getElementById('videoQualityDefault').value;
       const autoAdjust = document.getElementById('autoAdjust').checked;
+      
       try {
         await apiCall(`${BASE}/admin/video-quality`, 'PUT', { default: def, autoAdjust });
-        toast('Video quality updated');
-      } catch (e) { toast(e.message); }
+        showToast('Video quality settings updated');
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
     async function updateSafety() {
       const autoBanThreshold = parseInt(document.getElementById('autoBanThreshold').value) || 3;
       const highPriorityThreshold = parseInt(document.getElementById('highPriorityThreshold').value) || 2;
+      
       try {
-        await apiCall(`${BASE}/admin/safety-settings`, 'PUT', { autoBanThreshold, highPriorityThreshold });
-        toast('Safety settings updated');
-      } catch (e) { toast(e.message); }
+        await apiCall(`${BASE}/admin/safety-settings`, 'PUT', { 
+          autoBanThreshold, 
+          highPriorityThreshold 
+        });
+        showToast('Safety settings updated');
+      } catch (e) {
+        showToast(e.message, true);
+      }
     }
 
-    // Initial load
+    // Initialize
     window.onload = () => {
-      loadStats();
-      loadReports();
-      loadBannedDevices();
-      setInterval(loadStats, 15000);
+      if (!checkSession()) {
+        showLoginScreen();
+      }
+      
+      // Auto-refresh stats every 15 seconds
+      setInterval(() => {
+        if (sessionToken) loadStats();
+      }, 15000);
     };
+
+    // Handle Enter key on login
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
+        login();
+      }
+    });
   </script>
 </body>
 </html>
