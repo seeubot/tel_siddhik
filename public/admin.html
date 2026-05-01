@@ -1,585 +1,1347 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orey | Admin Control Center</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.263.1/lucide-react.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>Orey Admin Panel</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-link.active { background: #3b82f6; color: white; }
-        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
-        .log-line { font-family: 'Fira Code', monospace; font-size: 0.75rem; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5A4BD1;
+            --success: #00B894;
+            --danger: #FF7675;
+            --warning: #FDCB6E;
+            --info: #74B9FF;
+            --dark: #2D3436;
+            --light: #F5F6FA;
+            --border: #DFE6E9;
+            --text: #2D3436;
+            --text-light: #636E72;
+            --bg: #F5F6FA;
+            --card: #FFFFFF;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card);
+            padding: 20px 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.danger { border-left-color: var(--danger); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.info { border-left-color: var(--info); }
+
+        .stat-card h3 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .stat-card p {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .tab:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-danger.active {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .tab-danger:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--card);
+            padding: 25px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .panel h2 {
+            margin-bottom: 20px;
+            color: var(--dark);
+            font-size: 20px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .row { grid-template-columns: 1fr; }
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: var(--dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--light);
+            font-weight: 700;
+            color: var(--dark);
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: var(--light);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: #DFF6E4; color: var(--success); }
+        .badge-danger { background: #FFE8E8; color: var(--danger); }
+        .badge-warning { background: #FFF4D6; color: #E17055; }
+        .badge-info { background: #E3F2FD; color: var(--info); }
+        .badge-purple { background: #F3E8FF; color: var(--primary); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.warning { background: var(--warning); color: var(--dark); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--card);
+            padding: 30px;
+            border-radius: var(--radius);
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+        }
+
+        /* Auth bar */
+        .auth-bar {
+            background: var(--dark);
+            color: white;
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: 14px;
+        }
+
+        .auth-bar input {
+            width: auto;
+            flex: 1;
+            min-width: 150px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 6px;
+        }
+
+        .auth-bar input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.online { background: var(--success); }
+        .status-dot.offline { background: var(--danger); }
+
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .qr-container img {
+            max-width: 250px;
+            border-radius: 8px;
+        }
+
+        .monospace {
+            font-family: 'Courier New', monospace;
+            background: var(--light);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            word-break: break-all;
+        }
     </style>
 </head>
-<body class="overflow-hidden">
+<body>
+    <div class="container">
+        <!-- Auth Bar -->
+        <div class="auth-bar">
+            <span>🔑 Admin Key:</span>
+            <input type="password" id="adminKey" placeholder="Enter admin key" value="">
+            <span>🔐 TOTP:</span>
+            <input type="text" id="totpToken" placeholder="6-digit code" maxlength="6" style="max-width:100px;">
+            <span id="authStatus" style="color:var(--warning);">⚠️ Not authenticated</span>
+            <span id="serverStatus"><span class="status-dot offline"></span> Checking...</span>
+        </div>
 
-<div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
-    <div class="w-full max-w-md glass-card p-8 rounded-2xl shadow-2xl">
-        <div class="flex flex-col items-center mb-8">
-            <div class="bg-blue-600 p-3 rounded-xl mb-4 shadow-lg shadow-blue-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <h1 class="text-2xl font-bold text-white">Orey Admin Portal</h1>
-            <p class="text-slate-400 text-sm">Restricted Access Environment</p>
-        </div>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">Admin Secret Key</label>
-                <input type="password" id="admin-key" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Enter ADMIN_KEY">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1 uppercase tracking-wider">2FA TOTP Token</label>
-                <input type="text" id="totp-token" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-center tracking-[0.5em] font-bold" placeholder="000000" maxlength="6">
-            </div>
-            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]">
-                Authenticate
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="app-content" class="hidden h-screen flex flex-col md:flex-row">
-    <!-- Sidebar -->
-    <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">O</div>
-            <span class="text-xl font-bold tracking-tight">Orey Panel</span>
-        </div>
-        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-            <button onclick="switchTab('dashboard')" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium hover:bg-slate-800">
-                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
-            </button>
-            <button onclick="switchTab('reports')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
-                <i data-lucide="flag" class="w-4 h-4"></i> Reports <span id="report-badge" class="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">3</span>
-            </button>
-            <button onclick="switchTab('bans')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
-                <i data-lucide="ban" class="w-4 h-4"></i> Ban Management
-            </button>
-            <button onclick="switchTab('notifications')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
-                <i data-lucide="bell" class="w-4 h-4"></i> Push System
-            </button>
-            <button onclick="switchTab('settings')" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-slate-400 hover:bg-slate-800">
-                <i data-lucide="settings" class="w-4 h-4"></i> Server Settings
-            </button>
-        </nav>
-        <div class="p-4 bg-slate-950 border-t border-slate-800">
-            <div class="flex items-center gap-3 mb-3">
-                <span class="status-dot bg-green-500 animate-pulse"></span>
-                <span class="text-xs text-slate-400 uppercase font-bold tracking-widest">Server Healthy</span>
-            </div>
-            <button onclick="logout()" class="w-full text-left text-xs text-red-400 hover:text-red-300 font-medium px-2">Logout Session</button>
-        </div>
-    </aside>
-
-    <!-- Main View -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-slate-950">
         <!-- Header -->
-        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-900/50">
-            <div class="flex items-center gap-4 text-sm text-slate-400">
-                <span id="breadcrumb-active">Dashboard Overview</span>
+        <div class="header">
+            <h1>🎥 Orey Admin Panel</h1>
+            <div class="header-actions">
+                <button class="btn btn-outline btn-sm" onclick="refreshAll()">🔄 Refresh All</button>
+                <span id="lastRefresh" style="font-size:12px;color:var(--text-light);"></span>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="flex flex-col text-right">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase">Uptime</span>
-                    <span id="uptime-val" class="text-xs font-mono text-blue-400">00:00:00</span>
-                </div>
-                <div class="h-8 w-px bg-slate-800"></div>
-                <div class="flex items-center gap-2">
-                    <div class="text-right">
-                        <p class="text-xs font-bold">Admin Root</p>
-                        <p class="text-[10px] text-slate-500">Full Access</p>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                        <i data-lucide="user" class="w-4 h-4"></i>
-                    </div>
-                </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><h3 id="statConnections">--</h3><p>Active Connections</p></div>
+            <div class="stat-card success"><h3 id="statRooms">--</h3><p>Active Rooms</p></div>
+            <div class="stat-card warning"><h3 id="statQueue">--</h3><p>In Queue</p></div>
+            <div class="stat-card danger"><h3 id="statBanned">--</h3><p>Banned Devices</p></div>
+            <div class="stat-card info"><h3 id="statReports">--</h3><p>Total Reports</p></div>
+            <div class="stat-card"><h3 id="statNotifs">--</h3><p>Notifications</p></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="switchTab('reports')">🚨 Reports</button>
+            <button class="tab tab-danger" onclick="switchTab('bans')">🚫 Banned Devices</button>
+            <button class="tab" onclick="switchTab('notifications')">📢 Notifications</button>
+            <button class="tab" onclick="switchTab('config')">⚙️ Configuration</button>
+            <button class="tab" onclick="switchTab('totp')">🔐 TOTP Setup</button>
+            <button class="tab" onclick="switchTab('api')">🔌 API Tools</button>
+        </div>
+
+        <!-- Dashboard Panel -->
+        <div class="panel active" id="panel-dashboard">
+            <h2>📊 Server Dashboard</h2>
+            <div id="dashboardContent">
+                <p>Loading dashboard data...</p>
             </div>
-        </header>
+            <div style="margin-top:20px;">
+                <h3>Quick Actions</h3>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                    <button class="btn btn-primary" onclick="generateOreyId()">Generate Orey ID</button>
+                    <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+                    <button class="btn btn-warning" onclick="toggleMaintenance()">Toggle Maintenance</button>
+                </div>
+                <div id="quickActionResult" style="margin-top:10px;"></div>
+            </div>
+        </div>
 
-        <!-- Content Area -->
-        <div id="tab-container" class="flex-1 overflow-y-auto p-8">
-            
-            <!-- Dashboard Tab -->
-            <section id="tab-dashboard" class="space-y-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Sockets</span>
-                            <i data-lucide="zap" class="w-4 h-4 text-blue-400"></i>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <span id="stat-sockets" class="text-3xl font-bold">1,248</span>
-                            <span class="text-xs text-green-400 flex items-center">+4% <i data-lucide="trending-up" class="w-3 h-3 ml-1"></i></span>
-                        </div>
+        <!-- Reports Panel -->
+        <div class="panel" id="panel-reports">
+            <h2>🚨 User Reports</h2>
+            <div style="margin-bottom:15px;">
+                <label>Filter by Status:</label>
+                <select id="reportFilter" onchange="loadReports()" style="width:auto;display:inline;margin-left:10px;">
+                    <option value="">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="banned">Banned</option>
+                    <option value="dismissed">Dismissed</option>
+                    <option value="warned">Warned</option>
+                    <option value="auto_banned">Auto-Banned</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="loadReports()" style="margin-left:10px;">🔄 Refresh</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Report ID</th>
+                            <th>Reported Device</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsTable">
+                        <tr><td colspan="7">Loading reports...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="reportSummary" style="margin-top:15px;font-size:14px;"></div>
+        </div>
+
+        <!-- Bans Panel -->
+        <div class="panel" id="panel-bans">
+            <h2>🚫 Banned Devices</h2>
+            <div style="margin-bottom:15px;">
+                <button class="btn btn-primary btn-sm" onclick="loadBans()">🔄 Refresh</button>
+                <button class="btn btn-danger btn-sm" onclick="showBanForm()" style="margin-left:10px;">➕ Ban Device</button>
+                <button class="btn btn-success btn-sm" onclick="showUnbanForm()" style="margin-left:10px;">🔓 Unban Device</button>
+            </div>
+            <div id="banForm" style="display:none;margin-bottom:20px;padding:15px;background:var(--light);border-radius:8px;">
+                <h4>Ban Device</h4>
+                <div class="form-group">
+                    <label>Device ID</label>
+                    <input type="text" id="banDeviceId" placeholder="Enter device ID">
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Reason</label>
+                        <input type="text" id="banReason" value="Violation of terms">
                     </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Live Rooms</span>
-                            <i data-lucide="video" class="w-4 h-4 text-purple-400"></i>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <span id="stat-rooms" class="text-3xl font-bold">624</span>
-                            <span class="text-xs text-slate-500">1.2 avg user/room</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Pending Reports</span>
-                            <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <span id="stat-reports" class="text-3xl font-bold">12</span>
-                            <span class="text-xs text-red-400 font-medium">Needs Attention</span>
-                        </div>
-                    </div>
-                    <div class="glass-card p-6 rounded-2xl">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Banned Devices</span>
-                            <i data-lucide="shield-x" class="w-4 h-4 text-orange-400"></i>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <span id="stat-bans" class="text-3xl font-bold">482</span>
-                            <span class="text-xs text-slate-500">32 permanent</span>
-                        </div>
+                    <div class="form-group">
+                        <label>Duration (hours, 0=permanent)</label>
+                        <input type="number" id="banDuration" value="720">
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="lg:col-span-2 glass-card rounded-2xl overflow-hidden flex flex-col h-[400px]">
-                        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-                            <h3 class="text-sm font-bold flex items-center gap-2"><i data-lucide="terminal" class="w-4 h-4 text-blue-400"></i> Server Live Logs</h3>
-                            <button onclick="clearLogs()" class="text-[10px] uppercase font-bold text-slate-500 hover:text-slate-300">Clear</button>
-                        </div>
-                        <div id="log-container" class="flex-1 p-4 bg-slate-950/50 font-mono text-xs overflow-y-auto space-y-1">
-                            <!-- Logs injected here -->
-                        </div>
-                    </div>
-                    <div class="glass-card rounded-2xl p-6 h-[400px]">
-                        <h3 class="text-sm font-bold mb-6 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-green-400"></i> Memory Usage</h3>
-                        <canvas id="memoryChart"></canvas>
-                        <div class="mt-8 space-y-4">
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">Heap Total</span>
-                                <span class="font-mono">148.5 MB</span>
-                            </div>
-                            <div class="w-full bg-slate-800 h-1.5 rounded-full">
-                                <div class="bg-blue-500 h-1.5 rounded-full" style="width: 65%"></div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-slate-400">External</span>
-                                <span class="font-mono">12.2 MB</span>
-                            </div>
-                        </div>
-                    </div>
+                <button class="btn btn-danger" onclick="banDevice()">🚫 Ban Device</button>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('banForm').style.display='none'" style="margin-left:10px;">Cancel</button>
+            </div>
+            <div id="unbanForm" style="display:none;margin-bottom:20px;padding:15px;background:var(--light);border-radius:8px;">
+                <h4>Unban Device</h4>
+                <div class="form-group">
+                    <label>Device ID</label>
+                    <input type="text" id="unbanDeviceId" placeholder="Enter device ID to unban">
                 </div>
-            </section>
+                <button class="btn btn-success" onclick="unbanDevice()">🔓 Unban Device</button>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('unbanForm').style.display='none'" style="margin-left:10px;">Cancel</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Device ID</th>
+                            <th>Reason</th>
+                            <th>Type</th>
+                            <th>Source</th>
+                            <th>Banned At</th>
+                            <th>Expires</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bansTable">
+                        <tr><td colspan="6">Loading banned devices...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-            <!-- Reports Tab -->
-            <section id="tab-reports" class="hidden space-y-6">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <h2 class="text-2xl font-bold">User Reports</h2>
-                        <p class="text-sm text-slate-400">Review flagged community activity</p>
+        <!-- Notifications Panel -->
+        <div class="panel" id="panel-notifications">
+            <h2>📢 Notification Management</h2>
+            <div style="margin-bottom:20px;padding:15px;background:var(--light);border-radius:8px;">
+                <h4>Send Notification</h4>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="notifTitle" placeholder="Notification title">
                     </div>
-                    <div class="flex gap-2">
-                        <select class="bg-slate-900 border border-slate-800 rounded-lg text-xs px-3 py-2 outline-none">
-                            <option>All Reports</option>
-                            <option>Pending Only</option>
-                            <option>High Priority</option>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="notifType">
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="success">Success</option>
+                            <option value="error">Error</option>
                         </select>
                     </div>
                 </div>
-                <div class="glass-card rounded-2xl overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-900/80 border-b border-slate-800 text-slate-400 text-xs">
-                            <tr>
-                                <th class="px-6 py-4 font-bold uppercase">Report ID</th>
-                                <th class="px-6 py-4 font-bold uppercase">Reported Device</th>
-                                <th class="px-6 py-4 font-bold uppercase">Reason</th>
-                                <th class="px-6 py-4 font-bold uppercase">Status</th>
-                                <th class="px-6 py-4 font-bold uppercase text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reports-tbody" class="divide-y divide-slate-800">
-                            <!-- Rows injected here -->
-                        </tbody>
-                    </table>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea id="notifMessage" placeholder="Notification message"></textarea>
                 </div>
-            </section>
-
-            <!-- Notifications Tab -->
-            <section id="tab-notifications" class="hidden space-y-8">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="glass-card p-6 rounded-2xl space-y-6">
-                        <h3 class="font-bold flex items-center gap-2"><i data-lucide="megaphone" class="w-4 h-4 text-yellow-400"></i> Broadcast Notification</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Title</label>
-                                <input id="notif-title" type="text" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500" placeholder="New Update Available">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Message</label>
-                                <textarea id="notif-msg" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500 resize-none" placeholder="We have added new features..."></textarea>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Type</label>
-                                    <select id="notif-type" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
-                                        <option value="info">Info</option>
-                                        <option value="success">Success</option>
-                                        <option value="warning">Warning</option>
-                                        <option value="critical">Critical</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Priority</label>
-                                    <select id="notif-priority" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
-                                        <option value="normal">Normal</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button onclick="sendNotification()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
-                                <i data-lucide="send" class="w-4 h-4"></i> Dispatch Notification
-                            </button>
-                        </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="notifPriority">
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
                     </div>
-                    <div class="glass-card rounded-2xl flex flex-col">
-                        <div class="p-6 border-b border-slate-800">
-                            <h3 class="font-bold">Recent History</h3>
-                        </div>
-                        <div id="notif-history" class="flex-1 p-6 space-y-4 overflow-y-auto max-h-[400px]">
-                            <!-- History items injected -->
-                        </div>
+                    <div class="form-group">
+                        <label>Expires (days)</label>
+                        <input type="number" id="notifExpires" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Platform</label>
+                        <select id="notifPlatform">
+                            <option value="all">All</option>
+                            <option value="android">Android</option>
+                        </select>
                     </div>
                 </div>
-            </section>
-
-            <!-- Settings Tab -->
-            <section id="tab-settings" class="hidden space-y-8">
-                <div class="max-w-3xl space-y-6">
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="shield-alert" class="w-4 h-4 text-red-400"></i> Safety Configuration</h3>
-                        <div class="space-y-6">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium">Automatic Banning</p>
-                                    <p class="text-xs text-slate-400">Ban users automatically based on report thresholds</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" checked class="sr-only peer" id="toggle-autoban">
-                                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
-                            </div>
-                            <div class="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Regular Threshold</label>
-                                    <input type="number" value="3" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">High Priority Threshold</label>
-                                    <input type="number" value="2" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm outline-none">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-6 rounded-2xl">
-                        <h3 class="font-bold mb-6 flex items-center gap-2"><i data-lucide="hammer" class="w-4 h-4 text-orange-400"></i> Maintenance Mode</h3>
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="font-medium">Global Maintenance Lock</p>
-                                <p class="text-xs text-slate-400">Disconnect all current users and show a maintenance splash screen</p>
-                            </div>
-                            <button onclick="toggleMaintenance()" id="maint-btn" class="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800 px-4 py-2 rounded-lg text-sm font-bold transition-all">
-                                Activate Mode
-                            </button>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label>Action URL</label>
+                    <input type="text" id="notifActionUrl" value="/" placeholder="Action URL">
                 </div>
-            </section>
-
-        </div>
-    </main>
-</div>
-
-<div id="toast-container" class="fixed bottom-6 right-6 z-[100] space-y-3"></div>
-
-<script>
-    // --- Mock Backend State ---
-    const STATE = {
-        authenticated: false,
-        adminKey: '',
-        totp: '',
-        uptime: 0,
-        logs: [],
-        reports: [
-            { id: '8f2a1b', device: 'DEVICE-192-X', reason: 'Nudity / Sexual Content', priority: 'high', status: 'pending' },
-            { id: 'c3e9a0', device: 'DEVICE-441-A', reason: 'Harassment', priority: 'normal', status: 'pending' },
-            { id: 'f1d2b8', device: 'DEVICE-008-Z', reason: 'Spam / Bot', priority: 'normal', status: 'pending' }
-        ],
-        bans: [],
-        notifHistory: []
-    };
-
-    // --- Initialization ---
-    window.onload = () => {
-        lucide.createIcons();
-        initChart();
-        setInterval(updateUptime, 1000);
-        
-        // Push initial logs
-        log('system', 'Orey Core v1.4.0 initialization...');
-        log('db', 'MongoDB Cluster connected (5 nodes active)');
-        log('socket', 'Socket.io engine heartbeat detected');
-        
-        // Random log generation for effect
-        setInterval(() => {
-            if(!STATE.authenticated) return;
-            const events = [
-                {t: 'socket', m: 'New user joined room R-7821'},
-                {t: 'match', m: 'Auto-matching session initiated (2 peers)'},
-                {t: 'api', m: 'Device register: Samsung SM-G960F'},
-                {t: 'socket', m: 'Client disconnected: Latency timeout'}
-            ];
-            const evt = events[Math.floor(Math.random() * events.length)];
-            log(evt.t, evt.m);
-        }, 4000);
-    };
-
-    function login() {
-        const key = document.getElementById('admin-key').value;
-        const totp = document.getElementById('totp-token').value;
-
-        if (key.length > 5 && totp.length === 6) {
-            STATE.authenticated = true;
-            STATE.adminKey = key;
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-content').classList.remove('hidden');
-            showToast('Success', 'Secure administrative session established', 'success');
-            renderReports();
-        } else {
-            showToast('Auth Failed', 'Invalid administrative credentials or token', 'error');
-        }
-    }
-
-    function logout() {
-        location.reload();
-    }
-
-    function switchTab(tabId) {
-        // Update UI links
-        document.querySelectorAll('.sidebar-link').forEach(link => {
-            link.classList.remove('active', 'text-white');
-            link.classList.add('text-slate-400');
-        });
-        const activeLink = Array.from(document.querySelectorAll('.sidebar-link')).find(l => l.getAttribute('onclick').includes(tabId));
-        activeLink.classList.add('active', 'text-white');
-        activeLink.classList.remove('text-slate-400');
-
-        // Update sections
-        document.querySelectorAll('#tab-container section').forEach(sec => sec.classList.add('hidden'));
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-        
-        document.getElementById('breadcrumb-active').innerText = tabId.charAt(0).toUpperCase() + tabId.slice(1) + (tabId === 'dashboard' ? ' Overview' : '');
-    }
-
-    // --- Features ---
-
-    function log(type, message) {
-        const container = document.getElementById('log-container');
-        const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
-        const colors = {
-            system: 'text-blue-400',
-            db: 'text-green-400',
-            socket: 'text-purple-400',
-            match: 'text-yellow-400',
-            api: 'text-slate-400'
-        };
-        
-        const line = document.createElement('div');
-        line.className = 'log-line border-l-2 border-slate-800 pl-2 hover:bg-slate-900 transition-colors';
-        line.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="${colors[type] || 'text-slate-400'} font-bold uppercase mr-2 text-[10px]">${type}:</span> ${message}`;
-        
-        container.appendChild(line);
-        container.scrollTop = container.scrollHeight;
-        
-        if (container.children.length > 100) container.removeChild(container.firstChild);
-    }
-
-    function clearLogs() {
-        document.getElementById('log-container').innerHTML = '';
-        log('system', 'Log buffer cleared by administrator');
-    }
-
-    function renderReports() {
-        const tbody = document.getElementById('reports-tbody');
-        tbody.innerHTML = '';
-        
-        STATE.reports.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.className = 'hover:bg-slate-900/50 transition-colors';
-            tr.innerHTML = `
-                <td class="px-6 py-4 font-mono text-xs text-blue-400">#${r.id}</td>
-                <td class="px-6 py-4">
-                    <p class="font-medium">${r.device}</p>
-                    <p class="text-[10px] text-slate-500">Android 13 | IP: 182.xx.xx.xx</p>
-                </td>
-                <td class="px-6 py-4">
-                    <span class="px-2 py-1 rounded text-[10px] font-bold ${r.priority === 'high' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-slate-800 text-slate-400'}">${r.reason}</span>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2">
-                        <span class="status-dot bg-yellow-500"></span>
-                        <span class="text-xs text-slate-400 capitalize">${r.status}</span>
-                    </div>
-                </td>
-                <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end gap-2">
-                        <button onclick="handleReport('${r.id}', 'ban')" class="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors" title="Ban Device"><i data-lucide="user-x" class="w-4 h-4"></i></button>
-                        <button onclick="handleReport('${r.id}', 'dismiss')" class="p-2 hover:bg-slate-800 text-slate-400 rounded-lg transition-colors" title="Dismiss"><i data-lucide="check" class="w-4 h-4"></i></button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-        lucide.createIcons();
-        document.getElementById('report-badge').innerText = STATE.reports.length;
-    }
-
-    function handleReport(id, action) {
-        const idx = STATE.reports.findIndex(r => r.id === id);
-        const r = STATE.reports[idx];
-        if (action === 'ban') {
-            log('safety', `Manual BAN issued for ${r.device} following report #${id}`);
-            showToast('User Banned', `Device ${r.device} has been permanently restricted.`, 'warning');
-        } else {
-            showToast('Report Dismissed', `No violation found for report #${id}.`, 'info');
-        }
-        STATE.reports.splice(idx, 1);
-        renderReports();
-    }
-
-    function sendNotification() {
-        const title = document.getElementById('notif-title').value;
-        const msg = document.getElementById('notif-msg').value;
-        const type = document.getElementById('notif-type').value;
-
-        if (!title || !msg) return showToast('Error', 'Title and message required', 'error');
-
-        const notif = { title, msg, type, time: new Date().toLocaleTimeString() };
-        STATE.notifHistory.unshift(notif);
-        
-        // Add to history UI
-        const history = document.getElementById('notif-history');
-        const div = document.createElement('div');
-        div.className = 'glass-card p-4 rounded-xl border-l-4 ' + (type === 'critical' ? 'border-red-500' : 'border-blue-500');
-        div.innerHTML = `
-            <div class="flex justify-between items-start mb-1">
-                <h4 class="text-xs font-bold uppercase text-slate-400">${notif.title}</h4>
-                <span class="text-[10px] text-slate-600">${notif.time}</span>
+                <button class="btn btn-primary" onclick="sendNotification()">📤 Send Notification</button>
             </div>
-            <p class="text-sm">${notif.msg}</p>
-        `;
-        history.prepend(div);
-        
-        log('api', `Broadcast notification dispatched: ${title}`);
-        showToast('Sent', 'Notification delivered to all active clients', 'success');
-        
-        document.getElementById('notif-title').value = '';
-        document.getElementById('notif-msg').value = '';
-    }
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Priority</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notifsTable">
+                        <tr><td colspan="6">Loading notifications...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-    function toggleMaintenance() {
-        const btn = document.getElementById('maint-btn');
-        const isActive = btn.classList.contains('bg-red-600');
-        
-        if (!isActive) {
-            btn.className = "bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all";
-            btn.innerText = "Deactivate Mode";
-            log('system', 'MAINTENANCE MODE ENABLED - Connections locked');
-            showToast('Locked', 'Server is now in maintenance mode', 'warning');
-        } else {
-            btn.className = "bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800 px-4 py-2 rounded-lg text-sm font-bold transition-all";
-            btn.innerText = "Activate Mode";
-            log('system', 'Server live - maintenance mode disabled');
-            showToast('Online', 'Server is now accepting connections', 'success');
-        }
-    }
+        <!-- Config Panel -->
+        <div class="panel" id="panel-config">
+            <h2>⚙️ Configuration</h2>
+            
+            <div style="margin-bottom:25px;">
+                <h3>Maintenance Mode</h3>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="maintEnabled">
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <input type="text" id="maintMessage" value="We're improving Orey. Back soon!">
+                </div>
+                <button class="btn btn-warning" onclick="updateMaintenance()">💾 Save Maintenance</button>
+            </div>
 
-    // --- Utils ---
+            <div style="margin-bottom:25px;">
+                <h3>Video Quality</h3>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Default Quality</label>
+                        <select id="vidDefault">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="hd">HD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Auto Adjust</label>
+                        <select id="vidAutoAdjust">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Bitrate</label>
+                        <input type="number" id="vidMaxBitrate" value="1500000">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="updateVideoQuality()">💾 Save Video Quality</button>
+            </div>
 
-    function showToast(title, msg, type) {
-        const container = document.getElementById('toast-container');
-        const colors = {
-            success: 'bg-green-600',
-            error: 'bg-red-600',
-            warning: 'bg-orange-600',
-            info: 'bg-blue-600'
-        };
-        
-        const toast = document.createElement('div');
-        toast.className = `${colors[type]} p-4 rounded-xl shadow-lg w-72 transform translate-y-20 transition-all duration-300 opacity-0`;
-        toast.innerHTML = `<h5 class="font-bold text-sm">${title}</h5><p class="text-xs opacity-90">${msg}</p>`;
-        
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.classList.remove('translate-y-20', 'opacity-0');
-        }, 10);
-        
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-x-full');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
+            <div style="margin-bottom:25px;">
+                <h3>Safety Settings</h3>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Auto Ban</label>
+                        <select id="safetyAutoBan">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ban Threshold</label>
+                        <input type="number" id="safetyThreshold" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label>High Priority Threshold</label>
+                        <input type="number" id="safetyHPThreshold" value="2">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="updateSafety()">💾 Save Safety Settings</button>
+            </div>
 
-    function updateUptime() {
-        STATE.uptime++;
-        const h = Math.floor(STATE.uptime / 3600).toString().padStart(2, '0');
-        const m = Math.floor((STATE.uptime % 3600) / 60).toString().padStart(2, '0');
-        const s = (STATE.uptime % 60).toString().padStart(2, '0');
-        document.getElementById('uptime-val').innerText = `${h}:${m}:${s}`;
-    }
+            <div style="margin-bottom:25px;">
+                <h3>App Version (Android)</h3>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Version Code</label>
+                        <input type="number" id="appVersionCode" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Version Name</label>
+                        <input type="text" id="appVersionName" value="1.0.0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Update Message</label>
+                    <input type="text" id="appUpdateMsg" value="New features available!">
+                </div>
+                <button class="btn btn-primary" onclick="updateAppVersion()">💾 Save Version</button>
+            </div>
+        </div>
 
-    function initChart() {
-        const ctx = document.getElementById('memoryChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: Array(10).fill(''),
-                datasets: [{
-                    label: 'Memory',
-                    data: [65, 59, 80, 81, 56, 55, 40, 70, 75, 65],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { display: false },
-                    y: { 
-                        grid: { color: '#1e293b' },
-                        ticks: { color: '#64748b', font: { size: 10 } }
-                    }
-                }
-            }
+        <!-- TOTP Panel -->
+        <div class="panel" id="panel-totp">
+            <h2>🔐 TOTP Two-Factor Authentication</h2>
+            <div id="totpSetupArea">
+                <p>Click the button below to generate a new TOTP secret. Scan the QR code with Google Authenticator.</p>
+                <button class="btn btn-primary" onclick="setupTotp()">🔑 Generate TOTP Secret</button>
+                <div id="totpResult" style="margin-top:20px;"></div>
+            </div>
+            <div style="margin-top:20px;">
+                <h4>Verify TOTP Token</h4>
+                <div style="display:flex;gap:10px;align-items:flex-end;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Enter 6-digit code</label>
+                        <input type="text" id="totpVerifyCode" maxlength="6" placeholder="000000">
+                    </div>
+                    <button class="btn btn-success" onclick="verifyTotp()">✅ Verify</button>
+                </div>
+                <div id="totpVerifyResult" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- API Tools Panel -->
+        <div class="panel" id="panel-api">
+            <h2>🔌 API Tools</h2>
+            <div class="form-group">
+                <label>API Key Hash</label>
+                <input type="text" id="apiKeyHash" readonly class="monospace" style="background:var(--light);">
+                <button class="btn btn-outline btn-sm" onclick="getKeyHash()" style="margin-top:5px;">Get Hash</button>
+            </div>
+            <div class="form-group">
+                <label>Generate Orey ID</label>
+                <button class="btn btn-primary" onclick="generateOreyIdApi()">Generate</button>
+                <pre id="oreyIdResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;"></pre>
+            </div>
+            <div class="form-group">
+                <label>Check Device Ban</label>
+                <input type="text" id="checkBanDeviceId" placeholder="Device ID">
+                <button class="btn btn-info" onclick="checkBan()" style="margin-top:5px;">Check</button>
+                <pre id="checkBanResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // ─── Configuration ──────────────────────────────────────────────────
+        const API_BASE = window.location.origin;
+        let adminKey = localStorage.getItem('orey_admin_key') || '';
+        let totpToken = '';
+
+        // ─── Init ───────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('adminKey').value = adminKey;
+            checkServerHealth();
+            refreshAll();
+            // Auto-refresh every 30 seconds
+            setInterval(refreshAll, 30000);
         });
-    }
-</script>
+
+        document.getElementById('adminKey').addEventListener('change', (e) => {
+            adminKey = e.target.value;
+            localStorage.setItem('orey_admin_key', adminKey);
+            updateAuthStatus();
+        });
+
+        document.getElementById('totpToken').addEventListener('change', (e) => {
+            totpToken = e.target.value;
+            updateAuthStatus();
+        });
+
+        function updateAuthStatus() {
+            const statusEl = document.getElementById('authStatus');
+            if (adminKey && totpToken) {
+                statusEl.innerHTML = '<span style="color:var(--success);">✅ Authenticated</span>';
+            } else if (adminKey) {
+                statusEl.innerHTML = '<span style="color:var(--warning);">⚠️ TOTP required for write ops</span>';
+            } else {
+                statusEl.innerHTML = '<span style="color:var(--danger);">❌ Admin key required</span>';
+            }
+        }
+
+        function getHeaders(requireTotp = true) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'x-admin-key': adminKey,
+            };
+            if (requireTotp && totpToken) {
+                headers['x-totp-token'] = totpToken;
+            }
+            return headers;
+        }
+
+        // ─── Toast ──────────────────────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ─── Server Health ──────────────────────────────────────────────────
+        async function checkServerHealth() {
+            try {
+                const res = await fetch(`${API_BASE}/health`);
+                const data = await res.json();
+                const dot = document.querySelector('#serverStatus .status-dot');
+                dot.className = `status-dot ${data.status === 'ok' ? 'online' : 'offline'}`;
+                document.getElementById('serverStatus').innerHTML = 
+                    `<span class="status-dot ${data.status === 'ok' ? 'online' : 'offline'}"></span> ${data.status === 'ok' ? 'Online' : 'Offline'} | ${data.activeConnections || 0} users`;
+            } catch (e) {
+                document.getElementById('serverStatus').innerHTML = '<span class="status-dot offline"></span> Offline';
+            }
+        }
+
+        // ─── Refresh All ────────────────────────────────────────────────────
+        async function refreshAll() {
+            document.getElementById('lastRefresh').textContent = `Last: ${new Date().toLocaleTimeString()}`;
+            await checkServerHealth();
+            await loadDashboard();
+            await loadReports();
+            await loadBans();
+            await loadNotifications();
+            await loadConfig();
+        }
+
+        // ─── Dashboard ──────────────────────────────────────────────────────
+        async function loadDashboard() {
+            if (!adminKey) {
+                document.getElementById('dashboardContent').innerHTML = '<p style="color:var(--danger);">⚠️ Enter admin key to load dashboard</p>';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/admin/stats`, { headers: getHeaders(false) });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
+                document.getElementById('statConnections').textContent = data.activeConnections || 0;
+                document.getElementById('statRooms').textContent = data.activeRooms || 0;
+                document.getElementById('statQueue').textContent = data.queueLength || 0;
+                document.getElementById('statBanned').textContent = data.bannedDevices || 0;
+                document.getElementById('statReports').textContent = data.totalReports || 0;
+                document.getElementById('statNotifs').textContent = data.totalNotifications || 0;
+
+                document.getElementById('dashboardContent').innerHTML = `
+                    <div class="row">
+                        <div>
+                            <strong>Uptime:</strong> ${Math.floor(data.uptime / 3600)}h ${Math.floor((data.uptime % 3600) / 60)}m<br>
+                            <strong>Memory:</strong> ${data.memoryMB} MB<br>
+                            <strong>DB Status:</strong> ${data.dbState}<br>
+                            <strong>TOTP:</strong> ${data.totpConfigured ? '✅' : '❌'}
+                        </div>
+                        <div>
+                            <strong>Pending Reports:</strong> ${data.pendingReports}<br>
+                            <strong>Auto-Banned:</strong> ${data.autoBannedCount}<br>
+                            <strong>High Priority:</strong> ${data.highPriorityReports}<br>
+                            <strong>Subscribers:</strong> ${data.activeNotificationSubscribers}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('dashboardContent').innerHTML = `<p style="color:var(--danger);">Error: ${e.message}</p>`;
+            }
+        }
+
+        // ─── Reports ────────────────────────────────────────────────────────
+        async function loadReports() {
+            if (!adminKey) return;
+            const filter = document.getElementById('reportFilter')?.value || '';
+            const url = `${API_BASE}/admin/reports${filter ? `?status=${filter}` : ''}`;
+            try {
+                const res = await fetch(url, { headers: getHeaders() });
+                const data = await res.json();
+                const tbody = document.getElementById('reportsTable');
+                
+                document.getElementById('reportSummary').innerHTML = `
+                    Total: <strong>${data.total}</strong> | 
+                    Pending: <strong>${data.pending}</strong> | 
+                    Auto-Banned: <strong>${data.autoBanned}</strong> | 
+                    High Priority: <strong>${data.highPriority}</strong> | 
+                    Active Bans: <strong>${data.activeBans}</strong>
+                `;
+
+                if (data.reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7">No reports found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.reports.map(r => `
+                    <tr>
+                        <td><span class="monospace">${r.id.substring(0, 8)}...</span></td>
+                        <td><span class="monospace">${(r.reportedDeviceId || 'N/A').substring(0, 12)}...</span></td>
+                        <td>${r.reason}</td>
+                        <td><span class="badge badge-${getStatusBadge(r.status)}">${r.status}</span></td>
+                        <td>${r.isHighPriority ? '<span class="badge badge-danger">HIGH</span>' : '<span class="badge badge-info">Normal</span>'}</td>
+                        <td>${new Date(r.timestamp).toLocaleDateString()}</td>
+                        <td>
+                            ${r.status === 'pending' ? `
+                                <button class="btn btn-danger btn-sm" onclick="handleReport('${r.id}', 'ban')">Ban</button>
+                                <button class="btn btn-warning btn-sm" onclick="handleReport('${r.id}', 'warn')">Warn</button>
+                                <button class="btn btn-outline btn-sm" onclick="handleReport('${r.id}', 'dismiss')">Dismiss</button>
+                            ` : '—'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('reportsTable').innerHTML = `<tr><td colspan="7" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function getStatusBadge(status) {
+            const map = { pending: 'warning', banned: 'danger', dismissed: 'info', warned: 'warning', auto_banned: 'danger' };
+            return map[status] || 'info';
+        }
+
+        async function handleReport(reportId, action) {
+            const notes = prompt(`Notes for ${action}:`);
+            if (notes === null) return;
+            try {
+                const res = await fetch(`${API_BASE}/admin/reports/${reportId}/action`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ action, notes }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Report ${reportId}: ${action} successful!`, 'success');
+                    loadReports();
+                } else {
+                    showToast(data.error || 'Action failed', 'error');
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // ─── Bans ───────────────────────────────────────────────────────────
+        async function loadBans() {
+            if (!adminKey) return;
+            try {
+                const res = await fetch(`${API_BASE}/admin/banned-devices`, { headers: getHeaders() });
+                const data = await res.json();
+                const tbody = document.getElementById('bansTable');
+                
+                if (data.bannedDevices.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No banned devices</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.bannedDevices.map(b => `
+                    <tr>
+                        <td><span class="monospace">${b.deviceId.substring(0, 20)}...</span></td>
+                        <td>${b.reason}</td>
+                        <td><span class="badge ${b.permanent ? 'badge-danger' : 'badge-warning'}">${b.permanent ? 'PERMANENT' : 'Temporary'}</span></td>
+                        <td>${b.source}</td>
+                        <td>${new Date(b.timestamp).toLocaleString()}</td>
+                        <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Never'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('bansTable').innerHTML = `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function showBanForm() {
+            document.getElementById('banForm').style.display = 'block';
+            document.getElementById('unbanForm').style.display = 'none';
+        }
+
+        function showUnbanForm() {
+            document.getElementById('unbanForm').style.display = 'block';
+            document.getElementById('banForm').style.display = 'none';
+        }
+
+        async function banDevice() {
+            const deviceId = document.getElementById('banDeviceId').value.trim();
+            const reason = document.getElementById('banReason').value.trim();
+            const durationHours = parseInt(document.getElementById('banDuration').value) || 0;
+
+            if (!deviceId) { showToast('Device ID is required', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/ban-device`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ deviceId, reason, durationHours }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Device banned! ${data.socketsDisconnected} connections disconnected.`, 'success');
+                    document.getElementById('banForm').style.display = 'none';
+                    document.getElementById('banDeviceId').value = '';
+                    loadBans();
+                } else {
+                    showToast(data.error || 'Failed to ban', 'error');
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function unbanDevice() {
+            let deviceId = document.getElementById('unbanDeviceId').value.trim();
+            if (!deviceId) { showToast('Device ID is required', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/ban-device/${encodeURIComponent(deviceId)}`, {
+                    method: 'DELETE',
+                    headers: getHeaders(),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Device unbanned! Matched: ${data.matchedId}`, 'success');
+                    document.getElementById('unbanForm').style.display = 'none';
+                    document.getElementById('unbanDeviceId').value = '';
+                    loadBans();
+                } else {
+                    showToast(data.error || 'Device not banned', 'error');
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // ─── Notifications ──────────────────────────────────────────────────
+        async function loadNotifications() {
+            if (!adminKey) return;
+            try {
+                const res = await fetch(`${API_BASE}/admin/notifications`, { headers: getHeaders() });
+                const data = await res.json();
+                const tbody = document.getElementById('notifsTable');
+                
+                if (data.notifications.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No notifications</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.notifications.slice(-20).reverse().map(n => `
+                    <tr>
+                        <td>#${n.id}</td>
+                        <td>${n.icon || ''} ${n.title}</td>
+                        <td><span class="badge badge-info">${n.type}</span></td>
+                        <td><span class="badge ${n.priority === 'high' ? 'badge-danger' : 'badge-purple'}">${n.priority}</span></td>
+                        <td>${new Date(n.timestamp).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteNotification(${n.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('notifsTable').innerHTML = `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function sendNotification() {
+            const title = document.getElementById('notifTitle').value.trim();
+            const message = document.getElementById('notifMessage').value.trim();
+            const type = document.getElementById('notifType').value;
+            const priority = document.getElementById('notifPriority').value;
+            const expiresIn = parseInt(document.getElementById('notifExpires').value) || 30;
+            const targetPlatform = document.getElementById('notifPlatform').value;
+            const actionUrl = document.getElementById('notifActionUrl').value;
+
+            if (!title || !message) { showToast('Title and message are required', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/notifications`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ title, message, type, priority, expiresIn, targetPlatform, actionUrl }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Notification sent to ${data.activeClients} clients!`, 'success');
+                    document.getElementById('notifTitle').value = '';
+                    document.getElementById('notifMessage').value = '';
+                    loadNotifications();
+                } else {
+                    showToast(data.error || 'Failed to send', 'error');
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        async function deleteNotification(id) {
+            if (!confirm(`Delete notification #${id}?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/admin/notifications/${id}`, {
+                    method: 'DELETE',
+                    headers: getHeaders(),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Notification deleted', 'success');
+                    loadNotifications();
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // ─── Configuration ──────────────────────────────────────────────────
+        async function loadConfig() {
+            if (!adminKey) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/config`);
+                const data = await res.json();
+                
+                document.getElementById('maintEnabled').value = data.maintenance?.enabled ? 'true' : 'false';
+                document.getElementById('maintMessage').value = data.maintenance?.message || '';
+                
+                document.getElementById('vidDefault').value = data.videoQuality?.default || 'medium';
+                document.getElementById('vidAutoAdjust').value = data.videoQuality?.autoAdjust ? 'true' : 'false';
+                document.getElementById('vidMaxBitrate').value = data.videoQuality?.maxBitrate || 1500000;
+
+                document.getElementById('safetyAutoBan').value = data.safety?.autoBanEnabled ? 'true' : 'false';
+                document.getElementById('safetyThreshold').value = data.safety?.autoBanThreshold || 3;
+                document.getElementById('safetyHPThreshold').value = data.safety?.highPriorityThreshold || 2;
+            } catch (e) {
+                console.error('Config load error:', e);
+            }
+        }
+
+        async function updateMaintenance() {
+            const enabled = document.getElementById('maintEnabled').value === 'true';
+            const message = document.getElementById('maintMessage').value;
+            try {
+                const res = await fetch(`${API_BASE}/admin/maintenance`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ enabled, message }),
+                });
+                const data = await res.json();
+                if (data.success) showToast('Maintenance updated!', 'success');
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function updateVideoQuality() {
+            try {
+                const res = await fetch(`${API_BASE}/admin/video-quality`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        default: document.getElementById('vidDefault').value,
+                        autoAdjust: document.getElementById('vidAutoAdjust').value === 'true',
+                        maxBitrate: parseInt(document.getElementById('vidMaxBitrate').value),
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) showToast('Video quality updated!', 'success');
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function updateSafety() {
+            try {
+                const res = await fetch(`${API_BASE}/admin/safety-settings`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        autoBanEnabled: document.getElementById('safetyAutoBan').value === 'true',
+                        autoBanThreshold: parseInt(document.getElementById('safetyThreshold').value),
+                        highPriorityThreshold: parseInt(document.getElementById('safetyHPThreshold').value),
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) showToast('Safety settings updated!', 'success');
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function updateAppVersion() {
+            try {
+                const res = await fetch(`${API_BASE}/api/version`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        platform: 'android',
+                        versionCode: parseInt(document.getElementById('appVersionCode').value),
+                        versionName: document.getElementById('appVersionName').value,
+                        updateMessage: document.getElementById('appUpdateMsg').value,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) showToast('App version updated!', 'success');
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function toggleMaintenance() {
+            try {
+                const res = await fetch(`${API_BASE}/api/config`);
+                const config = await res.json();
+                const currentlyEnabled = config.maintenance?.enabled || false;
+                
+                const result = await fetch(`${API_BASE}/admin/maintenance`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ enabled: !currentlyEnabled, message: config.maintenance?.message || '' }),
+                });
+                const data = await result.json();
+                if (data.success) {
+                    showToast(`Maintenance ${!currentlyEnabled ? 'ENABLED' : 'DISABLED'}`, 'success');
+                    loadConfig();
+                }
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        // ─── TOTP ───────────────────────────────────────────────────────────
+        async function setupTotp() {
+            if (!adminKey) { showToast('Admin key required', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/admin/totp/setup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('totpResult').innerHTML = `
+                        <div class="qr-container">
+                            <img src="${data.qrCode}" alt="TOTP QR Code">
+                            <p style="margin-top:10px;"><strong>Secret:</strong> <span class="monospace">${data.secret}</span></p>
+                            <p style="color:var(--success);">✅ Scan this QR code with Google Authenticator</p>
+                            <p style="font-size:12px;color:var(--text-light);">Then use the 6-digit code for all admin operations.</p>
+                        </div>
+                    `;
+                    showToast('TOTP secret generated!', 'success');
+                }
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function verifyTotp() {
+            const code = document.getElementById('totpVerifyCode').value.trim();
+            if (!code) { showToast('Enter a code', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/admin/totp/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+                    body: JSON.stringify({ token: code }),
+                });
+                const data = await res.json();
+                document.getElementById('totpVerifyResult').innerHTML = data.valid
+                    ? '<span style="color:var(--success);">✅ Token is valid!</span>'
+                    : '<span style="color:var(--danger);">❌ Invalid or expired token</span>';
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        // ─── API Tools ──────────────────────────────────────────────────────
+        async function getKeyHash() {
+            try {
+                const res = await fetch(`${API_BASE}/api/get-key-hash`);
+                const data = await res.json();
+                document.getElementById('apiKeyHash').value = data.hash;
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function generateOreyId() {
+            try {
+                const res = await fetch(`${API_BASE}/generate-orey-id`);
+                const data = await res.json();
+                document.getElementById('quickActionResult').innerHTML = `
+                    <div style="background:var(--light);padding:10px;border-radius:8px;">
+                        <strong>Orey ID:</strong> <span style="font-size:20px;font-weight:bold;color:var(--primary);">${data.oreyId}</span><br>
+                        <strong>Expires:</strong> ${new Date(data.expiresAt).toLocaleString()}
+                    </div>
+                `;
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function createRoom() {
+            try {
+                const res = await fetch(`${API_BASE}/create-room`);
+                const data = await res.json();
+                document.getElementById('quickActionResult').innerHTML = `
+                    <div style="background:var(--light);padding:10px;border-radius:8px;">
+                        <strong>Room ID:</strong> <span style="font-size:20px;font-weight:bold;color:var(--primary);">${data.roomId}</span>
+                    </div>
+                `;
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function generateOreyIdApi() {
+            try {
+                const res = await fetch(`${API_BASE}/generate-orey-id`);
+                const data = await res.json();
+                document.getElementById('oreyIdResult').textContent = JSON.stringify(data, null, 2);
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        async function checkBan() {
+            const deviceId = document.getElementById('checkBanDeviceId').value.trim();
+            if (!deviceId) { showToast('Enter device ID', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/device/check-ban`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId }),
+                });
+                const data = await res.json();
+                document.getElementById('checkBanResult').textContent = JSON.stringify(data, null, 2);
+            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+        }
+
+        // ─── Tab Switching ──────────────────────────────────────────────────
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            
+            const tabMap = {
+                'dashboard': 0, 'reports': 1, 'bans': 2, 'notifications': 3, 'config': 4, 'totp': 5, 'api': 6
+            };
+            const panelIds = ['dashboard', 'reports', 'bans', 'notifications', 'config', 'totp', 'api'];
+            
+            document.querySelectorAll('.tab')[tabMap[tabName]]?.classList.add('active');
+            document.getElementById(`panel-${tabName}`)?.classList.add('active');
+        }
+
+        // Initial auth status
+        updateAuthStatus();
+    </script>
 </body>
 </html>
-
