@@ -1,850 +1,470 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orey Admin Panel</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h1 {
-            font-size: 24px;
-        }
-
-        .admin-key-status {
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .status-valid {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .status-invalid {
-            background: #f44336;
-            color: white;
-        }
-
-        .nav {
-            background: #f8f9fa;
-            padding: 10px 20px;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .nav-btn {
-            padding: 8px 16px;
-            background: white;
-            border: 1px solid #667eea;
-            color: #667eea;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .nav-btn:hover {
-            background: #667eea;
-            color: white;
-        }
-
-        .nav-btn.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .content {
-            padding: 20px;
-            display: none;
-        }
-
-        .content.active {
-            display: block;
-        }
-
-        .card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .card h2 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-        }
-
-        .stat-card h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .stat-card .value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .form-group textarea {
-            height: 100px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .btn:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-danger {
-            background: #f44336;
-        }
-
-        .btn-success {
-            background: #4CAF50;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .table th,
-        .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-
-        .badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .badge-info {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .badge-warning {
-            background: #fff3e0;
-            color: #f57c00;
-        }
-
-        .badge-danger {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .badge-success {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 5px;
-        }
-
-        .action-btn {
-            padding: 5px 10px;
-            font-size: 12px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 15% auto;
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-
-        .modal-content h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .notification-item {
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            transition: transform 0.2s;
-        }
-
-        .notification-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .notification-item.unread {
-            border-left: 4px solid #667eea;
-            background: #f8f9ff;
-        }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 1001;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .toast-success {
-            background: #4CAF50;
-        }
-
-        .toast-error {
-            background: #f44336;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Orey Admin Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    body {
+      background: #0b0f17;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      width: 100%;
+    }
+    header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid #334155;
+      padding: 1.2rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.6rem;
+      letter-spacing: -0.5px;
+      color: white;
+    }
+    .logo span {
+      background: #3b82f6;
+      padding: 0.2rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      color: white;
+    }
+    .admin-tag {
+      background: #1e293b;
+      padding: 0.4rem 1.2rem;
+      border-radius: 30px;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      border: 1px solid #334155;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin: 1.75rem 0;
+    }
+    .stat-card {
+      background: #1e293b;
+      border-radius: 20px;
+      padding: 1.4rem;
+      border: 1px solid #334155;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+    }
+    .stat-card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 2.3rem;
+      font-weight: 700;
+      margin: 0.4rem 0 0.2rem;
+    }
+    .stat-desc {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .panel {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.6rem;
+      margin-bottom: 1.8rem;
+      border: 1px solid #334155;
+    }
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #f1f5f9;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+    button {
+      background: #3b82f6;
+      border: none;
+      padding: 0.6rem 1.4rem;
+      border-radius: 30px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.2s;
+      font-size: 0.9rem;
+      border: 1px solid #2563eb;
+    }
+    button.secondary {
+      background: #334155;
+      border-color: #475569;
+    }
+    button.danger {
+      background: #b91c1c;
+      border-color: #dc2626;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    button.danger:hover {
+      background: #991b1b;
+    }
+    input, select, textarea {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 0.7rem 1rem;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      outline: none;
+      width: 100%;
+      margin-bottom: 0.8rem;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #3b82f6;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th {
+      text-align: left;
+      padding: 0.9rem 0.8rem;
+      background: #0f172a;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    td {
+      padding: 0.8rem;
+      border-bottom: 1px solid #334155;
+    }
+    .badge {
+      background: #334155;
+      padding: 0.2rem 0.7rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.active { background: #16a34a; color: white; }
+    .badge.pending { background: #ea580c; }
+    .badge.banned { background: #b91c1c; color: white; }
+    .badge.high { background: #7e22ce; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1e293b;
+      border: 1px solid #3b82f6;
+      padding: 0.9rem 1.5rem;
+      border-radius: 20px;
+      color: white;
+      z-index: 9999;
+      display: none;
+    }
+    .config-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+    }
+    hr {
+      border-color: #334155;
+      margin: 1.2rem 0;
+    }
+  </style>
 </head>
 <body>
-    <!-- Admin Key Modal -->
-    <div id="adminKeyModal" class="modal">
-        <div class="modal-content">
-            <h2>🔐 Enter Admin Key</h2>
-            <p style="margin-bottom: 20px; color: #666;">Please enter your admin key to access the dashboard.</p>
-            <div class="form-group">
-                <label for="adminKeyInput">Admin Key</label>
-                <input type="password" id="adminKeyInput" placeholder="Enter admin key...">
-            </div>
-            <button class="btn" onclick="setAdminKey()">Access Dashboard</button>
-            <p id="adminKeyError" style="color: #f44336; margin-top: 10px; display: none;"></p>
-        </div>
+  <header>
+    <div class="logo">🔷 OREY <span>ADMIN</span></div>
+    <div class="admin-tag" id="connectionStatus">🟡 Connecting...</div>
+  </header>
+  <div class="container">
+    <!-- Stats Grid -->
+    <div class="dashboard-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-label">Active Connections</div><div class="stat-value" id="activeConn">-</div></div>
+      <div class="stat-card"><div class="stat-label">Active Rooms</div><div class="stat-value" id="activeRooms">-</div></div>
+      <div class="stat-card"><div class="stat-label">Banned Devices</div><div class="stat-value" id="bannedCount">-</div></div>
+      <div class="stat-card"><div class="stat-label">Pending Reports</div><div class="stat-value" id="pendingReports">-</div></div>
     </div>
 
-    <div class="container" id="dashboard" style="display: none;">
-        <div class="header">
-            <h1>🎯 Orey Admin Dashboard</h1>
-            <span id="adminKeyStatus" class="admin-key-status">
-                Admin Key: <span id="keyStatusText">Valid</span>
-            </span>
-        </div>
-        
-        <div class="nav">
-            <div class="nav-buttons">
-                <button class="nav-btn active" onclick="showTab('overview')">📊 Overview</button>
-                <button class="nav-btn" onclick="showTab('notifications')">📬 Notifications</button>
-                <button class="nav-btn" onclick="showTab('reports')">🚨 Reports</button>
-                <button class="nav-btn" onclick="showTab('bans')">🚫 Bans</button>
-                <button class="nav-btn" onclick="showTab('settings')">⚙️ Settings</button>
-            </div>
-        </div>
-
-        <!-- Overview Tab -->
-        <div id="overview" class="content active">
-            <div class="stat-grid" id="statsGrid">
-                <!-- Stats will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Notifications Tab -->
-        <div id="notifications" class="content">
-            <div class="card">
-                <h2>📬 Send New Notification</h2>
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="notifTitle" placeholder="Notification title">
-                </div>
-                <div class="form-group">
-                    <label>Message</label>
-                    <textarea id="notifMessage" placeholder="Notification message"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Priority</label>
-                    <select id="notifPriority">
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Expires In (days)</label>
-                    <input type="number" id="notifExpiresIn" value="30">
-                </div>
-                <button class="btn" onclick="sendNotification()">Send Notification</button>
-            </div>
-            <div class="card">
-                <h2>📋 Notification History</h2>
-                <div id="notificationList"></div>
-            </div>
-        </div>
-
-        <!-- Reports Tab -->
-        <div id="reports" class="content">
-            <div class="card">
-                <h2>🚨 Pending Reports</h2>
-                <div id="reportsList"></div>
-            </div>
-        </div>
-
-        <!-- Bans Tab -->
-        <div id="bans" class="content">
-            <div class="card">
-                <h2>🚫 Ban Device</h2>
-                <div class="form-group">
-                    <label>Device ID</label>
-                    <input type="text" id="banDeviceId" placeholder="Enter device ID">
-                </div>
-                <div class="form-group">
-                    <label>Reason</label>
-                    <textarea id="banReason" placeholder="Reason for ban"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Duration (hours, 0 for permanent)</label>
-                    <input type="number" id="banDuration" value="720">
-                </div>
-                <button class="btn btn-danger" onclick="banDevice()">Ban Device</button>
-            </div>
-            <div class="card">
-                <h2>📋 Banned Devices</h2>
-                <div id="bannedDevicesList"></div>
-            </div>
-        </div>
-
-        <!-- Settings Tab -->
-        <div id="settings" class="content">
-            <div class="card">
-                <h2>🔧 Maintenance Mode</h2>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="maintenanceEnabled"> Enable Maintenance Mode
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>Maintenance Message</label>
-                    <textarea id="maintenanceMessage">We're improving Orey. Back soon!</textarea>
-                </div>
-                <button class="btn" onclick="toggleMaintenance()">Update Maintenance Mode</button>
-            </div>
-            <div class="card">
-                <h2>🛡️ Safety Settings</h2>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="autoBanEnabled" checked> Auto-Ban Enabled
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>Auto-Ban Threshold (reports)</label>
-                    <input type="number" id="autoBanThreshold" value="3">
-                </div>
-                <button class="btn" onclick="updateSafetySettings()">Update Safety Settings</button>
-            </div>
-        </div>
+    <!-- Reports Section -->
+    <div class="panel">
+      <h2>🚨 Reports</h2>
+      <div class="flex-row" style="margin-bottom:1rem;">
+        <button onclick="loadReports()">🔄 Refresh</button>
+        <select id="reportFilter" onchange="loadReports()" style="width:auto; margin:0;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="auto_banned">Auto Banned</option>
+          <option value="banned">Banned</option>
+          <option value="dismissed">Dismissed</option>
+        </select>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>ID</th><th>Reported Device</th><th>Reason</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="reportsTable"></tbody>
+        </table>
+      </div>
     </div>
 
-    <div id="toast" class="toast" style="display: none;"></div>
+    <!-- Banned Devices -->
+    <div class="panel">
+      <h2>🛑 Banned Devices</h2>
+      <div class="flex-row">
+        <button onclick="loadBannedDevices()">Refresh</button>
+        <input type="text" id="banDeviceId" placeholder="Device ID to ban" style="width:250px; margin:0;">
+        <input type="text" id="banReason" placeholder="Reason" style="width:180px; margin:0;">
+        <input type="number" id="banDuration" placeholder="Hours (0=permanent)" style="width:120px; margin:0;" value="720">
+        <button class="danger" onclick="banDevice()">Ban Device</button>
+      </div>
+      <div class="table-wrapper" style="margin-top:1rem;">
+        <table>
+          <thead><tr><th>Device ID</th><th>Reason</th><th>Expires</th><th>Source</th><th>Unban</th></tr></thead>
+          <tbody id="bannedTable"></tbody>
+        </table>
+      </div>
+    </div>
 
-    <script>
-        let adminKey = localStorage.getItem('orey_admin_key') || '';
-        
-        // Show admin key modal if not set
-        window.onload = function() {
-            if (!adminKey) {
-                document.getElementById('adminKeyModal').style.display = 'block';
-            } else {
-                document.getElementById('dashboard').style.display = 'block';
-                loadDashboardData();
-            }
-        };
+    <!-- Notifications -->
+    <div class="panel">
+      <h2>📢 Send Notification</h2>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+        <input type="text" id="notifTitle" placeholder="Title" />
+        <input type="text" id="notifMessage" placeholder="Message" />
+        <select id="notifType"><option value="info">Info</option><option value="warning">Warning</option><option value="alert">Alert</option></select>
+        <input type="text" id="notifImageUrl" placeholder="Image URL (optional)" />
+        <input type="text" id="notifActionUrl" value="/" placeholder="Action URL" />
+        <input type="number" id="notifExpiresIn" value="30" placeholder="Expires in days" />
+      </div>
+      <button onclick="sendNotification()" style="margin-top:1rem;">📤 Send Broadcast</button>
+    </div>
 
-        function setAdminKey() {
-            const key = document.getElementById('adminKeyInput').value;
-            if (!key) {
-                showError('Please enter an admin key');
-                return;
-            }
-            
-            // Test the admin key
-            fetch('/admin/stats?admin_key=' + encodeURIComponent(key))
-                .then(response => {
-                    if (response.ok) {
-                        adminKey = key;
-                        localStorage.setItem('orey_admin_key', key);
-                        document.getElementById('adminKeyModal').style.display = 'none';
-                        document.getElementById('dashboard').style.display = 'block';
-                        loadDashboardData();
-                        showToast('✅ Admin key verified successfully', 'success');
-                    } else {
-                        showError('Invalid admin key. Please try again.');
-                    }
-                })
-                .catch(() => {
-                    showError('Connection error. Please check your server.');
-                });
-        }
+    <!-- Server Config -->
+    <div class="panel">
+      <h2>⚙️ Server Configuration</h2>
+      <div class="config-section">
+        <div>
+          <label>Maintenance Mode</label>
+          <select id="maintEnabled" onchange="updateMaintenance()">
+            <option value="false">Disabled</option><option value="true">Enabled</option>
+          </select>
+          <input type="text" id="maintMessage" placeholder="Maintenance message" onchange="updateMaintenance()" />
+        </div>
+        <div>
+          <label>Default Video Quality</label>
+          <select id="videoQualityDefault" onchange="updateVideoQuality()">
+            <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="hd">HD</option>
+          </select>
+          <label>Auto Adjust <input type="checkbox" id="autoAdjust" checked onchange="updateVideoQuality()"></label>
+        </div>
+        <div>
+          <label>Auto Ban Threshold</label>
+          <input type="number" id="autoBanThreshold" value="3" onchange="updateSafety()" />
+          <label>High Priority Threshold</label>
+          <input type="number" id="highPriorityThreshold" value="2" onchange="updateSafety()" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast">✅ Action completed</div>
 
-        function showError(message) {
-            const errorEl = document.getElementById('adminKeyError');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => errorEl.style.display = 'none', 3000);
-        }
+  <script>
+    const ADMIN_KEY = 'admin_secret_change_this'; // Match server ADMIN_KEY
+    const BASE = window.location.origin;
+    
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
 
-        function showToast(message, type) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast toast-${type}`;
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 3000);
-        }
+    async function apiCall(url, method = 'GET', body = null) {
+      const headers = { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' };
+      const options = { method, headers };
+      if (body) options.body = JSON.stringify(body);
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(err.error || 'Error');
+      }
+      return res.json();
+    }
 
-        function showTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            
-            // Show selected tab
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            
-            // Load tab-specific data
-            switch(tabName) {
-                case 'overview': loadDashboardData(); break;
-                case 'notifications': loadNotifications(); break;
-                case 'reports': loadReports(); break;
-                case 'bans': loadBannedDevices(); break;
-            }
-        }
+    async function loadStats() {
+      try {
+        const data = await apiCall(`${BASE}/admin/stats`);
+        document.getElementById('activeConn').textContent = data.activeConnections || 0;
+        document.getElementById('activeRooms').textContent = data.activeRooms || 0;
+        document.getElementById('bannedCount').textContent = data.bannedDevices || 0;
+        document.getElementById('pendingReports').textContent = data.pendingReports || 0;
+        document.getElementById('connectionStatus').innerHTML = '🟢 Connected';
+      } catch (e) {
+        document.getElementById('connectionStatus').innerHTML = '🔴 Offline';
+      }
+    }
 
-        function loadDashboardData() {
-            fetch(`/admin/stats?admin_key=${adminKey}`)
-                .then(res => res.json())
-                .then(data => {
-                    const statsGrid = document.getElementById('statsGrid');
-                    statsGrid.innerHTML = `
-                        <div class="stat-card">
-                            <h3>Active Connections</h3>
-                            <div class="value">${data.activeConnections}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Active Rooms</h3>
-                            <div class="value">${data.activeRooms}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Banned Devices</h3>
-                            <div class="value">${data.bannedDevices}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Pending Reports</h3>
-                            <div class="value">${data.pendingReports}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Total Notifications</h3>
-                            <div class="value">${data.totalNotifications}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Uptime (hours)</h3>
-                            <div class="value">${Math.floor(data.uptime / 3600)}</div>
-                        </div>
-                    `;
-                })
-                .catch(err => showToast('Error loading dashboard data', 'error'));
-        }
-
-        function sendNotification() {
-            const title = document.getElementById('notifTitle').value;
-            const message = document.getElementById('notifMessage').value;
-            const priority = document.getElementById('notifPriority').value;
-            const expiresIn = document.getElementById('notifExpiresIn').value;
-
-            if (!title || !message) {
-                showToast('Please fill in all fields', 'error');
-                return;
-            }
-
-            fetch(`/admin/notifications?admin_key=${adminKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, message, priority, expiresIn: parseInt(expiresIn) })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Notification sent successfully!', 'success');
-                    document.getElementById('notifTitle').value = '';
-                    document.getElementById('notifMessage').value = '';
-                    loadNotifications();
-                } else {
-                    showToast('❌ Failed to send notification', 'error');
-                }
-            })
-            .catch(err => showToast('Error sending notification', 'error'));
-        }
-
-        function loadNotifications() {
-            fetch(`/admin/notifications?admin_key=${adminKey}`)
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('notificationList');
-                    if (data.notifications.length === 0) {
-                        list.innerHTML = '<p>No notifications found</p>';
-                        return;
-                    }
-                    list.innerHTML = data.notifications.map(n => `
-                        <div class="notification-item ${!n.isRead ? 'unread' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong>${n.icon} ${n.title}</strong>
-                                    <p>${n.message}</p>
-                                    <small>${new Date(n.timestamp).toLocaleString()} | Priority: ${n.priority}</small>
-                                </div>
-                                <button class="action-btn btn-danger" onclick="deleteNotification(${n.id})">Delete</button>
-                            </div>
-                        </div>
-                    `).join('');
-                })
-                .catch(err => showToast('Error loading notifications', 'error'));
-        }
-
-        function deleteNotification(id) {
-            if (!confirm('Are you sure you want to delete this notification?')) return;
-            
-            fetch(`/admin/notifications/${id}?admin_key=${adminKey}`, {
-                method: 'DELETE'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Notification deleted', 'success');
-                    loadNotifications();
-                } else {
-                    showToast('❌ Failed to delete notification', 'error');
-                }
-            })
-            .catch(err => showToast('Error deleting notification', 'error'));
-        }
-
-        function loadReports() {
-            fetch(`/admin/reports?admin_key=${adminKey}&status=pending`)
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('reportsList');
-                    if (data.reports.length === 0) {
-                        list.innerHTML = '<p>No pending reports</p>';
-                        return;
-                    }
-                    list.innerHTML = `
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Report ID</th>
-                                    <th>Reporter</th>
-                                    <th>Reported</th>
-                                    <th>Reason</th>
-                                    <th>Priority</th>
-                                    <th>Time</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.reports.map(r => `
-                                    <tr>
-                                        <td><small>${r.id}</small></td>
-                                        <td><small>${r.reporterDeviceId.substring(0, 12)}...</small></td>
-                                        <td><small>${r.reportedDeviceId.substring(0, 12)}...</small></td>
-                                        <td>${r.reason}</td>
-                                        <td><span class="badge ${r.isHighPriority ? 'badge-danger' : 'badge-info'}">${r.isHighPriority ? 'High' : 'Normal'}</span></td>
-                                        <td>${new Date(r.timestamp).toLocaleString()}</td>
-                                        <td>
-                                            <div class="action-buttons">
-                                                <button class="action-btn btn-danger" onclick="handleReport('${r.id}', 'ban')">Ban</button>
-                                                <button class="action-btn btn-success" onclick="handleReport('${r.id}', 'dismiss')">Dismiss</button>
-                                                <button class="action-btn" onclick="handleReport('${r.id}', 'warn')">Warn</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                })
-                .catch(err => showToast('Error loading reports', 'error'));
-        }
-
-        function handleReport(reportId, action) {
-            fetch(`/admin/reports/${reportId}/action?admin_key=${adminKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(`✅ Report ${action}ed successfully`, 'success');
-                    loadReports();
-                } else {
-                    showToast('❌ Failed to process report', 'error');
-                }
-            })
-            .catch(err => showToast('Error processing report', 'error'));
-        }
-
-        function banDevice() {
-            const deviceId = document.getElementById('banDeviceId').value;
-            const reason = document.getElementById('banReason').value;
-            const duration = document.getElementById('banDuration').value;
-
-            if (!deviceId) {
-                showToast('Please enter a device ID', 'error');
-                return;
-            }
-
-            fetch(`/admin/ban-device?admin_key=${adminKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    deviceId, 
-                    reason: reason || 'Violation of terms', 
-                    durationHours: parseInt(duration) 
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Device banned successfully', 'success');
-                    document.getElementById('banDeviceId').value = '';
-                    document.getElementById('banReason').value = '';
-                    loadBannedDevices();
-                } else {
-                    showToast('❌ Failed to ban device', 'error');
-                }
-            })
-            .catch(err => showToast('Error banning device', 'error'));
-        }
-
-        function loadBannedDevices() {
-            fetch(`/admin/banned-devices?admin_key=${adminKey}`)
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('bannedDevicesList');
-                    if (data.bannedDevices.length === 0) {
-                        list.innerHTML = '<p>No banned devices</p>';
-                        return;
-                    }
-                    list.innerHTML = `
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Device ID</th>
-                                    <th>Reason</th>
-                                    <th>Duration</th>
-                                    <th>Expires</th>
-                                    <th>Source</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.bannedDevices.map(b => `
-                                    <tr>
-                                        <td><small>${b.deviceId.substring(0, 12)}...</small></td>
-                                        <td>${b.reason}</td>
-                                        <td>${b.permanent ? 'Permanent' : `${b.durationHours}h`}</td>
-                                        <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Never'}</td>
-                                        <td><span class="badge badge-${b.source === 'auto' ? 'warning' : 'info'}">${b.source}</span></td>
-                                        <td>
-                                            <button class="action-btn btn-success" onclick="unbanDevice('${b.deviceId}')">Unban</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                })
-                .catch(err => showToast('Error loading banned devices', 'error'));
-        }
-
-        function unbanDevice(deviceId) {
-            if (!confirm('Are you sure you want to unban this device?')) return;
-            
-            fetch(`/admin/ban-device/${encodeURIComponent(deviceId)}?admin_key=${adminKey}`, {
-                method: 'DELETE'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Device unbanned successfully', 'success');
-                    loadBannedDevices();
-                } else {
-                    showToast('❌ Failed to unban device', 'error');
-                }
-            })
-            .catch(err => showToast('Error unbanning device', 'error'));
-        }
-
-        function toggleMaintenance() {
-            const enabled = document.getElementById('maintenanceEnabled').checked;
-            const message = document.getElementById('maintenanceMessage').value;
-
-            fetch(`/admin/maintenance?admin_key=${adminKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled, message })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(`✅ Maintenance mode ${enabled ? 'enabled' : 'disabled'}`, 'success');
-                } else {
-                    showToast('❌ Failed to update maintenance mode', 'error');
-                }
-            })
-            .catch(err => showToast('Error updating maintenance mode', 'error'));
-        }
-
-        function updateSafetySettings() {
-            const autoBanEnabled = document.getElementById('autoBanEnabled').checked;
-            const autoBanThreshold = document.getElementById('autoBanThreshold').value;
-
-            fetch(`/admin/safety-settings?admin_key=${adminKey}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ autoBanEnabled, autoBanThreshold: parseInt(autoBanThreshold) })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✅ Safety settings updated', 'success');
-                } else {
-                    showToast('❌ Failed to update safety settings', 'error');
-                }
-            })
-            .catch(err => showToast('Error updating safety settings', 'error'));
-        }
-
-        // Logout functionality
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'l') {
-                e.preventDefault();
-                adminKey = '';
-                localStorage.removeItem('orey_admin_key');
-                document.getElementById('dashboard').style.display = 'none';
-                document.getElementById('adminKeyModal').style.display = 'block';
-                document.getElementById('adminKeyInput').value = '';
-            }
+    async function loadReports() {
+      const status = document.getElementById('reportFilter').value;
+      let url = `${BASE}/admin/reports`;
+      if (status) url += `?status=${status}`;
+      try {
+        const data = await apiCall(url);
+        const tbody = document.getElementById('reportsTable');
+        tbody.innerHTML = '';
+        data.reports.slice(0, 30).forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${r.id?.substring(0,8)}</td>
+            <td>${(r.reportedDeviceId || '').substring(0,14)}...</td>
+            <td>${r.reason}</td>
+            <td><span class="badge ${r.isHighPriority ? 'high' : ''}">${r.isHighPriority ? 'HIGH' : 'normal'}</span></td>
+            <td><span class="badge ${r.status === 'pending' ? 'pending' : 'banned'}">${r.status}</span></td>
+            <td>
+              ${r.status === 'pending' ? `<button onclick="actOnReport('${r.id}','ban')">Ban</button>
+              <button class="secondary" onclick="actOnReport('${r.id}','dismiss')">Dismiss</button>` : 'Reviewed'}
+            </td>`;
+          tbody.appendChild(tr);
         });
-    </script>
+      } catch (e) { toast('Failed to load reports'); }
+    }
+
+    async function actOnReport(reportId, action) {
+      try {
+        await apiCall(`${BASE}/admin/reports/${reportId}/action`, 'POST', { action });
+        toast(`Report ${action} successful`);
+        loadReports();
+        loadStats();
+      } catch (e) { toast(e.message); }
+    }
+
+    async function loadBannedDevices() {
+      try {
+        const data = await apiCall(`${BASE}/admin/banned-devices`);
+        const tbody = document.getElementById('bannedTable');
+        tbody.innerHTML = '';
+        data.bannedDevices.forEach(b => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${b.deviceId.substring(0,16)}...</td>
+            <td>${b.reason}</td>
+            <td>${b.permanent ? 'Permanent' : b.expiresAt ? new Date(b.expiresAt).toLocaleDateString() : 'N/A'}</td>
+            <td>${b.source}</td>
+            <td><button class="danger" onclick="unbanDevice('${encodeURIComponent(b.deviceId)}')">Unban</button></td>`;
+          tbody.appendChild(tr);
+        });
+      } catch (e) { toast('Failed to load bans'); }
+    }
+
+    async function banDevice() {
+      const deviceId = document.getElementById('banDeviceId').value.trim();
+      const reason = document.getElementById('banReason').value.trim() || 'Manual ban';
+      const duration = parseInt(document.getElementById('banDuration').value) || 0;
+      if (!deviceId) return toast('Device ID required');
+      try {
+        await apiCall(`${BASE}/admin/ban-device`, 'POST', { deviceId, reason, durationHours: duration || null });
+        toast('Device banned');
+        loadBannedDevices();
+        loadStats();
+      } catch (e) { toast(e.message); }
+    }
+
+    async function unbanDevice(encodedId) {
+      try {
+        await apiCall(`${BASE}/admin/ban-device/${encodedId}`, 'DELETE');
+        toast('Device unbanned');
+        loadBannedDevices();
+      } catch (e) { toast(e.message); }
+    }
+
+    async function sendNotification() {
+      const title = document.getElementById('notifTitle').value.trim();
+      const message = document.getElementById('notifMessage').value.trim();
+      if (!title || !message) return toast('Title and message required');
+      const body = {
+        title, message,
+        type: document.getElementById('notifType').value,
+        imageUrl: document.getElementById('notifImageUrl').value || null,
+        actionUrl: document.getElementById('notifActionUrl').value,
+        expiresIn: parseInt(document.getElementById('notifExpiresIn').value) || 30
+      };
+      try {
+        await apiCall(`${BASE}/admin/notifications`, 'POST', body);
+        toast('Notification sent!');
+      } catch (e) { toast(e.message); }
+    }
+
+    async function updateMaintenance() {
+      const enabled = document.getElementById('maintEnabled').value === 'true';
+      const message = document.getElementById('maintMessage').value;
+      try {
+        await apiCall(`${BASE}/admin/maintenance`, 'POST', { enabled, message });
+        toast('Maintenance updated');
+      } catch (e) { toast(e.message); }
+    }
+
+    async function updateVideoQuality() {
+      const def = document.getElementById('videoQualityDefault').value;
+      const autoAdjust = document.getElementById('autoAdjust').checked;
+      try {
+        await apiCall(`${BASE}/admin/video-quality`, 'PUT', { default: def, autoAdjust });
+        toast('Video quality updated');
+      } catch (e) { toast(e.message); }
+    }
+
+    async function updateSafety() {
+      const autoBanThreshold = parseInt(document.getElementById('autoBanThreshold').value) || 3;
+      const highPriorityThreshold = parseInt(document.getElementById('highPriorityThreshold').value) || 2;
+      try {
+        await apiCall(`${BASE}/admin/safety-settings`, 'PUT', { autoBanThreshold, highPriorityThreshold });
+        toast('Safety settings updated');
+      } catch (e) { toast(e.message); }
+    }
+
+    // Initial load
+    window.onload = () => {
+      loadStats();
+      loadReports();
+      loadBannedDevices();
+      setInterval(loadStats, 15000);
+    };
+  </script>
 </body>
 </html>
