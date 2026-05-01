@@ -4,7 +4,7 @@ import {
   PhoneOff, Loader,
   Shield, VolumeX, Heart, Sparkles,
   Eye, EyeOff, SkipForward, MoreHorizontal,
-  User, Zap, MessageCircle
+  User
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -129,7 +129,7 @@ const CallScreen = ({
     
     if (!uiVisible) return;
     clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+    hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     return () => clearTimeout(hideTimerRef.current);
   }, [uiVisible]);
 
@@ -141,7 +141,7 @@ const CallScreen = ({
     const resetTimer = () => {
       if (!uiVisible) setUiVisible(true);
       clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+      hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
 
     const events = ['mousemove', 'touchstart', 'touchmove', 'keydown'];
@@ -300,13 +300,22 @@ const CallScreen = ({
 
       {/* REMOTE VIDEO */}
       <div className={styles.remoteView}>
-        {/* Poster/Avatar overlay */}
-        {(!isRemoteConnected || !remoteVideoReady || isPartnerVideoOff) && (
+        <video
+          ref={remoteVideoRef}
+          className={`${styles.video} ${searching ? styles.searchingBlur : ''} ${isBlurred ? styles.videoBlurred : ''}`}
+          autoPlay
+          playsInline
+          style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
+          aria-label="Remote video stream"
+        />
+
+        {/* Poster overlay when no remote video */}
+        {(!isRemoteConnected || isPartnerVideoOff) && (
           <div className={styles.videoPoster}>
             {isRemoteConnected && isPartnerVideoOff ? (
               <>
                 <div className={styles.posterAvatarLarge}>
-                  <User size={80} aria-hidden="true" />
+                  <VideoOff size={80} aria-hidden="true" />
                 </div>
                 <h2 className={styles.posterTitle}>Camera Off</h2>
                 <p className={styles.posterSubtitle}>Your match has disabled their camera</p>
@@ -315,77 +324,63 @@ const CallScreen = ({
                   <span>Audio connected</span>
                 </div>
               </>
-            ) : (
+            ) : !isRemoteConnected && !searching ? (
               <>
                 <div className={styles.posterAvatarLarge}>
-                  {searching ? (
-                    <Loader size={80} className={styles.posterSpinner} />
-                  ) : (
-                    <User size={80} aria-hidden="true" />
-                  )}
+                  <User size={80} aria-hidden="true" />
                 </div>
-                <h2 className={styles.posterTitle}>
-                  {searching ? 'Looking for someone' : 'Waiting for a match'}
-                </h2>
-                <p className={styles.posterSubtitle}>
-                  {searching 
-                    ? 'Finding the perfect connection...' 
-                    : 'You\'re ready to meet someone new'}
-                </p>
+                <h2 className={styles.posterTitle}>Ready to meet</h2>
+                <p className={styles.posterSubtitle}>Waiting for a match...</p>
               </>
-            )}
+            ) : null}
           </div>
         )}
 
-        <video
-          ref={remoteVideoRef}
-          className={`${styles.video} ${isBlurred ? styles.videoBlurred : ''} ${remoteVideoReady && !isPartnerVideoOff ? styles.videoVisible : ''}`}
-          autoPlay
-          playsInline
-          aria-label="Remote video stream"
-        />
-
         {/* Blur indicator */}
-        {isBlurred && remoteVideoReady && !isPartnerVideoOff && (
+        {isBlurred && isRemoteConnected && !isPartnerVideoOff && (
           <div className={styles.blurOverlay} role="status">
             <EyeOff size={16} aria-hidden="true" />
             <span>Blurred</span>
+          </div>
+        )}
+
+        {/* Partner muted chip */}
+        {isRemoteConnected && isPartnerMuted && (
+          <div className={styles.statusChipLeft} role="status">
+            <VolumeX size={13} aria-hidden="true" />
+            <span>Their mic is off</span>
           </div>
         )}
       </div>
 
       {/* LOCAL VIDEO */}
       <div className={styles.localView}>
-        {(!localStream || !localVideoReady) && videoEnabled ? (
-          <div className={styles.videoPoster}>
-            <div className={styles.posterAvatarSmall}>
-              <Loader size={32} className={styles.posterSpinner} />
-            </div>
-            <span className={styles.posterLabel}>Camera starting...</span>
-          </div>
-        ) : !videoEnabled ? (
+        <video
+          ref={localVideoRef}
+          className={`${styles.video} ${styles.mirrored}`}
+          autoPlay
+          playsInline
+          muted
+          style={{ display: videoEnabled ? 'block' : 'none' }}
+          aria-label="Local video stream"
+        />
+
+        {/* Local poster */}
+        {!videoEnabled && (
           <div className={styles.videoPoster}>
             <div className={styles.posterAvatarSmall}>
               <VideoOff size={32} aria-hidden="true" />
             </div>
             <span className={styles.posterLabel}>Camera off</span>
+            <p className={styles.posterSublabel}>Turn on to share your vibe</p>
           </div>
-        ) : null}
+        )}
 
-        <video
-          ref={localVideoRef}
-          className={`${styles.video} ${styles.mirrored} ${localVideoReady && videoEnabled ? styles.videoVisible : ''}`}
-          autoPlay
-          playsInline
-          muted
-          aria-label="Local video stream"
-        />
-
-        {/* Local status badges */}
+        {/* You muted chip */}
         {!audioEnabled && (
-          <div className={`${styles.localBadge} ${styles.localBadgeAudio}`} role="status">
-            <MicOff size={14} aria-hidden="true" />
-            <span>Muted</span>
+          <div className={styles.statusChipRight} role="status">
+            <MicOff size={13} aria-hidden="true" />
+            <span>Your mic is off</span>
           </div>
         )}
       </div>
@@ -409,9 +404,7 @@ const CallScreen = ({
             <div className={styles.controlIcon}>
               {audioEnabled ? <Mic size={22} aria-hidden="true" /> : <MicOff size={22} aria-hidden="true" />}
             </div>
-            <span className={styles.controlLabel}>
-              {audioEnabled ? 'Mute' : 'Unmute'}
-            </span>
+            <span className={styles.controlLabel}>Mic</span>
           </button>
 
           {/* Video button */}
@@ -424,9 +417,7 @@ const CallScreen = ({
             <div className={styles.controlIcon}>
               {videoEnabled ? <Video size={22} aria-hidden="true" /> : <VideoOff size={22} aria-hidden="true" />}
             </div>
-            <span className={styles.controlLabel}>
-              {videoEnabled ? 'Camera' : 'Camera'}
-            </span>
+            <span className={styles.controlLabel}>Camera</span>
           </button>
 
           {/* Blur button */}
@@ -458,35 +449,8 @@ const CallScreen = ({
                 </>
               )}
             </div>
+            <span className={styles.skipLabel}>Next</span>
           </button>
-
-          {/* More button */}
-          <div className={styles.moreMenuWrapper}>
-            <button
-              onClick={toggleMoreMenu}
-              className={styles.controlButton}
-              aria-label="More options"
-              aria-expanded={showMoreMenu}
-            >
-              <div className={styles.controlIcon}>
-                <MoreHorizontal size={22} aria-hidden="true" />
-              </div>
-              <span className={styles.controlLabel}>More</span>
-            </button>
-
-            {showMoreMenu && (
-              <div className={styles.dropdownMenu} role="menu">
-                <button className={styles.dropdownItem} role="menuitem">
-                  <MessageCircle size={18} aria-hidden="true" />
-                  <span>Send Message</span>
-                </button>
-                <button className={styles.dropdownItem} role="menuitem">
-                  <Zap size={18} aria-hidden="true" />
-                  <span>Quick Match</span>
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* End button */}
           <button
@@ -494,7 +458,10 @@ const CallScreen = ({
             className={styles.endButton}
             aria-label="End call"
           >
-            <PhoneOff size={24} aria-hidden="true" />
+            <div className={styles.endIcon}>
+              <PhoneOff size={24} aria-hidden="true" />
+            </div>
+            <span className={styles.endLabel}>End</span>
           </button>
         </div>
       </div>
