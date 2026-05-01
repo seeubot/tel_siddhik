@@ -3,9 +3,10 @@ import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, Loader,
   Shield, VolumeX, Heart, Sparkles,
-  Eye, EyeOff, SkipForward, MoreHorizontal
+  Eye, EyeOff, SkipForward, MoreHorizontal,
+  User
 } from 'lucide-react';
-import styles from './CallScreen.module.css';
+import './App.css';
 
 const CallScreen = ({
   partner = null,
@@ -31,10 +32,13 @@ const CallScreen = ({
   const [isBlurred, setIsBlurred] = useState(false);
   const [showBlurConfirm, setShowBlurConfirm] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [remoteVideoReady, setRemoteVideoReady] = useState(false);
+  const [localVideoReady, setLocalVideoReady] = useState(false);
   const hideTimerRef = useRef(null);
   const skipTimerRef = useRef(null);
   const localStreamRef = useRef(localStream);
   const partnerStreamRef = useRef(partnerStream);
+  const lastTapRef = useRef(0);
 
   // Update refs when streams change
   useEffect(() => {
@@ -54,12 +58,20 @@ const CallScreen = ({
     if (remoteVideoRef.current && partnerStream) {
       const videoElement = remoteVideoRef.current;
       videoElement.srcObject = partnerStream;
+      setRemoteVideoReady(false);
+      
+      const handleCanPlay = () => setRemoteVideoReady(true);
+      videoElement.addEventListener('canplay', handleCanPlay);
       
       return () => {
+        videoElement.removeEventListener('canplay', handleCanPlay);
         if (videoElement.srcObject === partnerStream) {
           videoElement.srcObject = null;
         }
+        setRemoteVideoReady(false);
       };
+    } else {
+      setRemoteVideoReady(false);
     }
   }, [partnerStream, remoteVideoRef]);
 
@@ -67,12 +79,20 @@ const CallScreen = ({
     if (localVideoRef.current && localStream) {
       const videoElement = localVideoRef.current;
       videoElement.srcObject = localStream;
+      setLocalVideoReady(false);
+      
+      const handleCanPlay = () => setLocalVideoReady(true);
+      videoElement.addEventListener('canplay', handleCanPlay);
       
       return () => {
+        videoElement.removeEventListener('canplay', handleCanPlay);
         if (videoElement.srcObject === localStream) {
           videoElement.srcObject = null;
         }
+        setLocalVideoReady(false);
       };
+    } else {
+      setLocalVideoReady(false);
     }
   }, [localStream, localVideoRef]);
 
@@ -98,8 +118,15 @@ const CallScreen = ({
     };
   }, []);
 
-  // Auto-hide UI controls
+  // Auto-hide UI controls (only on non-touch devices)
   useEffect(() => {
+    // Check if it's a touch device
+    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (isTouchDevice) {
+      setUiVisible(true);
+      return;
+    }
+    
     if (!uiVisible) return;
     clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
@@ -108,6 +135,9 @@ const CallScreen = ({
 
   // Handle user activity to show/hide controls
   useEffect(() => {
+    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (isTouchDevice) return;
+    
     const resetTimer = () => {
       if (!uiVisible) setUiVisible(true);
       clearTimeout(hideTimerRef.current);
@@ -159,8 +189,22 @@ const CallScreen = ({
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [onToggleAudio, onToggleVideo, showBlurConfirm, showMoreMenu]);
 
-  const handleScreenTap = useCallback(() => {
-    setUiVisible(prev => !prev);
+  const handleScreenTap = useCallback((e) => {
+    // Don't toggle if tapping on controls
+    if (e.target.closest('.control-bar')) return;
+    
+    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    
+    if (isTouchDevice) {
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        // Double tap detected - toggle controls
+        setUiVisible(prev => !prev);
+      }
+      lastTapRef.current = now;
+    } else {
+      setUiVisible(prev => !prev);
+    }
   }, []);
 
   const handleSkip = useCallback(() => {
@@ -204,26 +248,26 @@ const CallScreen = ({
 
   // Memoized floating elements
   const floatingElements = useMemo(() => (
-    <div className={styles.floatingElements}>
-      <Heart className={styles.floatHeart1} size={16} aria-hidden="true" />
-      <Heart className={styles.floatHeart2} size={12} aria-hidden="true" />
-      <Sparkles className={styles.floatSparkle1} size={14} aria-hidden="true" />
-      <Sparkles className={styles.floatSparkle2} size={18} aria-hidden="true" />
+    <div className="floating-elements">
+      <Heart className="float-heart-1" size={16} aria-hidden="true" />
+      <Heart className="float-heart-2" size={12} aria-hidden="true" />
+      <Sparkles className="float-sparkle-1" size={14} aria-hidden="true" />
+      <Sparkles className="float-sparkle-2" size={18} aria-hidden="true" />
     </div>
   ), []);
 
   // Memoized background effects
   const backgroundEffects = useMemo(() => (
     <>
-      <div className={styles.gradientOrb1} aria-hidden="true" />
-      <div className={styles.gradientOrb2} aria-hidden="true" />
-      <div className={styles.noiseLayer} aria-hidden="true" />
+      <div className="gradient-orb-1" aria-hidden="true" />
+      <div className="gradient-orb-2" aria-hidden="true" />
+      <div className="noise-layer" aria-hidden="true" />
     </>
   ), []);
 
   return (
     <div 
-      className={styles.container} 
+      className="container" 
       onClick={handleScreenTap}
       role="main"
       aria-label="Video call screen"
@@ -235,33 +279,47 @@ const CallScreen = ({
       {floatingElements}
 
       {/* REMOTE VIDEO */}
-      <div className={styles.remoteView}>
+      <div className="remote-view">
+        {/* Default poster/avatar */}
+        {(!isRemoteConnected || !remoteVideoReady || isPartnerVideoOff) && (
+          <div className="video-poster">
+            <div className="poster-avatar">
+              <User size={64} aria-hidden="true" />
+            </div>
+            {isRemoteConnected && !isPartnerVideoOff && !remoteVideoReady && (
+              <div className="poster-text">Connecting video...</div>
+            )}
+            {!isRemoteConnected && !searching && (
+              <div className="poster-text">Waiting for match</div>
+            )}
+          </div>
+        )}
+
         <video
           ref={remoteVideoRef}
-          className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''} ${isBlurred ? styles.videoBlur : ''}`}
+          className={`video-base ${searching ? 'searching-blur' : ''} ${isBlurred ? 'video-blur' : ''} ${remoteVideoReady && !isPartnerVideoOff ? 'video-visible' : 'video-hidden'}`}
           autoPlay
           playsInline
-          style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
           aria-label="Remote video stream"
         />
 
         {/* Blur indicator */}
         {isBlurred && isRemoteConnected && !isPartnerVideoOff && (
-          <div className={styles.blurIndicator} role="status">
+          <div className="blur-indicator" role="status">
             <EyeOff size={14} aria-hidden="true" />
             <span>Video blurred</span>
           </div>
         )}
 
         {isRemoteConnected && isPartnerVideoOff && (
-          <div className={styles.partnerCameraOff}>
-            <div className={styles.cameraOffIconWrapper}>
-              <VideoOff size={40} className={styles.cameraOffIconLarge} aria-hidden="true" />
+          <div className="partner-camera-off">
+            <div className="camera-off-icon-wrapper">
+              <VideoOff size={40} className="camera-off-icon-large" aria-hidden="true" />
             </div>
-            <h3 className={styles.partnerCameraOffTitle}>Camera off</h3>
-            <p className={styles.partnerCameraOffText}>Your match turned their camera off</p>
-            <div className={styles.cameraOffStatus}>
-              <span className={styles.statusDot} aria-hidden="true" />
+            <h3 className="partner-camera-off-title">Camera off</h3>
+            <p className="partner-camera-off-text">Your match turned their camera off</p>
+            <div className="camera-off-status">
+              <span className="status-dot" aria-hidden="true" />
               Audio still connected
             </div>
           </div>
@@ -269,65 +327,74 @@ const CallScreen = ({
 
         {/* Partner muted chip */}
         {isRemoteConnected && isPartnerMuted && (
-          <div className={`${styles.statusChip} ${styles.chipLeft}`} role="status">
+          <div className="status-chip chip-left" role="status">
             <VolumeX size={13} aria-hidden="true" />
             <span>Their mic is off</span>
           </div>
         )}
 
         {!isRemoteConnected && !searching && (
-          <div className={styles.placeholder}>
-            <div className={styles.logoWrapper}>
-              <div className={styles.logoGlow} aria-hidden="true" />
-              <div className={styles.brandText} aria-label="Orey">Orey!</div>
+          <div className="placeholder">
+            <div className="logo-wrapper">
+              <div className="logo-glow" aria-hidden="true" />
+              <div className="brand-text" aria-label="Orey">Orey!</div>
             </div>
-            <div className={styles.waitingText}>
-              <Sparkles size={16} className={styles.sparkleIcon} aria-hidden="true" />
+            <div className="waiting-text">
+              <Sparkles size={16} className="sparkle-icon" aria-hidden="true" />
               Ready to meet someone new?
             </div>
-            <div className={styles.loadingDots} aria-label="Loading">
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.dot} />
+            <div className="loading-dots" aria-label="Loading">
+              <span className="dot" />
+              <span className="dot" />
+              <span className="dot" />
             </div>
           </div>
         )}
       </div>
 
       {/* LOCAL VIDEO */}
-      <div className={styles.localView}>
+      <div className="local-view">
+        {/* Default poster/avatar for local video */}
+        {(!localStream || !localVideoReady) && videoEnabled && (
+          <div className="video-poster local-poster">
+            <div className="poster-avatar">
+              <User size={48} aria-hidden="true" />
+            </div>
+            <div className="poster-text">Starting camera...</div>
+          </div>
+        )}
+
         <video
           ref={localVideoRef}
-          className={`${styles.videoBase} ${styles.mirrored}`}
+          className={`video-base mirrored ${localVideoReady && videoEnabled ? 'video-visible' : 'video-hidden'}`}
           autoPlay
           playsInline
           muted
-          style={{ display: videoEnabled ? 'block' : 'none' }}
           aria-label="Local video stream"
         />
 
         {/* You muted chip */}
         {!audioEnabled && (
-          <div className={`${styles.statusChip} ${styles.chipRight}`} role="status">
+          <div className="status-chip chip-right" role="status">
             <MicOff size={13} aria-hidden="true" />
             <span>Your mic is off</span>
           </div>
         )}
 
         {!videoEnabled && (
-          <div className={styles.localCameraOff}>
-            <div className={styles.cameraOffIconWrapper}>
-              <VideoOff size={28} className={styles.cameraOffIconSmall} aria-hidden="true" />
+          <div className="local-camera-off">
+            <div className="camera-off-icon-wrapper">
+              <VideoOff size={28} className="camera-off-icon-small" aria-hidden="true" />
             </div>
-            <span className={styles.cameraOffText}>Camera off</span>
-            <p className={styles.cameraOffSubtext}>Turn on to share your vibe</p>
+            <span className="camera-off-text">Camera off</span>
+            <p className="camera-off-subtext">Turn on to share your vibe</p>
           </div>
         )}
       </div>
 
-      {/* ── REDESIGNED CONTROL BAR ── */}
+      {/* ── CONTROL BAR ── */}
       <div
-        className={`${styles.controlBar} ${!uiVisible ? styles.controlBarHidden : ''}`}
+        className={`control-bar ${!uiVisible ? 'control-bar-hidden' : ''}`}
         onClick={e => e.stopPropagation()}
         role="toolbar"
         aria-label="Call controls"
@@ -335,7 +402,7 @@ const CallScreen = ({
         {/* Mic button */}
         <button
           onClick={onToggleAudio}
-          className={`${styles.controlButton} ${!audioEnabled ? styles.controlButtonOff : ''}`}
+          className={`control-button ${!audioEnabled ? 'control-button-off' : ''}`}
           aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
           aria-pressed={!audioEnabled}
         >
@@ -345,7 +412,7 @@ const CallScreen = ({
         {/* Video button */}
         <button
           onClick={onToggleVideo}
-          className={`${styles.controlButton} ${!videoEnabled ? styles.controlButtonOff : ''}`}
+          className={`control-button ${!videoEnabled ? 'control-button-off' : ''}`}
           aria-label={videoEnabled ? 'Stop video' : 'Start video'}
           aria-pressed={!videoEnabled}
         >
@@ -356,21 +423,21 @@ const CallScreen = ({
         <button
           onClick={handleSkip}
           disabled={isSkipping}
-          className={styles.nextButton}
+          className="next-button"
           aria-label={isSkipping ? 'Finding next match' : 'Skip to next match'}
         >
           {isSkipping ? (
-            <Loader size={22} className={styles.spinner} aria-hidden="true" />
+            <Loader size={22} className="spinner" aria-hidden="true" />
           ) : (
             <SkipForward size={22} aria-hidden="true" />
           )}
         </button>
 
         {/* More options button */}
-        <div className={styles.moreMenuWrapper}>
+        <div className="more-menu-wrapper">
           <button
             onClick={toggleMoreMenu}
-            className={styles.controlButton}
+            className="control-button"
             aria-label="More options"
             aria-expanded={showMoreMenu}
           >
@@ -379,10 +446,10 @@ const CallScreen = ({
 
           {/* Dropdown menu */}
           {showMoreMenu && (
-            <div className={styles.dropdownMenu} role="menu">
+            <div className="dropdown-menu" role="menu">
               <button
                 onClick={handleBlurClick}
-                className={styles.dropdownItem}
+                className="dropdown-item"
                 role="menuitem"
               >
                 {isBlurred ? (
@@ -404,7 +471,7 @@ const CallScreen = ({
         {/* End call button */}
         <button
           onClick={onLeave}
-          className={styles.endButton}
+          className="end-button"
           aria-label="End call"
         >
           <PhoneOff size={20} aria-hidden="true" />
@@ -414,34 +481,34 @@ const CallScreen = ({
       {/* ── BLUR CONFIRMATION MODAL ── */}
       {showBlurConfirm && (
         <div 
-          className={styles.modalOverlay} 
+          className="modal-overlay" 
           onClick={e => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby="blur-modal-title"
         >
-          <div className={styles.modal}>
-            <div className={styles.modalIcon} aria-hidden="true">
+          <div className="modal">
+            <div className="modal-icon" aria-hidden="true">
               {isBlurred ? <Eye size={28} /> : <EyeOff size={28} />}
             </div>
-            <h2 id="blur-modal-title" className={styles.modalTitle}>
+            <h2 id="blur-modal-title" className="modal-title">
               {isBlurred ? 'Remove video blur?' : 'Blur your video?'}
             </h2>
-            <p className={styles.modalText}>
+            <p className="modal-text">
               {isBlurred 
                 ? 'The other person will be able to see you clearly again.'
                 : 'The other person will see a blurred version of your video. You can unblur anytime.'}
             </p>
-            <div className={styles.modalActions}>
+            <div className="modal-actions">
               <button 
                 onClick={handleCancelBlur} 
-                className={styles.modalCancelBtn}
+                className="modal-cancel-btn"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmBlur}
-                className={styles.modalConfirmBtn}
+                className="modal-confirm-btn"
                 aria-label={isBlurred ? 'Confirm remove blur' : 'Confirm blur'}
               >
                 {isBlurred ? 'Remove Blur' : 'Apply Blur'}
@@ -453,41 +520,41 @@ const CallScreen = ({
 
       {/* ── OVERLAYS ── */}
       {(searching || autoSearchCountdown !== null) && (
-        <div className={styles.overlay} role="alert" aria-live="polite">
-          <div className={styles.overlayGradient} aria-hidden="true" />
+        <div className="overlay" role="alert" aria-live="polite">
+          <div className="overlay-gradient" aria-hidden="true" />
 
           {autoSearchCountdown !== null ? (
-            <div className={styles.countdownOverlay}>
-              <div className={styles.countdownText} aria-label={`${autoSearchCountdown} seconds`}>
+            <div className="countdown-overlay">
+              <div className="countdown-text" aria-label={`${autoSearchCountdown} seconds`}>
                 {autoSearchCountdown}
               </div>
-              <div className={styles.encryptionBadge}>
-                <Shield size={15} className={styles.shieldIcon} aria-hidden="true" />
-                <span className={styles.encryptionText}>Secure connection ready</span>
+              <div className="encryption-badge">
+                <Shield size={15} className="shield-icon" aria-hidden="true" />
+                <span className="encryption-text">Secure connection ready</span>
               </div>
               <button 
                 onClick={onCancelAutoSearch} 
-                className={styles.terminateBtn}
+                className="terminate-btn"
                 aria-label="Cancel auto search"
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <div className={styles.searchingOverlay}>
-              <div className={styles.orbitingHearts} aria-hidden="true">
-                <div className={styles.orbitRing}>
-                  <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
-                  <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
-                  <Heart size={14} className={styles.orbitHeart3} fill="currentColor" />
+            <div className="searching-overlay">
+              <div className="orbiting-hearts" aria-hidden="true">
+                <div className="orbit-ring">
+                  <Heart size={16} className="orbit-heart-1" fill="currentColor" />
+                  <Heart size={12} className="orbit-heart-2" fill="currentColor" />
+                  <Heart size={14} className="orbit-heart-3" fill="currentColor" />
                 </div>
-                <div className={styles.spinnerCenter}>
-                  <Loader size={30} className={styles.spinnerIcon} />
+                <div className="spinner-center">
+                  <Loader size={30} className="spinner-icon" />
                 </div>
               </div>
-              <div className={styles.searchingTextContainer}>
-                <div className={styles.synchronizingText}>Looking for your match</div>
-                <p className={styles.searchingSubtext}>
+              <div className="searching-text-container">
+                <div className="synchronizing-text">Looking for your match</div>
+                <p className="searching-subtext">
                   Someone great is just around the corner…
                 </p>
               </div>
