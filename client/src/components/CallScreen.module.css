@@ -20,8 +20,8 @@
 }
 
 /* ── BACKGROUND EFFECTS ── */
-.gradientOrb1,
-.gradientOrb2 {
+.gradient-orb-1,
+.gradient-orb-2 {
   position: fixed;
   border-radius: 50%;
   filter: blur(80px);
@@ -29,7 +29,7 @@
   pointer-events: none;
 }
 
-.gradientOrb1 {
+.gradient-orb-1 {
   width: 500px;
   height: 500px;
   background: radial-gradient(circle, #FF2D55 0%, transparent 70%);
@@ -38,7 +38,7 @@
   animation: floatOrb1 20s ease-in-out infinite;
 }
 
-.gradientOrb2 {
+.gradient-orb-2 {
   width: 400px;
   height: 400px;
   background: radial-gradient(circle, #FF6B8A 0%, transparent 70%);
@@ -71,7 +71,7 @@
   }
 }
 
-.noiseLayer {
+.noise-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -81,14 +81,14 @@
 }
 
 /* ── FLOATING ELEMENTS ── */
-.floatingElements {
+.floating-elements {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 51;
 }
 
-.floatHeart1 {
+.float-heart-1 {
   position: absolute;
   top: 15%;
   left: 10%;
@@ -96,7 +96,7 @@
   animation: floatA 6s ease-in-out infinite;
 }
 
-.floatHeart2 {
+.float-heart-2 {
   position: absolute;
   top: 25%;
   right: 15%;
@@ -104,7 +104,7 @@
   animation: floatB 8s ease-in-out infinite 2s;
 }
 
-.floatSparkle1 {
+.float-sparkle-1 {
   position: absolute;
   bottom: 20%;
   left: 20%;
@@ -112,7 +112,7 @@
   animation: floatA 7s ease-in-out infinite 4s;
 }
 
-.floatSparkle2 {
+.float-sparkle-2 {
   position: absolute;
   bottom: 30%;
   right: 25%;
@@ -142,15 +142,66 @@
   }
 }
 
+/* ── VIDEO POSTER / AVATAR ── */
+.video-poster {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a0a0f 50%, #0a0a0f 100%);
+  z-index: 2;
+}
+
+.local-poster {
+  background: linear-gradient(135deg, #08080c 0%, #0c0809 50%, #08080c 100%);
+}
+
+.poster-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.1), rgba(255, 107, 138, 0.1));
+  border: 2px solid rgba(255, 45, 85, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 45, 85, 0.4);
+  margin-bottom: 1rem;
+  animation: avatarPulse 2s ease-in-out infinite;
+}
+
+.local-poster .poster-avatar {
+  width: 100px;
+  height: 100px;
+}
+
+.poster-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+@keyframes avatarPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 45, 85, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 45, 85, 0.2);
+  }
+}
+
 /* ── VIDEO PANELS ── */
-.remoteView {
+.remote-view {
   position: relative;
   flex: 1.4;
   background-color: #000;
   overflow: hidden;
 }
 
-.localView {
+.local-view {
   position: relative;
   flex: 1;
   background-color: #0a0a0f;
@@ -159,20 +210,32 @@
 }
 
 @media (min-width: 768px) {
-  .localView {
+  .local-view {
     border-top: 0;
     border-left: 1px solid rgba(255, 45, 85, 0.1);
   }
 }
 
-.videoBase {
+.video-base {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), filter 0.7s ease, opacity 0.7s ease;
+  transition: opacity 0.5s ease, filter 0.7s ease;
 }
 
-.searchingBlur {
+.video-visible {
+  opacity: 1;
+  z-index: 1;
+}
+
+.video-hidden {
+  opacity: 0;
+  z-index: 0;
+}
+
+.searching-blur {
   filter: blur(40px) brightness(0.5);
   transform: scale(1.05);
   opacity: 0.4;
@@ -182,13 +245,13 @@
   transform: scaleX(-1);
 }
 
-.videoBlur {
+.video-blur {
   filter: blur(20px) brightness(0.7);
   transition: filter 0.3s ease;
 }
 
 /* ── STATUS CHIPS ── */
-.statusChip {
+.status-chip {
   position: absolute;
   top: 1rem;
   display: flex;
@@ -208,11 +271,11 @@
   animation: chipIn 0.3s ease-out;
 }
 
-.chipLeft {
+.chip-left {
   left: 1rem;
 }
 
-.chipRight {
+.chip-right {
   right: 1rem;
 }
 
@@ -228,7 +291,7 @@
 }
 
 /* ── PARTNER CAMERA OFF ── */
-.partnerCameraOff {
+.partner-camera-off {
   position: absolute;
   inset: 0;
   display: flex;
@@ -238,17 +301,18 @@
   background: linear-gradient(135deg, #0a0a0f 0%, #0f0a0d 50%, #0a0a0f 100%);
   padding: 2rem;
   text-align: center;
+  z-index: 2;
 }
 
-.cameraOffIconLarge {
+.camera-off-icon-large {
   color: rgba(255, 255, 255, 0.2);
 }
 
-.cameraOffIconSmall {
+.camera-off-icon-small {
   color: rgba(255, 255, 255, 0.15);
 }
 
-.cameraOffIconWrapper {
+.camera-off-icon-wrapper {
   margin-bottom: 1.5rem;
   padding: 1.5rem;
   border-radius: 50%;
@@ -256,20 +320,20 @@
   border: 1px solid rgba(255, 45, 85, 0.1);
 }
 
-.partnerCameraOffTitle {
+.partner-camera-off-title {
   font-size: 1.2rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.55);
   margin: 0 0 0.5rem;
 }
 
-.partnerCameraOffText {
+.partner-camera-off-text {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.3);
   margin: 0 0 1rem;
 }
 
-.cameraOffStatus {
+.camera-off-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -281,7 +345,7 @@
   border: 1px solid rgba(255, 45, 85, 0.1);
 }
 
-.statusDot {
+.status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -299,7 +363,7 @@
 }
 
 /* ── LOCAL CAMERA OFF ── */
-.localCameraOff {
+.local-camera-off {
   position: absolute;
   inset: 0;
   display: flex;
@@ -307,9 +371,10 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #08080c 0%, #0c0809 50%, #08080c 100%);
+  z-index: 2;
 }
 
-.cameraOffText {
+.camera-off-text {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -318,7 +383,7 @@
   margin: 1rem 0 0.5rem;
 }
 
-.cameraOffSubtext {
+.camera-off-subtext {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.1);
   font-style: italic;
@@ -334,14 +399,15 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #0a0a0f 0%, #0f0a0d 50%, #0a0a0f 100%);
+  z-index: 2;
 }
 
-.logoWrapper {
+.logo-wrapper {
   position: relative;
   margin-bottom: 1.5rem;
 }
 
-.logoGlow {
+.logo-glow {
   position: absolute;
   width: 150px;
   height: 150px;
@@ -352,7 +418,7 @@
   filter: blur(30px);
 }
 
-.brandText {
+.brand-text {
   position: relative;
   font-size: clamp(8vw, 12vw, 8rem);
   font-weight: 900;
@@ -366,7 +432,7 @@
   user-select: none;
 }
 
-.waitingText {
+.waiting-text {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -376,12 +442,12 @@
   margin-bottom: 1rem;
 }
 
-.sparkleIcon {
+.sparkle-icon {
   color: rgba(255, 45, 85, 0.4);
   animation: pulse 2s ease-in-out infinite;
 }
 
-.loadingDots {
+.loading-dots {
   display: flex;
   gap: 0.5rem;
 }
@@ -416,9 +482,9 @@
 }
 
 /* ════════════════════════════════════════════
-   REDESIGNED CONTROL BAR
+   CONTROL BAR
    ════════════════════════════════════════════ */
-.controlBar {
+.control-bar {
   position: fixed;
   bottom: clamp(1.5rem, 5vw, 2.5rem);
   left: 50%;
@@ -442,14 +508,14 @@
   max-width: 95vw;
 }
 
-.controlBarHidden {
+.control-bar-hidden {
   transform: translateX(-50%) translateY(6rem);
   opacity: 0;
   pointer-events: none;
 }
 
 /* Generic control button (mic, video, more) */
-.controlButton {
+.control-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -467,7 +533,7 @@
   flex-shrink: 0;
 }
 
-.controlButton:hover {
+.control-button:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.18);
   color: #fff;
@@ -475,32 +541,32 @@
   box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.3);
 }
 
-.controlButton:active {
+.control-button:active {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.08);
   transition: all 0.1s ease;
 }
 
-.controlButton:focus-visible {
+.control-button:focus-visible {
   outline: 2px solid rgba(255, 45, 85, 0.5);
   outline-offset: 3px;
 }
 
 /* Off state (muted / camera off) */
-.controlButtonOff {
+.control-button-off {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.3);
   color: #f87171;
 }
 
-.controlButtonOff:hover {
+.control-button-off:hover {
   background: rgba(239, 68, 68, 0.25);
   border-color: rgba(239, 68, 68, 0.5);
   color: #fca5a5;
 }
 
 /* Next/Skip button - prominent */
-.nextButton {
+.next-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,7 +588,7 @@
   position: relative;
 }
 
-.nextButton::before {
+.next-button::before {
   content: '';
   position: absolute;
   inset: -4px;
@@ -532,7 +598,7 @@
   transition: opacity 0.3s ease;
 }
 
-.nextButton:hover:not(:disabled) {
+.next-button:hover:not(:disabled) {
   transform: scale(1.08);
   box-shadow: 
     0 0 50px rgba(255, 45, 85, 0.6),
@@ -540,28 +606,28 @@
     0 1px 0 rgba(255, 255, 255, 0.3) inset;
 }
 
-.nextButton:hover:not(:disabled)::before {
+.next-button:hover:not(:disabled)::before {
   opacity: 1;
 }
 
-.nextButton:active:not(:disabled) {
+.next-button:active:not(:disabled) {
   transform: scale(0.95);
   transition: all 0.1s ease;
 }
 
-.nextButton:disabled {
+.next-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: 0 0 15px rgba(255, 45, 85, 0.2);
 }
 
-.nextButton:focus-visible {
+.next-button:focus-visible {
   outline: 3px solid rgba(255, 45, 85, 0.5);
   outline-offset: 4px;
 }
 
 /* End call button */
-.endButton {
+.end-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -581,7 +647,7 @@
   flex-shrink: 0;
 }
 
-.endButton:hover {
+.end-button:hover {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   box-shadow: 
     0 0 30px rgba(239, 68, 68, 0.6),
@@ -589,23 +655,23 @@
   transform: scale(1.05);
 }
 
-.endButton:active {
+.end-button:active {
   transform: scale(0.92);
   transition: all 0.1s ease;
 }
 
-.endButton:focus-visible {
+.end-button:focus-visible {
   outline: 3px solid rgba(239, 68, 68, 0.5);
   outline-offset: 4px;
 }
 
 /* ── MORE MENU DROPDOWN ── */
-.moreMenuWrapper {
+.more-menu-wrapper {
   position: relative;
   flex-shrink: 0;
 }
 
-.dropdownMenu {
+.dropdown-menu {
   position: absolute;
   bottom: calc(100% + 12px);
   right: 50%;
@@ -635,7 +701,7 @@
   }
 }
 
-.dropdownItem {
+.dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -653,12 +719,12 @@
   white-space: nowrap;
 }
 
-.dropdownItem:hover {
+.dropdown-item:hover {
   background: rgba(255, 45, 85, 0.15);
   color: #fff;
 }
 
-.dropdownItem:focus-visible {
+.dropdown-item:focus-visible {
   background: rgba(255, 45, 85, 0.2);
   outline: 1px solid rgba(255, 45, 85, 0.3);
 }
@@ -679,7 +745,7 @@
 /* ════════════════════════════════════════════
    BLUR CONFIRMATION MODAL
    ════════════════════════════════════════════ */
-.modalOverlay {
+.modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 300;
@@ -724,7 +790,7 @@
   }
 }
 
-.modalIcon {
+.modal-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -737,26 +803,26 @@
   margin-bottom: 1rem;
 }
 
-.modalTitle {
+.modal-title {
   font-size: 1.25rem;
   font-weight: 800;
   color: #fff;
   margin: 0 0 0.5rem;
 }
 
-.modalText {
+.modal-text {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.45);
   margin: 0 0 1.5rem;
   line-height: 1.5;
 }
 
-.modalActions {
+.modal-actions {
   display: flex;
   gap: 0.75rem;
 }
 
-.modalCancelBtn {
+.modal-cancel-btn {
   flex: 1;
   padding: 0.75rem;
   background: rgba(255, 255, 255, 0.05);
@@ -770,12 +836,12 @@
   outline: none;
 }
 
-.modalCancelBtn:hover {
+.modal-cancel-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
-.modalConfirmBtn {
+.modal-confirm-btn {
   flex: 1;
   padding: 0.75rem;
   background: linear-gradient(135deg, #FF2D55, #FF6B8A);
@@ -789,7 +855,7 @@
   outline: none;
 }
 
-.modalConfirmBtn:hover {
+.modal-confirm-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 45, 85, 0.3);
 }
@@ -807,13 +873,13 @@
   padding: 1.5rem;
 }
 
-.overlayGradient {
+.overlay-gradient {
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at center, rgba(255, 45, 85, 0.1) 0%, transparent 70%);
 }
 
-.countdownOverlay {
+.countdown-overlay {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -833,7 +899,7 @@
   }
 }
 
-.countdownText {
+.countdown-text {
   font-size: clamp(8rem, 20vw, 12rem);
   font-weight: 900;
   font-style: italic;
@@ -845,7 +911,7 @@
   letter-spacing: -0.05em;
 }
 
-.encryptionBadge {
+.encryption-badge {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -858,11 +924,11 @@
   -webkit-backdrop-filter: blur(20px);
 }
 
-.shieldIcon {
+.shield-icon {
   color: #FF2D55;
 }
 
-.encryptionText {
+.encryption-text {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -871,7 +937,7 @@
   user-select: none;
 }
 
-.terminateBtn {
+.terminate-btn {
   padding: 0.75rem 2.5rem;
   border-radius: 2rem;
   border: 1px solid rgba(255, 45, 85, 0.15);
@@ -888,19 +954,19 @@
   outline: none;
 }
 
-.terminateBtn:hover {
+.terminate-btn:hover {
   background: rgba(255, 45, 85, 0.1);
   color: #fff;
   border-color: rgba(255, 45, 85, 0.3);
 }
 
-.terminateBtn:focus-visible {
+.terminate-btn:focus-visible {
   outline: 2px solid rgba(255, 45, 85, 0.5);
   outline-offset: 2px;
 }
 
 /* Searching */
-.searchingOverlay {
+.searching-overlay {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -909,19 +975,19 @@
   z-index: 1;
 }
 
-.orbitingHearts {
+.orbiting-hearts {
   position: relative;
   width: 120px;
   height: 120px;
 }
 
-.orbitRing {
+.orbit-ring {
   position: absolute;
   inset: 0;
   animation: rotate 3s linear infinite;
 }
 
-.orbitHeart1 {
+.orbit-heart-1 {
   position: absolute;
   top: 0;
   left: 50%;
@@ -930,7 +996,7 @@
   transform: translateX(-50%);
 }
 
-.orbitHeart2 {
+.orbit-heart-2 {
   position: absolute;
   bottom: 10%;
   right: 0;
@@ -938,7 +1004,7 @@
   opacity: 0.4;
 }
 
-.orbitHeart3 {
+.orbit-heart-3 {
   position: absolute;
   bottom: 10%;
   left: 0;
@@ -955,7 +1021,7 @@
   }
 }
 
-.spinnerCenter {
+.spinner-center {
   position: absolute;
   inset: 0;
   display: flex;
@@ -963,16 +1029,16 @@
   justify-content: center;
 }
 
-.spinnerIcon {
+.spinner-icon {
   color: #FF2D55;
   animation: spin 1.5s linear infinite;
 }
 
-.searchingTextContainer {
+.searching-text-container {
   text-align: center;
 }
 
-.synchronizingText {
+.synchronizing-text {
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.25em;
@@ -981,7 +1047,7 @@
   margin-bottom: 0.5rem;
 }
 
-.searchingSubtext {
+.searching-subtext {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.22);
   font-style: italic;
@@ -989,7 +1055,7 @@
 }
 
 /* Blur indicator on remote video */
-.blurIndicator {
+.blur-indicator {
   position: absolute;
   bottom: 1rem;
   left: 1rem;
@@ -1025,7 +1091,7 @@
     margin: 1rem;
   }
   
-  .controlBar {
+  .control-bar {
     gap: 8px;
     padding: 8px 12px;
   }
@@ -1036,39 +1102,55 @@
     max-height: 80vh;
   }
   
-  .controlBar {
+  .control-bar {
     bottom: 0.75rem;
     padding: 6px 12px;
     gap: 6px;
   }
   
-  .controlButton {
+  .control-button {
     width: 40px;
     height: 40px;
   }
   
-  .nextButton {
+  .next-button {
     width: 48px;
     height: 48px;
   }
   
-  .endButton {
+  .end-button {
     width: 40px;
     height: 40px;
   }
 }
 
+/* ── CONTROL BAR ALWAYS VISIBLE ON TOUCH ── */
+@media (hover: none) and (pointer: coarse) {
+  .control-bar {
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0) !important;
+    pointer-events: all !important;
+    transition: none !important;
+  }
+  
+  .control-bar-hidden {
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0) !important;
+    pointer-events: all !important;
+  }
+}
+
 /* ── REDUCED MOTION ── */
 @media (prefers-reduced-motion: reduce) {
-  .gradientOrb1,
-  .gradientOrb2,
-  .floatHeart1,
-  .floatHeart2,
-  .floatSparkle1,
-  .floatSparkle2,
-  .orbitRing,
+  .gradient-orb-1,
+  .gradient-orb-2,
+  .float-heart-1,
+  .float-heart-2,
+  .float-sparkle-1,
+  .float-sparkle-2,
+  .orbit-ring,
   .spinner,
-  .spinnerIcon {
+  .spinner-icon {
     animation: none !important;
   }
   
