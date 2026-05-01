@@ -42,7 +42,6 @@
             padding: 20px;
         }
 
-        /* Header */
         .header {
             background: var(--card);
             padding: 20px 30px;
@@ -68,7 +67,6 @@
             flex-wrap: wrap;
         }
 
-        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -100,7 +98,6 @@
             font-size: 14px;
         }
 
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 5px;
@@ -141,7 +138,6 @@
             border-color: var(--danger);
         }
 
-        /* Panels */
         .panel {
             background: var(--card);
             padding: 25px;
@@ -161,7 +157,6 @@
             font-size: 20px;
         }
 
-        /* Forms */
         .form-group {
             margin-bottom: 15px;
         }
@@ -204,7 +199,6 @@
             .row { grid-template-columns: 1fr; }
         }
 
-        /* Buttons */
         .btn {
             padding: 10px 20px;
             border: none;
@@ -259,7 +253,6 @@
             cursor: not-allowed;
         }
 
-        /* Tables */
         .table-container {
             overflow-x: auto;
             margin-top: 15px;
@@ -289,7 +282,6 @@
             background: var(--light);
         }
 
-        /* Badges */
         .badge {
             display: inline-block;
             padding: 4px 10px;
@@ -304,7 +296,6 @@
         .badge-info { background: #E3F2FD; color: var(--info); }
         .badge-purple { background: #F3E8FF; color: var(--primary); }
 
-        /* Toast */
         .toast {
             position: fixed;
             top: 20px;
@@ -328,45 +319,20 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal {
-            background: var(--card);
-            padding: 30px;
-            border-radius: var(--radius);
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal h3 {
-            margin-bottom: 20px;
-        }
-
-        /* Auth bar */
         .auth-bar {
             background: var(--dark);
             color: white;
-            padding: 12px 20px;
+            padding: 15px 20px;
             border-radius: var(--radius);
             margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .auth-bar > div {
             display: flex;
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
-            font-size: 14px;
         }
 
         .auth-bar input {
@@ -378,10 +344,18 @@
             border: 1px solid rgba(255,255,255,0.2);
             color: white;
             border-radius: 6px;
+            font-size: 14px;
         }
 
         .auth-bar input::placeholder {
             color: rgba(255,255,255,0.5);
+        }
+
+        .auth-bar .status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
         }
 
         .status-dot {
@@ -389,20 +363,11 @@
             height: 10px;
             border-radius: 50%;
             display: inline-block;
+            margin-right: 5px;
         }
 
         .status-dot.online { background: var(--success); }
         .status-dot.offline { background: var(--danger); }
-
-        .qr-container {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .qr-container img {
-            max-width: 250px;
-            border-radius: 8px;
-        }
 
         .monospace {
             font-family: 'Courier New', monospace;
@@ -412,25 +377,49 @@
             font-size: 12px;
             word-break: break-all;
         }
+
+        .error-message {
+            background: #FFE8E8;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .info-message {
+            background: #E3F2FD;
+            border: 1px solid var(--info);
+            color: #1976D2;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Auth Bar -->
         <div class="auth-bar">
-            <span>🔑 Admin Key:</span>
-            <input type="password" id="adminKey" placeholder="Enter admin key" value="">
-            <span>🔐 TOTP:</span>
-            <input type="text" id="totpToken" placeholder="6-digit code" maxlength="6" style="max-width:100px;">
-            <span id="authStatus" style="color:var(--warning);">⚠️ Not authenticated</span>
-            <span id="serverStatus"><span class="status-dot offline"></span> Checking...</span>
+            <div>
+                <strong>🔑 Authentication</strong>
+                <span>Admin Key:</span>
+                <input type="password" id="adminKey" placeholder="Enter admin secret key">
+                <span>TOTP (if configured):</span>
+                <input type="text" id="totpToken" placeholder="6-digit code" maxlength="6" style="max-width:120px;">
+                <span id="authStatus" class="status" style="background:rgba(255,255,255,0.1);">⚠️ Enter admin key</span>
+                <span id="serverStatus" style="margin-left:auto;">
+                    <span class="status-dot offline"></span> Checking...
+                </span>
+            </div>
         </div>
 
         <!-- Header -->
         <div class="header">
             <h1>🎥 Orey Admin Panel</h1>
             <div class="header-actions">
-                <button class="btn btn-outline btn-sm" onclick="refreshAll()">🔄 Refresh All</button>
+                <button class="btn btn-primary btn-sm" onclick="refreshAll()">🔄 Refresh All Data</button>
+                <button class="btn btn-outline btn-sm" onclick="testConnection()">🔍 Test Connection</button>
                 <span id="lastRefresh" style="font-size:12px;color:var(--text-light);"></span>
             </div>
         </div>
@@ -460,14 +449,14 @@
         <div class="panel active" id="panel-dashboard">
             <h2>📊 Server Dashboard</h2>
             <div id="dashboardContent">
-                <p>Loading dashboard data...</p>
+                <div class="info-message">Enter your admin key above and press "Refresh All Data" to load dashboard.</div>
             </div>
             <div style="margin-top:20px;">
-                <h3>Quick Actions</h3>
+                <h3>Quick Actions (Public - No Auth Required)</h3>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
                     <button class="btn btn-primary" onclick="generateOreyId()">Generate Orey ID</button>
                     <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
-                    <button class="btn btn-warning" onclick="toggleMaintenance()">Toggle Maintenance</button>
+                    <button class="btn btn-outline btn-sm" onclick="getApiKeyHash()">Get API Key Hash</button>
                 </div>
                 <div id="quickActionResult" style="margin-top:10px;"></div>
             </div>
@@ -476,10 +465,11 @@
         <!-- Reports Panel -->
         <div class="panel" id="panel-reports">
             <h2>🚨 User Reports</h2>
+            <div id="reportsError" style="display:none;"></div>
             <div style="margin-bottom:15px;">
                 <label>Filter by Status:</label>
                 <select id="reportFilter" onchange="loadReports()" style="width:auto;display:inline;margin-left:10px;">
-                    <option value="">All</option>
+                    <option value="">All Reports</option>
                     <option value="pending">Pending</option>
                     <option value="banned">Banned</option>
                     <option value="dismissed">Dismissed</option>
@@ -487,6 +477,9 @@
                     <option value="auto_banned">Auto-Banned</option>
                 </select>
                 <button class="btn btn-primary btn-sm" onclick="loadReports()" style="margin-left:10px;">🔄 Refresh</button>
+            </div>
+            <div id="reportSummary" style="margin-bottom:15px;font-size:14px;padding:10px;background:var(--light);border-radius:8px;">
+                No data loaded yet.
             </div>
             <div class="table-container">
                 <table>
@@ -506,12 +499,12 @@
                     </tbody>
                 </table>
             </div>
-            <div id="reportSummary" style="margin-top:15px;font-size:14px;"></div>
         </div>
 
         <!-- Bans Panel -->
         <div class="panel" id="panel-bans">
             <h2>🚫 Banned Devices</h2>
+            <div id="bansError" style="display:none;"></div>
             <div style="margin-bottom:15px;">
                 <button class="btn btn-primary btn-sm" onclick="loadBans()">🔄 Refresh</button>
                 <button class="btn btn-danger btn-sm" onclick="showBanForm()" style="margin-left:10px;">➕ Ban Device</button>
@@ -567,11 +560,12 @@
         <!-- Notifications Panel -->
         <div class="panel" id="panel-notifications">
             <h2>📢 Notification Management</h2>
+            <div id="notifsError" style="display:none;"></div>
             <div style="margin-bottom:20px;padding:15px;background:var(--light);border-radius:8px;">
-                <h4>Send Notification</h4>
+                <h4>Send New Notification</h4>
                 <div class="row">
                     <div class="form-group">
-                        <label>Title</label>
+                        <label>Title *</label>
                         <input type="text" id="notifTitle" placeholder="Notification title">
                     </div>
                     <div class="form-group">
@@ -585,7 +579,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Message</label>
+                    <label>Message *</label>
                     <textarea id="notifMessage" placeholder="Notification message"></textarea>
                 </div>
                 <div class="row">
@@ -604,14 +598,10 @@
                     <div class="form-group">
                         <label>Platform</label>
                         <select id="notifPlatform">
-                            <option value="all">All</option>
-                            <option value="android">Android</option>
+                            <option value="all">All Platforms</option>
+                            <option value="android">Android Only</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Action URL</label>
-                    <input type="text" id="notifActionUrl" value="/" placeholder="Action URL">
                 </div>
                 <button class="btn btn-primary" onclick="sendNotification()">📤 Send Notification</button>
             </div>
@@ -639,9 +629,9 @@
             <h2>⚙️ Configuration</h2>
             
             <div style="margin-bottom:25px;">
-                <h3>Maintenance Mode</h3>
+                <h3>🔧 Maintenance Mode</h3>
                 <div class="form-group">
-                    <label>Status</label>
+                    <label>Enable Maintenance</label>
                     <select id="maintEnabled">
                         <option value="false">Disabled</option>
                         <option value="true">Enabled</option>
@@ -651,11 +641,11 @@
                     <label>Message</label>
                     <input type="text" id="maintMessage" value="We're improving Orey. Back soon!">
                 </div>
-                <button class="btn btn-warning" onclick="updateMaintenance()">💾 Save Maintenance</button>
+                <button class="btn btn-warning" onclick="updateMaintenance()">💾 Update Maintenance</button>
             </div>
 
             <div style="margin-bottom:25px;">
-                <h3>Video Quality</h3>
+                <h3>🎥 Video Quality</h3>
                 <div class="row">
                     <div class="form-group">
                         <label>Default Quality</label>
@@ -674,15 +664,15 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Max Bitrate</label>
+                        <label>Max Bitrate (bps)</label>
                         <input type="number" id="vidMaxBitrate" value="1500000">
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="updateVideoQuality()">💾 Save Video Quality</button>
+                <button class="btn btn-primary" onclick="updateVideoQuality()">💾 Update Quality</button>
             </div>
 
             <div style="margin-bottom:25px;">
-                <h3>Safety Settings</h3>
+                <h3>🛡️ Safety Settings</h3>
                 <div class="row">
                     <div class="form-group">
                         <label>Auto Ban</label>
@@ -692,7 +682,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Ban Threshold</label>
+                        <label>Regular Ban Threshold</label>
                         <input type="number" id="safetyThreshold" value="3">
                     </div>
                     <div class="form-group">
@@ -700,11 +690,11 @@
                         <input type="number" id="safetyHPThreshold" value="2">
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="updateSafety()">💾 Save Safety Settings</button>
+                <button class="btn btn-primary" onclick="updateSafety()">💾 Update Safety</button>
             </div>
 
             <div style="margin-bottom:25px;">
-                <h3>App Version (Android)</h3>
+                <h3>📱 Android App Version</h3>
                 <div class="row">
                     <div class="form-group">
                         <label>Version Code</label>
@@ -719,18 +709,16 @@
                     <label>Update Message</label>
                     <input type="text" id="appUpdateMsg" value="New features available!">
                 </div>
-                <button class="btn btn-primary" onclick="updateAppVersion()">💾 Save Version</button>
+                <button class="btn btn-primary" onclick="updateAppVersion()">💾 Update Version</button>
             </div>
         </div>
 
         <!-- TOTP Panel -->
         <div class="panel" id="panel-totp">
-            <h2>🔐 TOTP Two-Factor Authentication</h2>
-            <div id="totpSetupArea">
-                <p>Click the button below to generate a new TOTP secret. Scan the QR code with Google Authenticator.</p>
-                <button class="btn btn-primary" onclick="setupTotp()">🔑 Generate TOTP Secret</button>
-                <div id="totpResult" style="margin-top:20px;"></div>
-            </div>
+            <h2>🔐 TOTP Setup</h2>
+            <p>Two-factor authentication for admin operations. Requires admin key only for setup.</p>
+            <button class="btn btn-primary" onclick="setupTotp()">🔑 Generate New TOTP Secret</button>
+            <div id="totpResult" style="margin-top:20px;"></div>
             <div style="margin-top:20px;">
                 <h4>Verify TOTP Token</h4>
                 <div style="display:flex;gap:10px;align-items:flex-end;">
@@ -738,7 +726,7 @@
                         <label>Enter 6-digit code</label>
                         <input type="text" id="totpVerifyCode" maxlength="6" placeholder="000000">
                     </div>
-                    <button class="btn btn-success" onclick="verifyTotp()">✅ Verify</button>
+                    <button class="btn btn-success" onclick="verifyTotpToken()">✅ Verify</button>
                 </div>
                 <div id="totpVerifyResult" style="margin-top:10px;"></div>
             </div>
@@ -747,21 +735,32 @@
         <!-- API Tools Panel -->
         <div class="panel" id="panel-api">
             <h2>🔌 API Tools</h2>
+            <p>Test API endpoints directly.</p>
+            
             <div class="form-group">
-                <label>API Key Hash</label>
-                <input type="text" id="apiKeyHash" readonly class="monospace" style="background:var(--light);">
-                <button class="btn btn-outline btn-sm" onclick="getKeyHash()" style="margin-top:5px;">Get Hash</button>
+                <label>Get API Key Hash (Public)</label>
+                <button class="btn btn-outline btn-sm" onclick="getApiKeyHash()">Get Hash</button>
+                <input type="text" id="apiKeyHash" readonly class="monospace" style="background:var(--light);margin-top:5px;">
             </div>
+
             <div class="form-group">
-                <label>Generate Orey ID</label>
-                <button class="btn btn-primary" onclick="generateOreyIdApi()">Generate</button>
-                <pre id="oreyIdResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;"></pre>
+                <label>Generate Orey ID (Public)</label>
+                <button class="btn btn-primary btn-sm" onclick="generateOreyIdApi()">Generate</button>
+                <pre id="oreyIdResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;white-space:pre-wrap;"></pre>
             </div>
+
             <div class="form-group">
-                <label>Check Device Ban</label>
-                <input type="text" id="checkBanDeviceId" placeholder="Device ID">
-                <button class="btn btn-info" onclick="checkBan()" style="margin-top:5px;">Check</button>
-                <pre id="checkBanResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;"></pre>
+                <label>Check Device Ban Status</label>
+                <input type="text" id="checkBanDeviceId" placeholder="Enter device ID">
+                <button class="btn btn-info btn-sm" onclick="checkBan()" style="margin-top:5px;">Check</button>
+                <pre id="checkBanResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;white-space:pre-wrap;"></pre>
+            </div>
+
+            <div class="form-group">
+                <label>Register Device</label>
+                <input type="text" id="registerDeviceId" placeholder="Enter device ID">
+                <button class="btn btn-success btn-sm" onclick="registerDevice()" style="margin-top:5px;">Register</button>
+                <pre id="registerDeviceResult" style="margin-top:10px;background:var(--light);padding:10px;border-radius:8px;white-space:pre-wrap;"></pre>
             </div>
         </div>
     </div>
@@ -772,36 +771,50 @@
         // ─── Configuration ──────────────────────────────────────────────────
         const API_BASE = window.location.origin;
         let adminKey = localStorage.getItem('orey_admin_key') || '';
-        let totpToken = '';
+        let totpToken = localStorage.getItem('orey_totp_token') || '';
 
         // ─── Init ───────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('adminKey').value = adminKey;
-            checkServerHealth();
-            refreshAll();
-            // Auto-refresh every 30 seconds
-            setInterval(refreshAll, 30000);
+            document.getElementById('totpToken').value = totpToken;
+            
+            if (adminKey) {
+                updateAuthStatus();
+                refreshAll();
+            } else {
+                testConnection();
+            }
+
+            // Auto-refresh every 30 seconds if authenticated
+            setInterval(() => {
+                if (adminKey) refreshAll();
+                else testConnection();
+            }, 30000);
         });
 
-        document.getElementById('adminKey').addEventListener('change', (e) => {
+        document.getElementById('adminKey').addEventListener('input', (e) => {
             adminKey = e.target.value;
             localStorage.setItem('orey_admin_key', adminKey);
             updateAuthStatus();
         });
 
-        document.getElementById('totpToken').addEventListener('change', (e) => {
+        document.getElementById('totpToken').addEventListener('input', (e) => {
             totpToken = e.target.value;
+            localStorage.setItem('orey_totp_token', totpToken);
             updateAuthStatus();
         });
 
         function updateAuthStatus() {
             const statusEl = document.getElementById('authStatus');
             if (adminKey && totpToken) {
-                statusEl.innerHTML = '<span style="color:var(--success);">✅ Authenticated</span>';
+                statusEl.innerHTML = '✅ Fully Authenticated';
+                statusEl.style.background = 'rgba(0,184,148,0.2)';
             } else if (adminKey) {
-                statusEl.innerHTML = '<span style="color:var(--warning);">⚠️ TOTP required for write ops</span>';
+                statusEl.innerHTML = '⚠️ Admin Key Set (TOTP needed for write ops)';
+                statusEl.style.background = 'rgba(253,203,110,0.2)';
             } else {
-                statusEl.innerHTML = '<span style="color:var(--danger);">❌ Admin key required</span>';
+                statusEl.innerHTML = '❌ Enter Admin Key';
+                statusEl.style.background = 'rgba(255,118,117,0.2)';
             }
         }
 
@@ -826,40 +839,70 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
-        // ─── Server Health ──────────────────────────────────────────────────
-        async function checkServerHealth() {
+        // ─── Test Connection ────────────────────────────────────────────────
+        async function testConnection() {
             try {
                 const res = await fetch(`${API_BASE}/health`);
                 const data = await res.json();
                 const dot = document.querySelector('#serverStatus .status-dot');
-                dot.className = `status-dot ${data.status === 'ok' ? 'online' : 'offline'}`;
-                document.getElementById('serverStatus').innerHTML = 
-                    `<span class="status-dot ${data.status === 'ok' ? 'online' : 'offline'}"></span> ${data.status === 'ok' ? 'Online' : 'Offline'} | ${data.activeConnections || 0} users`;
+                if (data.status === 'ok') {
+                    dot.className = 'status-dot online';
+                    document.getElementById('serverStatus').innerHTML = 
+                        '<span class="status-dot online"></span> Server Online';
+                    showToast('✅ Server is online!', 'success');
+                } else {
+                    dot.className = 'status-dot offline';
+                    document.getElementById('serverStatus').innerHTML = 
+                        '<span class="status-dot offline"></span> Server Issue';
+                }
             } catch (e) {
-                document.getElementById('serverStatus').innerHTML = '<span class="status-dot offline"></span> Offline';
+                document.getElementById('serverStatus').innerHTML = 
+                    '<span class="status-dot offline"></span> Cannot connect';
+                showToast('❌ Cannot connect to server', 'error');
             }
         }
 
         // ─── Refresh All ────────────────────────────────────────────────────
         async function refreshAll() {
-            document.getElementById('lastRefresh').textContent = `Last: ${new Date().toLocaleTimeString()}`;
-            await checkServerHealth();
+            if (!adminKey) {
+                showToast('Please enter admin key first', 'warning');
+                return;
+            }
+            document.getElementById('lastRefresh').textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+            await testConnection();
             await loadDashboard();
-            await loadReports();
-            await loadBans();
-            await loadNotifications();
             await loadConfig();
+            
+            // Load tab-specific data based on active tab
+            const activeTab = document.querySelector('.panel.active')?.id;
+            if (activeTab === 'panel-reports') await loadReports();
+            if (activeTab === 'panel-bans') await loadBans();
+            if (activeTab === 'panel-notifications') await loadNotifications();
         }
 
         // ─── Dashboard ──────────────────────────────────────────────────────
         async function loadDashboard() {
             if (!adminKey) {
-                document.getElementById('dashboardContent').innerHTML = '<p style="color:var(--danger);">⚠️ Enter admin key to load dashboard</p>';
+                document.getElementById('dashboardContent').innerHTML = 
+                    '<div class="error-message">⚠️ Please enter your admin key above.</div>';
                 return;
             }
             try {
-                const res = await fetch(`${API_BASE}/admin/stats`, { headers: getHeaders(false) });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const res = await fetch(`${API_BASE}/admin/stats`, { 
+                    headers: getHeaders(false) // Stats might work without TOTP
+                });
+                
+                if (res.status === 401) {
+                    document.getElementById('dashboardContent').innerHTML = 
+                        '<div class="error-message">🔒 Authentication failed. Check your admin key.</div>';
+                    return;
+                }
+                if (res.status === 403) {
+                    document.getElementById('dashboardContent').innerHTML = 
+                        '<div class="error-message">🔐 TOTP token required or invalid.</div>';
+                    return;
+                }
+                
                 const data = await res.json();
                 
                 document.getElementById('statConnections').textContent = data.activeConnections || 0;
@@ -871,56 +914,98 @@
 
                 document.getElementById('dashboardContent').innerHTML = `
                     <div class="row">
-                        <div>
-                            <strong>Uptime:</strong> ${Math.floor(data.uptime / 3600)}h ${Math.floor((data.uptime % 3600) / 60)}m<br>
+                        <div style="padding:15px;background:var(--light);border-radius:8px;">
+                            <strong>📊 Server Info</strong><br><br>
+                            <strong>Uptime:</strong> ${Math.floor(data.uptime / 3600)}h ${Math.floor((data.uptime % 3600) / 60)}m ${Math.floor(data.uptime % 60)}s<br>
                             <strong>Memory:</strong> ${data.memoryMB} MB<br>
-                            <strong>DB Status:</strong> ${data.dbState}<br>
-                            <strong>TOTP:</strong> ${data.totpConfigured ? '✅' : '❌'}
+                            <strong>Database:</strong> ${data.dbState || 'unknown'}<br>
+                            <strong>TOTP 2FA:</strong> ${data.totpConfigured ? '✅ Configured' : '⚠️ Not Configured'}
                         </div>
-                        <div>
-                            <strong>Pending Reports:</strong> ${data.pendingReports}<br>
-                            <strong>Auto-Banned:</strong> ${data.autoBannedCount}<br>
-                            <strong>High Priority:</strong> ${data.highPriorityReports}<br>
-                            <strong>Subscribers:</strong> ${data.activeNotificationSubscribers}
+                        <div style="padding:15px;background:var(--light);border-radius:8px;">
+                            <strong>🚨 Reports Overview</strong><br><br>
+                            <strong>Pending:</strong> ${data.pendingReports || 0}<br>
+                            <strong>Auto-Banned:</strong> ${data.autoBannedCount || 0}<br>
+                            <strong>High Priority:</strong> ${data.highPriorityReports || 0}<br>
+                            <strong>Active Subscribers:</strong> ${data.activeNotificationSubscribers || 0}
                         </div>
+                    </div>
+                    <div style="margin-top:15px;padding:15px;background:var(--light);border-radius:8px;">
+                        <strong>🛡️ Safety Settings:</strong> 
+                        Auto-Ban: <span style="color:${data.safetySettings?.autoBanEnabled ? 'var(--success)' : 'var(--danger)'}">
+                            ${data.safetySettings?.autoBanEnabled ? 'ON' : 'OFF'}
+                        </span> | 
+                        Threshold: ${data.safetySettings?.autoBanThreshold || 3} | 
+                        HP Threshold: ${data.safetySettings?.highPriorityThreshold || 2}
                     </div>
                 `;
             } catch (e) {
-                document.getElementById('dashboardContent').innerHTML = `<p style="color:var(--danger);">Error: ${e.message}</p>`;
+                document.getElementById('dashboardContent').innerHTML = 
+                    `<div class="error-message">❌ Error loading dashboard: ${e.message}</div>`;
             }
         }
 
         // ─── Reports ────────────────────────────────────────────────────────
         async function loadReports() {
-            if (!adminKey) return;
+            if (!adminKey) {
+                document.getElementById('reportsError').style.display = 'block';
+                document.getElementById('reportsError').innerHTML = 
+                    '<div class="error-message">⚠️ Admin key required.</div>';
+                return;
+            }
+            
+            document.getElementById('reportsError').style.display = 'none';
             const filter = document.getElementById('reportFilter')?.value || '';
             const url = `${API_BASE}/admin/reports${filter ? `?status=${filter}` : ''}`;
+            
             try {
                 const res = await fetch(url, { headers: getHeaders() });
+                
+                if (res.status === 401) {
+                    document.getElementById('reportsError').style.display = 'block';
+                    document.getElementById('reportsError').innerHTML = 
+                        '<div class="error-message">🔒 Invalid admin key.</div>';
+                    document.getElementById('reportsTable').innerHTML = '<tr><td colspan="7">Authentication required</td></tr>';
+                    return;
+                }
+                if (res.status === 403) {
+                    document.getElementById('reportsError').style.display = 'block';
+                    document.getElementById('reportsError').innerHTML = 
+                        '<div class="error-message">🔐 TOTP token required.</div>';
+                    document.getElementById('reportsTable').innerHTML = '<tr><td colspan="7">TOTP required</td></tr>';
+                    return;
+                }
+                
                 const data = await res.json();
                 const tbody = document.getElementById('reportsTable');
                 
+                // Safely access data properties with defaults
+                const total = data.total || (data.reports ? data.reports.length : 0);
+                const pending = data.pending || 0;
+                const autoBanned = data.autoBanned || 0;
+                const highPriority = data.highPriority || 0;
+                const activeBans = data.activeBans || 0;
+                
                 document.getElementById('reportSummary').innerHTML = `
-                    Total: <strong>${data.total}</strong> | 
-                    Pending: <strong>${data.pending}</strong> | 
-                    Auto-Banned: <strong>${data.autoBanned}</strong> | 
-                    High Priority: <strong>${data.highPriority}</strong> | 
-                    Active Bans: <strong>${data.activeBans}</strong>
+                    <strong>Total:</strong> ${total} | 
+                    <strong>Pending:</strong> ${pending} | 
+                    <strong>Auto-Banned:</strong> ${autoBanned} | 
+                    <strong>High Priority:</strong> ${highPriority} | 
+                    <strong>Active Bans:</strong> ${activeBans}
                 `;
 
-                if (data.reports.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7">No reports found</td></tr>';
+                if (!data.reports || data.reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">No reports found</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.reports.map(r => `
                     <tr>
-                        <td><span class="monospace">${r.id.substring(0, 8)}...</span></td>
+                        <td><span class="monospace">${(r.id || '').substring(0, 8)}...</span></td>
                         <td><span class="monospace">${(r.reportedDeviceId || 'N/A').substring(0, 12)}...</span></td>
-                        <td>${r.reason}</td>
-                        <td><span class="badge badge-${getStatusBadge(r.status)}">${r.status}</span></td>
+                        <td>${r.reason || 'N/A'}</td>
+                        <td><span class="badge badge-${getStatusBadge(r.status)}">${r.status || 'unknown'}</span></td>
                         <td>${r.isHighPriority ? '<span class="badge badge-danger">HIGH</span>' : '<span class="badge badge-info">Normal</span>'}</td>
-                        <td>${new Date(r.timestamp).toLocaleDateString()}</td>
+                        <td>${r.timestamp ? new Date(r.timestamp).toLocaleDateString() : 'N/A'}</td>
                         <td>
                             ${r.status === 'pending' ? `
                                 <button class="btn btn-danger btn-sm" onclick="handleReport('${r.id}', 'ban')">Ban</button>
@@ -931,18 +1016,27 @@
                     </tr>
                 `).join('');
             } catch (e) {
-                document.getElementById('reportsTable').innerHTML = `<tr><td colspan="7" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+                document.getElementById('reportsError').style.display = 'block';
+                document.getElementById('reportsError').innerHTML = 
+                    `<div class="error-message">❌ Error: ${e.message}</div>`;
+                document.getElementById('reportsTable').innerHTML = 
+                    `<tr><td colspan="7" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
             }
         }
 
         function getStatusBadge(status) {
-            const map = { pending: 'warning', banned: 'danger', dismissed: 'info', warned: 'warning', auto_banned: 'danger' };
+            const map = { 
+                pending: 'warning', 
+                banned: 'danger', 
+                dismissed: 'info', 
+                warned: 'warning', 
+                auto_banned: 'danger' 
+            };
             return map[status] || 'info';
         }
 
         async function handleReport(reportId, action) {
-            const notes = prompt(`Notes for ${action}:`);
-            if (notes === null) return;
+            const notes = prompt(`Notes for ${action}:`) || '';
             try {
                 const res = await fetch(`${API_BASE}/admin/reports/${reportId}/action`, {
                     method: 'POST',
@@ -950,7 +1044,7 @@
                     body: JSON.stringify({ action, notes }),
                 });
                 const data = await res.json();
-                if (data.success) {
+                if (res.ok) {
                     showToast(`Report ${reportId}: ${action} successful!`, 'success');
                     loadReports();
                 } else {
@@ -966,26 +1060,29 @@
             if (!adminKey) return;
             try {
                 const res = await fetch(`${API_BASE}/admin/banned-devices`, { headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                
                 const data = await res.json();
                 const tbody = document.getElementById('bansTable');
                 
-                if (data.bannedDevices.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">No banned devices</td></tr>';
+                if (!data.bannedDevices || data.bannedDevices.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No banned devices</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.bannedDevices.map(b => `
                     <tr>
-                        <td><span class="monospace">${b.deviceId.substring(0, 20)}...</span></td>
-                        <td>${b.reason}</td>
+                        <td><span class="monospace">${(b.deviceId || '').substring(0, 20)}...</span></td>
+                        <td>${b.reason || 'N/A'}</td>
                         <td><span class="badge ${b.permanent ? 'badge-danger' : 'badge-warning'}">${b.permanent ? 'PERMANENT' : 'Temporary'}</span></td>
-                        <td>${b.source}</td>
-                        <td>${new Date(b.timestamp).toLocaleString()}</td>
+                        <td>${b.source || 'unknown'}</td>
+                        <td>${b.timestamp ? new Date(b.timestamp).toLocaleString() : 'N/A'}</td>
                         <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Never'}</td>
                     </tr>
                 `).join('');
             } catch (e) {
-                document.getElementById('bansTable').innerHTML = `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+                document.getElementById('bansTable').innerHTML = 
+                    `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
             }
         }
 
@@ -1013,10 +1110,9 @@
                     body: JSON.stringify({ deviceId, reason, durationHours }),
                 });
                 const data = await res.json();
-                if (data.success) {
-                    showToast(`Device banned! ${data.socketsDisconnected} connections disconnected.`, 'success');
+                if (res.ok) {
+                    showToast(`Device banned!`, 'success');
                     document.getElementById('banForm').style.display = 'none';
-                    document.getElementById('banDeviceId').value = '';
                     loadBans();
                 } else {
                     showToast(data.error || 'Failed to ban', 'error');
@@ -1036,10 +1132,9 @@
                     headers: getHeaders(),
                 });
                 const data = await res.json();
-                if (data.success) {
-                    showToast(`Device unbanned! Matched: ${data.matchedId}`, 'success');
+                if (res.ok) {
+                    showToast('Device unbanned!', 'success');
                     document.getElementById('unbanForm').style.display = 'none';
-                    document.getElementById('unbanDeviceId').value = '';
                     loadBans();
                 } else {
                     showToast(data.error || 'Device not banned', 'error');
@@ -1054,51 +1149,59 @@
             if (!adminKey) return;
             try {
                 const res = await fetch(`${API_BASE}/admin/notifications`, { headers: getHeaders() });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                
                 const data = await res.json();
                 const tbody = document.getElementById('notifsTable');
                 
-                if (data.notifications.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">No notifications</td></tr>';
+                if (!data.notifications || data.notifications.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No notifications</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.notifications.slice(-20).reverse().map(n => `
                     <tr>
-                        <td>#${n.id}</td>
-                        <td>${n.icon || ''} ${n.title}</td>
-                        <td><span class="badge badge-info">${n.type}</span></td>
-                        <td><span class="badge ${n.priority === 'high' ? 'badge-danger' : 'badge-purple'}">${n.priority}</span></td>
-                        <td>${new Date(n.timestamp).toLocaleDateString()}</td>
+                        <td>#${n.id || '?'}</td>
+                        <td>${n.icon || ''} ${n.title || 'Untitled'}</td>
+                        <td><span class="badge badge-info">${n.type || 'info'}</span></td>
+                        <td><span class="badge ${n.priority === 'high' || n.priority === 'urgent' ? 'badge-danger' : 'badge-purple'}">${n.priority || 'normal'}</span></td>
+                        <td>${n.timestamp ? new Date(n.timestamp).toLocaleDateString() : 'N/A'}</td>
                         <td>
-                            <button class="btn btn-danger btn-sm" onclick="deleteNotification(${n.id})">🗑️</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteNotification(${n.id})">🗑️ Delete</button>
                         </td>
                     </tr>
                 `).join('');
             } catch (e) {
-                document.getElementById('notifsTable').innerHTML = `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
+                document.getElementById('notifsTable').innerHTML = 
+                    `<tr><td colspan="6" style="color:var(--danger);">Error: ${e.message}</td></tr>`;
             }
         }
 
         async function sendNotification() {
             const title = document.getElementById('notifTitle').value.trim();
             const message = document.getElementById('notifMessage').value.trim();
-            const type = document.getElementById('notifType').value;
-            const priority = document.getElementById('notifPriority').value;
-            const expiresIn = parseInt(document.getElementById('notifExpires').value) || 30;
-            const targetPlatform = document.getElementById('notifPlatform').value;
-            const actionUrl = document.getElementById('notifActionUrl').value;
 
-            if (!title || !message) { showToast('Title and message are required', 'error'); return; }
+            if (!title || !message) { 
+                showToast('Title and message are required', 'error'); 
+                return; 
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/admin/notifications`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    body: JSON.stringify({ title, message, type, priority, expiresIn, targetPlatform, actionUrl }),
+                    body: JSON.stringify({
+                        title,
+                        message,
+                        type: document.getElementById('notifType').value,
+                        priority: document.getElementById('notifPriority').value,
+                        expiresIn: parseInt(document.getElementById('notifExpires').value) || 30,
+                        targetPlatform: document.getElementById('notifPlatform').value,
+                    }),
                 });
                 const data = await res.json();
-                if (data.success) {
-                    showToast(`Notification sent to ${data.activeClients} clients!`, 'success');
+                if (res.ok) {
+                    showToast(`Notification sent!`, 'success');
                     document.getElementById('notifTitle').value = '';
                     document.getElementById('notifMessage').value = '';
                     loadNotifications();
@@ -1117,9 +1220,8 @@
                     method: 'DELETE',
                     headers: getHeaders(),
                 });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('Notification deleted', 'success');
+                if (res.ok) {
+                    showToast('Deleted!', 'success');
                     loadNotifications();
                 }
             } catch (e) {
@@ -1129,37 +1231,43 @@
 
         // ─── Configuration ──────────────────────────────────────────────────
         async function loadConfig() {
-            if (!adminKey) return;
             try {
                 const res = await fetch(`${API_BASE}/api/config`);
                 const data = await res.json();
                 
-                document.getElementById('maintEnabled').value = data.maintenance?.enabled ? 'true' : 'false';
-                document.getElementById('maintMessage').value = data.maintenance?.message || '';
+                if (data.maintenance) {
+                    document.getElementById('maintEnabled').value = data.maintenance.enabled ? 'true' : 'false';
+                    document.getElementById('maintMessage').value = data.maintenance.message || '';
+                }
                 
-                document.getElementById('vidDefault').value = data.videoQuality?.default || 'medium';
-                document.getElementById('vidAutoAdjust').value = data.videoQuality?.autoAdjust ? 'true' : 'false';
-                document.getElementById('vidMaxBitrate').value = data.videoQuality?.maxBitrate || 1500000;
+                if (data.videoQuality) {
+                    document.getElementById('vidDefault').value = data.videoQuality.default || 'medium';
+                    document.getElementById('vidAutoAdjust').value = data.videoQuality.autoAdjust ? 'true' : 'false';
+                    document.getElementById('vidMaxBitrate').value = data.videoQuality.maxBitrate || 1500000;
+                }
 
-                document.getElementById('safetyAutoBan').value = data.safety?.autoBanEnabled ? 'true' : 'false';
-                document.getElementById('safetyThreshold').value = data.safety?.autoBanThreshold || 3;
-                document.getElementById('safetyHPThreshold').value = data.safety?.highPriorityThreshold || 2;
+                if (data.safety) {
+                    document.getElementById('safetyAutoBan').value = data.safety.autoBanEnabled ? 'true' : 'false';
+                    document.getElementById('safetyThreshold').value = data.safety.autoBanThreshold || 3;
+                    document.getElementById('safetyHPThreshold').value = data.safety.highPriorityThreshold || 2;
+                }
             } catch (e) {
                 console.error('Config load error:', e);
             }
         }
 
         async function updateMaintenance() {
-            const enabled = document.getElementById('maintEnabled').value === 'true';
-            const message = document.getElementById('maintMessage').value;
             try {
                 const res = await fetch(`${API_BASE}/admin/maintenance`, {
                     method: 'POST',
                     headers: getHeaders(),
-                    body: JSON.stringify({ enabled, message }),
+                    body: JSON.stringify({
+                        enabled: document.getElementById('maintEnabled').value === 'true',
+                        message: document.getElementById('maintMessage').value,
+                    }),
                 });
-                const data = await res.json();
-                if (data.success) showToast('Maintenance updated!', 'success');
+                if (res.ok) showToast('Maintenance updated!', 'success');
+                else showToast('Failed to update', 'error');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1174,8 +1282,8 @@
                         maxBitrate: parseInt(document.getElementById('vidMaxBitrate').value),
                     }),
                 });
-                const data = await res.json();
-                if (data.success) showToast('Video quality updated!', 'success');
+                if (res.ok) showToast('Video quality updated!', 'success');
+                else showToast('Failed to update', 'error');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1190,8 +1298,8 @@
                         highPriorityThreshold: parseInt(document.getElementById('safetyHPThreshold').value),
                     }),
                 });
-                const data = await res.json();
-                if (data.success) showToast('Safety settings updated!', 'success');
+                if (res.ok) showToast('Safety settings updated!', 'success');
+                else showToast('Failed to update', 'error');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1207,27 +1315,8 @@
                         updateMessage: document.getElementById('appUpdateMsg').value,
                     }),
                 });
-                const data = await res.json();
-                if (data.success) showToast('App version updated!', 'success');
-            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
-        }
-
-        async function toggleMaintenance() {
-            try {
-                const res = await fetch(`${API_BASE}/api/config`);
-                const config = await res.json();
-                const currentlyEnabled = config.maintenance?.enabled || false;
-                
-                const result = await fetch(`${API_BASE}/admin/maintenance`, {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify({ enabled: !currentlyEnabled, message: config.maintenance?.message || '' }),
-                });
-                const data = await result.json();
-                if (data.success) {
-                    showToast(`Maintenance ${!currentlyEnabled ? 'ENABLED' : 'DISABLED'}`, 'success');
-                    loadConfig();
-                }
+                if (res.ok) showToast('App version updated!', 'success');
+                else showToast('Failed to update', 'error');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1240,21 +1329,23 @@
                     headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
                 });
                 const data = await res.json();
-                if (data.success) {
+                if (res.ok && data.qrCode) {
                     document.getElementById('totpResult').innerHTML = `
-                        <div class="qr-container">
-                            <img src="${data.qrCode}" alt="TOTP QR Code">
-                            <p style="margin-top:10px;"><strong>Secret:</strong> <span class="monospace">${data.secret}</span></p>
-                            <p style="color:var(--success);">✅ Scan this QR code with Google Authenticator</p>
-                            <p style="font-size:12px;color:var(--text-light);">Then use the 6-digit code for all admin operations.</p>
+                        <div style="text-align:center;padding:20px;background:var(--light);border-radius:8px;">
+                            <img src="${data.qrCode}" alt="TOTP QR Code" style="max-width:250px;border-radius:8px;">
+                            <p style="margin-top:15px;"><strong>Secret:</strong> <span class="monospace">${data.secret}</span></p>
+                            <p style="color:var(--success);">✅ Scan with Google Authenticator</p>
+                            <p style="font-size:12px;color:var(--text-light);">
+                                Copy the TOTP code from your authenticator app into the TOTP field above.
+                            </p>
                         </div>
                     `;
-                    showToast('TOTP secret generated!', 'success');
+                    showToast('TOTP secret generated! Scan QR code.', 'success');
                 }
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
-        async function verifyTotp() {
+        async function verifyTotpToken() {
             const code = document.getElementById('totpVerifyCode').value.trim();
             if (!code) { showToast('Enter a code', 'error'); return; }
             try {
@@ -1265,18 +1356,21 @@
                 });
                 const data = await res.json();
                 document.getElementById('totpVerifyResult').innerHTML = data.valid
-                    ? '<span style="color:var(--success);">✅ Token is valid!</span>'
+                    ? '<span style="color:var(--success);font-weight:bold;">✅ Token is valid!</span>'
                     : '<span style="color:var(--danger);">❌ Invalid or expired token</span>';
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
         // ─── API Tools ──────────────────────────────────────────────────────
-        async function getKeyHash() {
+        async function getApiKeyHash() {
             try {
                 const res = await fetch(`${API_BASE}/api/get-key-hash`);
                 const data = await res.json();
-                document.getElementById('apiKeyHash').value = data.hash;
-            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+                document.getElementById('apiKeyHash').value = data.hash || 'Error';
+                showToast('API key hash retrieved', 'success');
+            } catch (e) { 
+                document.getElementById('apiKeyHash').value = `Error: ${e.message}`;
+            }
         }
 
         async function generateOreyId() {
@@ -1284,11 +1378,14 @@
                 const res = await fetch(`${API_BASE}/generate-orey-id`);
                 const data = await res.json();
                 document.getElementById('quickActionResult').innerHTML = `
-                    <div style="background:var(--light);padding:10px;border-radius:8px;">
-                        <strong>Orey ID:</strong> <span style="font-size:20px;font-weight:bold;color:var(--primary);">${data.oreyId}</span><br>
-                        <strong>Expires:</strong> ${new Date(data.expiresAt).toLocaleString()}
+                    <div style="background:var(--light);padding:15px;border-radius:8px;margin-top:10px;">
+                        <strong>🆔 Orey ID:</strong> 
+                        <span style="font-size:22px;font-weight:bold;color:var(--primary);">${data.oreyId}</span><br>
+                        <strong>⏰ Expires:</strong> ${new Date(data.expiresAt).toLocaleString()}<br>
+                        <strong>📋 Format:</strong> ${data.format || 'OREY-XXXXX'}
                     </div>
                 `;
+                showToast('Orey ID generated!', 'success');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1297,10 +1394,12 @@
                 const res = await fetch(`${API_BASE}/create-room`);
                 const data = await res.json();
                 document.getElementById('quickActionResult').innerHTML = `
-                    <div style="background:var(--light);padding:10px;border-radius:8px;">
-                        <strong>Room ID:</strong> <span style="font-size:20px;font-weight:bold;color:var(--primary);">${data.roomId}</span>
+                    <div style="background:var(--light);padding:15px;border-radius:8px;margin-top:10px;">
+                        <strong>🏠 Room ID:</strong> 
+                        <span style="font-size:20px;font-weight:bold;color:var(--primary);">${data.roomId}</span>
                     </div>
                 `;
+                showToast('Room created!', 'success');
             } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
         }
 
@@ -1309,7 +1408,9 @@
                 const res = await fetch(`${API_BASE}/generate-orey-id`);
                 const data = await res.json();
                 document.getElementById('oreyIdResult').textContent = JSON.stringify(data, null, 2);
-            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+            } catch (e) {
+                document.getElementById('oreyIdResult').textContent = `Error: ${e.message}`;
+            }
         }
 
         async function checkBan() {
@@ -1318,12 +1419,30 @@
             try {
                 const res = await fetch(`${API_BASE}/api/device/check-ban`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': document.getElementById('apiKeyHash').value || 'oryx_2024_secure_key_change_this' },
                     body: JSON.stringify({ deviceId }),
                 });
                 const data = await res.json();
                 document.getElementById('checkBanResult').textContent = JSON.stringify(data, null, 2);
-            } catch (e) { showToast(`Error: ${e.message}`, 'error'); }
+            } catch (e) {
+                document.getElementById('checkBanResult').textContent = `Error: ${e.message}`;
+            }
+        }
+
+        async function registerDevice() {
+            const deviceId = document.getElementById('registerDeviceId').value.trim();
+            if (!deviceId) { showToast('Enter device ID', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/device/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': 'oryx_2024_secure_key_change_this' },
+                    body: JSON.stringify({ deviceId, platform: 'web' }),
+                });
+                const data = await res.json();
+                document.getElementById('registerDeviceResult').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('registerDeviceResult').textContent = `Error: ${e.message}`;
+            }
         }
 
         // ─── Tab Switching ──────────────────────────────────────────────────
@@ -1334,14 +1453,32 @@
             const tabMap = {
                 'dashboard': 0, 'reports': 1, 'bans': 2, 'notifications': 3, 'config': 4, 'totp': 5, 'api': 6
             };
-            const panelIds = ['dashboard', 'reports', 'bans', 'notifications', 'config', 'totp', 'api'];
             
-            document.querySelectorAll('.tab')[tabMap[tabName]]?.classList.add('active');
-            document.getElementById(`panel-${tabName}`)?.classList.add('active');
+            const tabIndex = tabMap[tabName];
+            if (tabIndex !== undefined) {
+                document.querySelectorAll('.tab')[tabIndex]?.classList.add('active');
+            }
+            
+            const panel = document.getElementById(`panel-${tabName}`);
+            if (panel) {
+                panel.classList.add('active');
+            }
+
+            // Auto-load data for the tab
+            if (adminKey) {
+                switch(tabName) {
+                    case 'dashboard': loadDashboard(); break;
+                    case 'reports': loadReports(); break;
+                    case 'bans': loadBans(); break;
+                    case 'notifications': loadNotifications(); break;
+                    case 'config': loadConfig(); break;
+                }
+            }
         }
 
-        // Initial auth status
+        // Initial setup
         updateAuthStatus();
+        testConnection();
     </script>
 </body>
 </html>
