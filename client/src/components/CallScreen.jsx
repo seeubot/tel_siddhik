@@ -1,508 +1,502 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { 
-  motion, 
-  useMotionValue, 
-  useTransform, 
-  useAnimation, 
-  AnimatePresence,
-  useSpring
-} from 'framer-motion';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, Loader, Eye, EyeOff, 
-  SkipForward, Heart, ShieldAlert, 
-  Zap, VolumeX, Sparkles
+  PhoneOff, Loader,
+  Shield, VolumeX, Heart, Sparkles,
+  Eye, EyeOff, SkipForward, MoreHorizontal
 } from 'lucide-react';
-import './App.css';
+import styles from './App.css';
 
-// Status Pill Component
-const StatusPill = ({ text, icon: Icon, color }) => (
-    <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className={`status-pill ${color === 'rose' ? 'status-pill-rose' : 'status-pill-indigo'}`}
-    >
-        <Icon size={16} />
-        <span className="pill-text">{text}</span>
-    </motion.div>
-);
-
-// Flex Button Component
-const FlexButton = ({ onClick, Icon, isActive, isDanger, isAccent }) => (
-  <motion.button
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`flex-button ${isDanger ? 'flex-button-danger' : isAccent ? 'flex-button-accent' : 'flex-button-default'}`}
-  >
-    <Icon size={18} />
-  </motion.button>
-);
-
-// Floating Particles Component
-const FloatingParticles = () => {
-  const particles = useMemo(() => 
-    Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 2,
-      duration: 3 + Math.random() * 4,
-      size: 2 + Math.random() * 4
-    })), []
-  );
-
-  return (
-    <div className="particles-container">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="particle"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-          }}
-          animate={{
-            y: [-10, -40, -10],
-            x: [0, 15, 0],
-            opacity: [0, 0.3, 0],
-            scale: [1, 1.5, 1],
-          }}
-          transition={{
-            duration: p.duration,
-            delay: p.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// Swipe Hint Component
-const SwipeHint = () => (
-  <motion.div 
-    className="swipe-hint"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: [0, 0.5, 0] }}
-    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-  >
-    <motion.div
-      animate={{ x: [0, 15, 0] }}
-      transition={{ duration: 1.5, repeat: Infinity }}
-    >
-      <SkipForward size={14} />
-    </motion.div>
-    <span>Swipe to skip</span>
-  </motion.div>
-);
-
-const App = ({
+const CallScreen = ({
   partner = null,
-  externalLocalRef,
-  externalRemoteRef,
+  localVideoRef,
+  remoteVideoRef,
   audioEnabled = true,
   videoEnabled = true,
   partnerMedia = { video: true, audio: true },
   localStream = null,
   partnerStream = null,
-  searching: externalSearching = false,
+  searching = false,
+  autoSearchCountdown = null,
   onToggleAudio = () => {},
   onToggleVideo = () => {},
   onSkip = () => {},
   onLeave = () => {},
+  onCancelAutoSearch = () => {},
   onFindRandomPeer = () => {},
   onBlurToggle = () => {},
 }) => {
-  // State
-  const [audioEnabledState, setAudioEnabledState] = useState(audioEnabled);
-  const [videoEnabledState, setVideoEnabledState] = useState(videoEnabled);
+  const [uiVisible, setUiVisible] = useState(true);
   const [isSkipping, setIsSkipping] = useState(false);
   const [isBlurred, setIsBlurred] = useState(false);
-  const [uiVisible, setUiVisible] = useState(true);
-  const [searching, setSearching] = useState(externalSearching);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  const [statusMessages, setStatusMessages] = useState({
-    audio: false, video: false, blur: false
-  });
-
-  // Refs
-  const localVideoRefInternal = useRef(null);
-  const remoteVideoRefInternal = useRef(null);
-  const localVideoRef = externalLocalRef || localVideoRefInternal;
-  const remoteVideoRef = externalRemoteRef || remoteVideoRefInternal;
+  const [showBlurConfirm, setShowBlurConfirm] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const hideTimerRef = useRef(null);
   const skipTimerRef = useRef(null);
-  const messageTimers = useRef({ audio: null, video: null, blur: null });
+  const localStreamRef = useRef(localStream);
+  const partnerStreamRef = useRef(partnerStream);
 
-  // Sync external state
-  useEffect(() => setAudioEnabledState(audioEnabled), [audioEnabled]);
-  useEffect(() => setVideoEnabledState(videoEnabled), [videoEnabled]);
-  useEffect(() => setSearching(externalSearching), [externalSearching]);
-
-  // Handle video stream sources
+  // Update refs when streams change
   useEffect(() => {
-    if (remoteVideoRef?.current && partnerStream) {
-      remoteVideoRef.current.srcObject = partnerStream;
-    }
-  }, [partnerStream, remoteVideoRef]);
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   useEffect(() => {
-    if (localVideoRef?.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream, localVideoRef]);
+    partnerStreamRef.current = partnerStream;
+  }, [partnerStream]);
 
-  // Derived state
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Status message handler
-  const triggerStatusMessage = useCallback((type, isActive) => {
-    if (!isActive) {
-      setStatusMessages(prev => ({ ...prev, [type]: true }));
-      if (messageTimers.current[type]) clearTimeout(messageTimers.current[type]);
-      messageTimers.current[type] = setTimeout(() => {
-        setStatusMessages(prev => ({ ...prev, [type]: false }));
-      }, 5000);
-    } else {
-      setStatusMessages(prev => ({ ...prev, [type]: false }));
+  // Handle video stream sources with proper cleanup
+  useEffect(() => {
+    if (remoteVideoRef.current && partnerStream) {
+      const videoElement = remoteVideoRef.current;
+      videoElement.srcObject = partnerStream;
+      
+      return () => {
+        if (videoElement.srcObject === partnerStream) {
+          videoElement.srcObject = null;
+        }
+      };
     }
+  }, [partnerStream, remoteVideoRef]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      const videoElement = localVideoRef.current;
+      videoElement.srcObject = localStream;
+      
+      return () => {
+        if (videoElement.srcObject === localStream) {
+          videoElement.srcObject = null;
+        }
+      };
+    }
+  }, [localStream, localVideoRef]);
+
+  // Cleanup tracks on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+      }
+      if (partnerStreamRef.current) {
+        partnerStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+      }
+      clearTimeout(hideTimerRef.current);
+      clearTimeout(skipTimerRef.current);
+    };
   }, []);
 
-  // Auto-hide controls
+  // Auto-hide UI controls
+  useEffect(() => {
+    if (!uiVisible) return;
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
+    return () => clearTimeout(hideTimerRef.current);
+  }, [uiVisible]);
+
+  // Handle user activity to show/hide controls
   useEffect(() => {
     const resetTimer = () => {
-      setUiVisible(true);
+      if (!uiVisible) setUiVisible(true);
       clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+      hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
-    const events = ['mousemove', 'touchstart', 'touchmove', 'keydown', 'click'];
-    events.forEach(e => window.addEventListener(e, resetTimer));
-    resetTimer();
+
+    const events = ['mousemove', 'touchstart', 'touchmove', 'scroll', 'keydown'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
     return () => {
-      events.forEach(e => window.removeEventListener(e, resetTimer));
+      events.forEach(event => window.removeEventListener(event, resetTimer));
       clearTimeout(hideTimerRef.current);
     };
+  }, [uiVisible]);
+
+  // Close more menu when controls hide
+  useEffect(() => {
+    if (!uiVisible) setShowMoreMenu(false);
+  }, [uiVisible]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+      
+      switch(e.key) {
+        case 'm':
+          onToggleAudio?.();
+          break;
+        case 'v':
+          onToggleVideo?.();
+          break;
+        case 'n':
+          handleSkip();
+          break;
+        case 'b':
+          handleBlurClick();
+          break;
+        case 'Escape':
+          if (showBlurConfirm) setShowBlurConfirm(false);
+          if (showMoreMenu) setShowMoreMenu(false);
+          break;
+        default:
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [onToggleAudio, onToggleVideo, showBlurConfirm, showMoreMenu]);
+
+  const handleScreenTap = useCallback(() => {
+    setUiVisible(prev => !prev);
   }, []);
 
-  // Skip handler
-  const handleSkip = useCallback(async () => {
+  const handleSkip = useCallback(() => {
     if (isSkipping) return;
     setIsSkipping(true);
     onFindRandomPeer?.();
     
-    if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
-
-    await cardControls.start({ 
-      x: isDragging ? x.get() * 3 : 1000,
-      y: -50,
-      rotate: 15,
-      opacity: 0,
-      scale: 0.8,
-      transition: { duration: 0.5, ease: "easeOut" } 
-    });
-
+    if (skipTimerRef.current) {
+      clearTimeout(skipTimerRef.current);
+    }
+    
     skipTimerRef.current = setTimeout(() => {
       setIsSkipping(false);
       onSkip?.();
-      x.set(0);
-      cardControls.set({ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1.1 });
-      cardControls.start({ 
-        scale: 1, 
-        transition: { type: "spring", stiffness: 80, damping: 15 } 
-      });
     }, 2000);
-  }, [isSkipping, isDragging, onFindRandomPeer, onSkip]);
+  }, [isSkipping, onFindRandomPeer, onSkip]);
 
-  // Motion values
-  const x = useMotionValue(0);
-  const y = useSpring(0, { stiffness: 100, damping: 30 });
-  const rotate = useTransform(x, [-300, 300], [-15, 15]);
-  const opacityValue = useTransform(x, [-200, -100, 0, 100, 200], [0.3, 1, 1, 1, 0.3]);
-  const scaleValue = useTransform(x, [-200, 0, 200], [0.9, 1, 0.9]);
-  const rotateY = useTransform(x, [-100, 100], [5, -5]);
-  const cardControls = useAnimation();
+  const handleBlurClick = useCallback(() => {
+    setShowBlurConfirm(true);
+    setShowMoreMenu(false);
+  }, []);
 
-  // Auto-float animation
-  useEffect(() => {
-    if (!isDragging && !searching && isRemoteConnected) {
-      cardControls.start({
-        y: [0, -15, 0],
-        transition: {
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }
-      });
+  const handleConfirmBlur = useCallback(async () => {
+    const newBlurState = !isBlurred;
+    setIsBlurred(newBlurState);
+    setShowBlurConfirm(false);
+    
+    if (onBlurToggle) {
+      await onBlurToggle(newBlurState);
     }
-  }, [isDragging, searching, isRemoteConnected, cardControls]);
+  }, [isBlurred, onBlurToggle]);
 
-  // Drag handlers
-  const handleDragStart = () => {
-    setIsDragging(true);
-    cardControls.stop();
-  };
+  const handleCancelBlur = useCallback(() => {
+    setShowBlurConfirm(false);
+  }, []);
 
-  const handleDragEnd = (event, info) => {
-    setIsDragging(false);
-    if (Math.abs(info.offset.x) > 120) {
-      handleSkip();
-    } else {
-      cardControls.start({ 
-        x: 0, 
-        y: 0, 
-        opacity: 1, 
-        rotate: 0, 
-        scale: 1,
-        transition: { type: "spring", stiffness: 150, damping: 20 } 
-      });
-    }
-  };
+  const toggleMoreMenu = useCallback((e) => {
+    e.stopPropagation();
+    setShowMoreMenu(prev => !prev);
+  }, []);
+
+  // Memoized floating elements
+  const floatingElements = useMemo(() => (
+    <div className={styles.floatingElements}>
+      <Heart className={styles.floatHeart1} size={16} aria-hidden="true" />
+      <Heart className={styles.floatHeart2} size={12} aria-hidden="true" />
+      <Sparkles className={styles.floatSparkle1} size={14} aria-hidden="true" />
+      <Sparkles className={styles.floatSparkle2} size={18} aria-hidden="true" />
+    </div>
+  ), []);
+
+  // Memoized background effects
+  const backgroundEffects = useMemo(() => (
+    <>
+      <div className={styles.gradientOrb1} aria-hidden="true" />
+      <div className={styles.gradientOrb2} aria-hidden="true" />
+      <div className={styles.noiseLayer} aria-hidden="true" />
+    </>
+  ), []);
 
   return (
-    <div className="app-container">
-      {/* TOP: PARTNER VIEWPORT */}
-      <div className="partner-viewport">
-        {/* Branding */}
-        <div className="branding">
-          <Zap size={16} className="branding-icon" />
-          <span className="branding-text">Orey!</span>
-        </div>
+    <div 
+      className={styles.container} 
+      onClick={handleScreenTap}
+      role="main"
+      aria-label="Video call screen"
+    >
+      {/* Background Effects */}
+      {backgroundEffects}
+      
+      {/* Floating ambient elements */}
+      {floatingElements}
 
-        <FloatingParticles />
+      {/* REMOTE VIDEO */}
+      <div className={styles.remoteView}>
+        <video
+          ref={remoteVideoRef}
+          className={`${styles.videoBase} ${searching ? styles.searchingBlur : ''} ${isBlurred ? styles.videoBlur : ''}`}
+          autoPlay
+          playsInline
+          style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
+          aria-label="Remote video stream"
+        />
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            drag="x"
-            dragConstraints={{ left: -50, right: 50 }}
-            dragElastic={0.1}
-            style={{ x, y, rotate, opacity: opacityValue, scale: scaleValue }}
-            animate={cardControls}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            className="card-wrapper"
-          >
-            {/* Card with 3D effect */}
-            <motion.div 
-              className="card-3d"
-              style={{
-                transformStyle: "preserve-3d",
-                transform: `perspective(1000px) rotateY(${rotateY.get()}deg)`
-              }}
-            >
-              <div className="card-gradient" />
-              
-              {searching ? (
-                <div className="searching-state">
-                  <motion.div 
-                    initial={{ scale: 0.8, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }} 
-                    className="searching-animation"
-                  >
-                    <div className="searching-spinner" />
-                    <Heart className="searching-heart" size={28} />
-                  </motion.div>
-                  <p className="searching-title">Searching</p>
-                  <p className="searching-subtitle">Finding someone special...</p>
-                </div>
-              ) : (
-                <>
-                  <video
-                    ref={remoteVideoRef}
-                    className="remote-video"
-                    autoPlay
-                    playsInline
-                    style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
-                  />
+        {/* Blur indicator */}
+        {isBlurred && isRemoteConnected && !isPartnerVideoOff && (
+          <div className={styles.blurIndicator} role="status">
+            <EyeOff size={14} aria-hidden="true" />
+            <span>Video blurred</span>
+          </div>
+        )}
 
-                  {isRemoteConnected && isPartnerVideoOff && (
-                    <div className="camera-off-state">
-                      <motion.div 
-                        whileHover={{ scale: 1.05 }}
-                        className="camera-off-icon-wrapper"
-                      >
-                        <VideoOff size={40} className="camera-off-icon" />
-                      </motion.div>
-                      <h3 className="camera-off-title">Camera off</h3>
-                      <p className="camera-off-text">Your match turned their camera off</p>
-                      <div className="camera-off-status">
-                        <span className="camera-off-dot" />
-                        Audio still connected
-                      </div>
-                    </div>
-                  )}
+        {isRemoteConnected && isPartnerVideoOff && (
+          <div className={styles.partnerCameraOff}>
+            <div className={styles.cameraOffIconWrapper}>
+              <VideoOff size={40} className={styles.cameraOffIconLarge} aria-hidden="true" />
+            </div>
+            <h3 className={styles.partnerCameraOffTitle}>Camera off</h3>
+            <p className={styles.partnerCameraOffText}>Your match turned their camera off</p>
+            <div className={styles.cameraOffStatus}>
+              <span className={styles.statusDot} aria-hidden="true" />
+              Audio still connected
+            </div>
+          </div>
+        )}
 
-                  {isRemoteConnected && isPartnerMuted && (
-                    <motion.div 
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      className="muted-chip-left"
-                    >
-                      <VolumeX size={13} />
-                      <span>Their mic is off</span>
-                    </motion.div>
-                  )}
+        {/* Partner muted chip */}
+        {isRemoteConnected && isPartnerMuted && (
+          <div className={`${styles.statusChip} ${styles.chipLeft}`} role="status">
+            <VolumeX size={13} aria-hidden="true" />
+            <span>Their mic is off</span>
+          </div>
+        )}
 
-                  {!isDragging && isRemoteConnected && <SwipeHint />}
-                  
-                  <div className="status-messages-container">
-                    <AnimatePresence>
-                      {statusMessages.audio && <StatusPill text="You Muted" icon={MicOff} color="rose" />}
-                      {statusMessages.video && <StatusPill text="Camera Off" icon={VideoOff} color="rose" />}
-                      {statusMessages.blur && <StatusPill text="Privacy Mode" icon={ShieldAlert} color="indigo" />}
-                    </AnimatePresence>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
+        {!isRemoteConnected && !searching && (
+          <div className={styles.placeholder}>
+            <div className={styles.logoWrapper}>
+              <div className={styles.logoGlow} aria-hidden="true" />
+              <div className={styles.brandText} aria-label="Orey">Orey!</div>
+            </div>
+            <div className={styles.waitingText}>
+              <Sparkles size={16} className={styles.sparkleIcon} aria-hidden="true" />
+              Ready to meet someone new?
+            </div>
+            <div className={styles.loadingDots} aria-label="Loading">
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* BOTTOM: LOCAL VIEWPORT */}
-      <div className="local-viewport">
-        <div className="local-video-container">
-          <video
-            ref={localVideoRef}
-            className={`local-video ${!videoEnabledState ? 'video-hidden' : 'video-visible'} ${isBlurred ? 'video-blurred' : ''}`}
-            autoPlay
-            muted
-            playsInline
-            style={{ display: videoEnabledState ? 'block' : 'none' }}
-          />
+      {/* LOCAL VIDEO */}
+      <div className={styles.localView}>
+        <video
+          ref={localVideoRef}
+          className={`${styles.videoBase} ${styles.mirrored}`}
+          autoPlay
+          playsInline
+          muted
+          style={{ display: videoEnabled ? 'block' : 'none' }}
+          aria-label="Local video stream"
+        />
 
-          {!audioEnabledState && (
-            <motion.div 
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              className="muted-chip-right"
-            >
-              <MicOff size={13} />
-              <span>Your mic is off</span>
-            </motion.div>
+        {/* You muted chip */}
+        {!audioEnabled && (
+          <div className={`${styles.statusChip} ${styles.chipRight}`} role="status">
+            <MicOff size={13} aria-hidden="true" />
+            <span>Your mic is off</span>
+          </div>
+        )}
+
+        {!videoEnabled && (
+          <div className={styles.localCameraOff}>
+            <div className={styles.cameraOffIconWrapper}>
+              <VideoOff size={28} className={styles.cameraOffIconSmall} aria-hidden="true" />
+            </div>
+            <span className={styles.cameraOffText}>Camera off</span>
+            <p className={styles.cameraOffSubtext}>Turn on to share your vibe</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── REDESIGNED CONTROL BAR ── */}
+      <div
+        className={`${styles.controlBar} ${!uiVisible ? styles.controlBarHidden : ''}`}
+        onClick={e => e.stopPropagation()}
+        role="toolbar"
+        aria-label="Call controls"
+      >
+        {/* Mic button */}
+        <button
+          onClick={onToggleAudio}
+          className={`${styles.controlButton} ${!audioEnabled ? styles.controlButtonOff : ''}`}
+          aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+          aria-pressed={!audioEnabled}
+        >
+          {audioEnabled ? <Mic size={20} aria-hidden="true" /> : <MicOff size={20} aria-hidden="true" />}
+        </button>
+
+        {/* Video button */}
+        <button
+          onClick={onToggleVideo}
+          className={`${styles.controlButton} ${!videoEnabled ? styles.controlButtonOff : ''}`}
+          aria-label={videoEnabled ? 'Stop video' : 'Start video'}
+          aria-pressed={!videoEnabled}
+        >
+          {videoEnabled ? <Video size={20} aria-hidden="true" /> : <VideoOff size={20} aria-hidden="true" />}
+        </button>
+
+        {/* Next/Skip button */}
+        <button
+          onClick={handleSkip}
+          disabled={isSkipping}
+          className={styles.nextButton}
+          aria-label={isSkipping ? 'Finding next match' : 'Skip to next match'}
+        >
+          {isSkipping ? (
+            <Loader size={22} className={styles.spinner} aria-hidden="true" />
+          ) : (
+            <SkipForward size={22} aria-hidden="true" />
           )}
-          
-          <AnimatePresence>
-            {isBlurred && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                className="blur-overlay"
-              >
-                <EyeOff size={40} className="blur-overlay-icon" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+        </button>
 
-          {!videoEnabledState && (
-            <div className="camera-off-local">
-              <div className="camera-off-local-icon-wrapper">
-                <VideoOff size={28} className="camera-off-local-icon" />
-              </div>
-              <span className="camera-off-local-text">Camera off</span>
+        {/* More options button */}
+        <div className={styles.moreMenuWrapper}>
+          <button
+            onClick={toggleMoreMenu}
+            className={styles.controlButton}
+            aria-label="More options"
+            aria-expanded={showMoreMenu}
+          >
+            <MoreHorizontal size={20} aria-hidden="true" />
+          </button>
+
+          {/* Dropdown menu */}
+          {showMoreMenu && (
+            <div className={styles.dropdownMenu} role="menu">
+              <button
+                onClick={handleBlurClick}
+                className={styles.dropdownItem}
+                role="menuitem"
+              >
+                {isBlurred ? (
+                  <>
+                    <Eye size={16} aria-hidden="true" />
+                    <span>Remove Blur</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff size={16} aria-hidden="true" />
+                    <span>Blur Video</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
 
-        {searching && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} 
-            animate={{ opacity: 0.1, scale: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="branding-watermark"
-          >
-            <h1 className="branding-watermark-text">O!</h1>
-            <span className="branding-watermark-subtext">Orey! Pro</span>
-          </motion.div>
-        )}
+        {/* End call button */}
+        <button
+          onClick={onLeave}
+          className={styles.endButton}
+          aria-label="End call"
+        >
+          <PhoneOff size={20} aria-hidden="true" />
+        </button>
+      </div>
 
-        {/* Control Bar */}
-        <AnimatePresence>
-          {uiVisible && (
-            <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
-              className="control-bar-wrapper"
-            >
-              <div className="control-bar">
-                <div className="control-group-left">
-                  <FlexButton 
-                    onClick={() => {
-                      const ns = !audioEnabledState;
-                      setAudioEnabledState(ns);
-                      triggerStatusMessage('audio', ns);
-                      onToggleAudio?.();
-                    }} 
-                    Icon={audioEnabledState ? Mic : MicOff} 
-                    isActive={audioEnabledState}
-                    isDanger={!audioEnabledState}
-                  />
-                  <FlexButton 
-                    onClick={() => {
-                      const ns = !videoEnabledState;
-                      setVideoEnabledState(ns);
-                      triggerStatusMessage('video', ns);
-                      onToggleVideo?.();
-                    }} 
-                    Icon={videoEnabledState ? Video : VideoOff} 
-                    isActive={videoEnabledState}
-                    isDanger={!videoEnabledState}
-                  />
+      {/* ── BLUR CONFIRMATION MODAL ── */}
+      {showBlurConfirm && (
+        <div 
+          className={styles.modalOverlay} 
+          onClick={e => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blur-modal-title"
+        >
+          <div className={styles.modal}>
+            <div className={styles.modalIcon} aria-hidden="true">
+              {isBlurred ? <Eye size={28} /> : <EyeOff size={28} />}
+            </div>
+            <h2 id="blur-modal-title" className={styles.modalTitle}>
+              {isBlurred ? 'Remove video blur?' : 'Blur your video?'}
+            </h2>
+            <p className={styles.modalText}>
+              {isBlurred 
+                ? 'The other person will be able to see you clearly again.'
+                : 'The other person will see a blurred version of your video. You can unblur anytime.'}
+            </p>
+            <div className={styles.modalActions}>
+              <button 
+                onClick={handleCancelBlur} 
+                className={styles.modalCancelBtn}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBlur}
+                className={styles.modalConfirmBtn}
+                aria-label={isBlurred ? 'Confirm remove blur' : 'Confirm blur'}
+              >
+                {isBlurred ? 'Remove Blur' : 'Apply Blur'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OVERLAYS ── */}
+      {(searching || autoSearchCountdown !== null) && (
+        <div className={styles.overlay} role="alert" aria-live="polite">
+          <div className={styles.overlayGradient} aria-hidden="true" />
+
+          {autoSearchCountdown !== null ? (
+            <div className={styles.countdownOverlay}>
+              <div className={styles.countdownText} aria-label={`${autoSearchCountdown} seconds`}>
+                {autoSearchCountdown}
+              </div>
+              <div className={styles.encryptionBadge}>
+                <Shield size={15} className={styles.shieldIcon} aria-hidden="true" />
+                <span className={styles.encryptionText}>Secure connection ready</span>
+              </div>
+              <button 
+                onClick={onCancelAutoSearch} 
+                className={styles.terminateBtn}
+                aria-label="Cancel auto search"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className={styles.searchingOverlay}>
+              <div className={styles.orbitingHearts} aria-hidden="true">
+                <div className={styles.orbitRing}>
+                  <Heart size={16} className={styles.orbitHeart1} fill="currentColor" />
+                  <Heart size={12} className={styles.orbitHeart2} fill="currentColor" />
+                  <Heart size={14} className={styles.orbitHeart3} fill="currentColor" />
                 </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSkip}
-                  disabled={isSkipping}
-                  className="skip-button"
-                >
-                  {isSkipping ? (
-                    <Loader className="skip-button-spinner" size={16} />
-                  ) : (
-                    <SkipForward size={16} />
-                  )}
-                  <span className="skip-button-text-desktop">Next Match</span>
-                  <span className="skip-button-text-mobile">Next</span>
-                </motion.button>
-
-                <div className="control-group-right">
-                  <FlexButton 
-                    onClick={() => {
-                      const ns = !isBlurred;
-                      setIsBlurred(ns);
-                      triggerStatusMessage('blur', !ns);
-                      onBlurToggle?.(ns);
-                    }} 
-                    Icon={isBlurred ? EyeOff : Eye} 
-                    isActive={!isBlurred}
-                    isAccent={isBlurred}
-                  />
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={onLeave}
-                    className="end-call-button"
-                  >
-                    <PhoneOff size={18} />
-                  </motion.button>
+                <div className={styles.spinnerCenter}>
+                  <Loader size={30} className={styles.spinnerIcon} />
                 </div>
               </div>
-            </motion.div>
+              <div className={styles.searchingTextContainer}>
+                <div className={styles.synchronizingText}>Looking for your match</div>
+                <p className={styles.searchingSubtext}>
+                  Someone great is just around the corner…
+                </p>
+              </div>
+            </div>
           )}
-        </AnimatePresence>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default App;
+export default CallScreen;
