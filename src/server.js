@@ -12,8 +12,6 @@ const helmet       = require('helmet');
 const rateLimit    = require('express-rate-limit');
 const compression  = require('compression');
 const mongoose     = require('mongoose');
-const speakeasy    = require('speakeasy');
-const QRCode       = require('qrcode');
 
 // ─── App Bootstrap ────────────────────────────────────────────────────────────
 const app    = express();
@@ -31,7 +29,6 @@ const OREY_ID_TTL_MS             = 24 * 60 * 60 * 1000;
 const AUTO_SEARCH_DELAY_MS       = 5000;
 const API_KEY                    = process.env.API_KEY                    || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY                  = process.env.ADMIN_KEY                  || 'admin_secret_change_this';
-const TOTP_SECRET                = process.env.TOTP_SECRET                || null; // set via /admin/totp/setup
 const AUTO_BAN_THRESHOLD         = 3;
 const HIGH_PRIORITY_BAN_THRESHOLD = 2;
 const DEFAULT_BAN_DURATION_HOURS = 720;
@@ -61,14 +58,6 @@ const REGULAR_REASONS = [
 ];
 
 // ─── MongoDB Schemas ──────────────────────────────────────────────────────────
-
-// Persisted TOTP secret for the admin
-const TotpConfigSchema = new mongoose.Schema({
-  _id:       { type: String, default: 'singleton' },
-  secret:    { type: String, required: true },
-  createdAt: { type: Date,   default: Date.now },
-});
-const TotpConfig = mongoose.model('TotpConfig', TotpConfigSchema);
 
 // Banned devices
 const BanSchema = new mongoose.Schema({
@@ -155,7 +144,6 @@ let bannedDevicesCache     = new Map(); // deviceId → banDoc
 let appConfig              = null;      // loaded from DB
 let notificationsCache     = [];        // loaded from DB
 let notificationIdCounter  = 1;         // monotonic counter
-let totpSecret             = TOTP_SECRET; // loaded from DB if available
 
 // ─── DB Init & Cache Warmup ───────────────────────────────────────────────────
 async function initDB() {
@@ -213,29 +201,28 @@ async function initDB() {
     notificationIdCounter = Math.max(...notifs.map(n => n.id)) + 1;
   }
   console.log(`📦 Loaded ${notificationsCache.length} notifications`);
-
-  // Load TOTP secret
-  const totpDoc = await TotpConfig.findById('singleton').lean();
-  if (totpDoc) { totpSecret = totpDoc.secret; console.log('🔐 TOTP secret loaded'); }
-  else console.log('⚠️  No TOTP secret found — visit POST /admin/totp/setup to generate one');
 }
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: 'Too many requests, please try again later.' } });
+const apiLimiter = rateLimit({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
+  message: { error: 'Too many requests, please try again later.' } 
+});
 app.use('/api/',   apiLimiter);
 app.use('/admin/', apiLimiter);
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors:              { origin: '*', methods: ['GET', 'POST'] },
-  maxHttpBufferSize: 1e7, // 10MB (reduced from 100MB for safety)
+  maxHttpBufferSize: 1e7, // 10MB
   pingTimeout:       60000,
   pingInterval:      25000,
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateOreyId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O/0/1/I ambiguity
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let suffix = '';
   for (let i = 0; i < 5; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
   return 'OREY-' + suffix;
@@ -300,7 +287,6 @@ function attemptMatch(newSocketId) {
   const selfSocket    = io.sockets.sockets.get(selfId);
   const partnerSocket = io.sockets.sockets.get(partnerId);
 
-  // Re-queue both if either is gone (bug fix)
   if (!selfSocket || !partnerSocket) {
     if (selfSocket)    { randomQueue.push(selfId);    attemptMatch(selfId); }
     if (partnerSocket) { randomQueue.push(partnerId); attemptMatch(partnerId); }
@@ -363,8 +349,6 @@ async function banDeviceAndDisconnect(deviceId, banInfo) {
   }
 
   console.log(`🚫 Banned device: ${deviceId.substring(0, 12)}... - ${socketsToDisconnect.length} sockets disconnected`);
-  console.log(`📋 Ban reason: ${banInfo.reason}`);
-  console.log(`⏰ Ban duration: ${banInfo.permanent ? 'PERMANENT' : `${banInfo.durationHours} hours`}`);
   return socketsToDisconnect.length;
 }
 
@@ -373,12 +357,6 @@ function validateOreyId(id) {
   if (cleanId.startsWith('OREY-')) return cleanId.length === 10 ? cleanId : null;
   if (cleanId.length === 5) return 'OREY-' + cleanId;
   return null;
-}
-
-// ─── TOTP helpers ─────────────────────────────────────────────────────────────
-function verifyTotp(token) {
-  if (!totpSecret) return false;
-  return speakeasy.totp.verify({ secret: totpSecret, encoding: 'base32', token: String(token), window: 1 });
 }
 
 // ─── Auth Middleware ──────────────────────────────────────────────────────────
@@ -390,27 +368,11 @@ const verifyApiKey = (req, res, next) => {
 };
 
 const verifyAdminKey = (req, res, next) => {
-  const key = req.headers['x-admin-key'];
-  if (!key)       return res.status(401).json({ error: 'Admin key required' });
+  const key = req.headers['x-admin-key'] || req.query.admin_key || req.body.admin_key;
+  if (!key)       return res.status(401).json({ error: 'Admin key required. Use x-admin-key header or admin_key parameter.' });
   if (key !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key' });
   next();
 };
-
-// TOTP middleware — applied on top of verifyAdminKey for sensitive admin routes
-const verifyTotp2FA = (req, res, next) => {
-  const token = req.headers['x-totp-token'] || req.body?.totpToken || req.query?.totpToken;
-  if (!totpSecret) {
-    // TOTP not configured yet — warn but allow (so setup can proceed)
-    console.warn('⚠️  TOTP not configured — skipping 2FA check');
-    return next();
-  }
-  if (!token)            return res.status(401).json({ error: 'TOTP token required (x-totp-token header)' });
-  if (!verifyTotp(token)) return res.status(403).json({ error: 'Invalid or expired TOTP token' });
-  next();
-};
-
-// Combined: admin key + TOTP
-const verifyAdminFull = [verifyAdminKey, verifyTotp2FA];
 
 // ─── Notification helpers ─────────────────────────────────────────────────────
 function isNotifExpired(n) {
@@ -430,46 +392,21 @@ async function persistAppConfig() {
 }
 
 // ─── Public Endpoints ─────────────────────────────────────────────────────────
-
-// TOTP Setup — generates a new secret and returns a QR code
-// POST /admin/totp/setup  (requires x-admin-key only, no TOTP yet since we're setting it up)
-app.post('/admin/totp/setup', verifyAdminKey, async (req, res) => {
-  const generated = speakeasy.generateSecret({ name: 'Orey Admin', length: 20 });
-  totpSecret = generated.base32;
-  await TotpConfig.findByIdAndUpdate('singleton', { $set: { secret: totpSecret } }, { upsert: true });
-  const qr = await QRCode.toDataURL(generated.otpauth_url);
-  res.json({
-    success: true,
-    secret:  totpSecret,
-    otpauth: generated.otpauth_url,
-    qrCode:  qr, // base64 PNG — scan with Google Authenticator
-    instructions: 'Scan the qrCode image with Google Authenticator. Then include x-totp-token header in all admin requests.',
-  });
-});
-
-// TOTP Verify — test a token
-app.post('/admin/totp/verify', verifyAdminKey, (req, res) => {
-  const { token } = req.body;
-  if (!totpSecret) return res.status(400).json({ error: 'TOTP not configured. POST /admin/totp/setup first.' });
-  const valid = verifyTotp(token);
-  res.json({ valid, message: valid ? '✅ Token is valid' : '❌ Invalid or expired token' });
-});
-
 app.get('/health', (_req, res) => {
   res.json({
-    status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime(),
+    status: 'ok', 
+    timestamp: new Date().toISOString(), 
+    uptime: process.uptime(),
     activeConnections: io.engine.clientsCount,
     bannedDevices: bannedDevicesCache.size,
     notificationSubscriptions: notificationSubscriptions.size,
     memory: +(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    totpConfigured: !!totpSecret,
   });
 });
 
 app.get('/generate-orey-id', (_req, res) => {
   cleanExpiredOreyIds();
-  // Ensure no collision
   let oreyId;
   let attempts = 0;
   do { oreyId = generateOreyId(); attempts++; } while (oreyIds.has(oreyId) && attempts < 20);
@@ -484,7 +421,7 @@ app.get('/api/get-key-hash', (_req, res) => {
   res.json({ hash: crypto.createHash('sha256').update(API_KEY).digest('hex').substring(0, 32) });
 });
 
-// ─── App API Endpoints ────────────────────────────────────────────────────────
+// ─── App API Endpoints (Protected with API Key) ───────────────────────────────
 app.get('/api/version', (req, res) => {
   const platform = req.query.platform || 'android';
   const clientVersion = parseInt(req.query.version) || 0;
@@ -508,43 +445,29 @@ app.get('/api/notifications', (req, res) => {
   }
 
   res.json({
-    success: true, notifications: filtered, total: filtered.length,
+    success: true, 
+    notifications: filtered, 
+    total: filtered.length,
     unread: filtered.filter(n => !n.isRead).length,
     serverTime: new Date().toISOString(),
     lastId: filtered.length > 0 ? Math.max(...filtered.map(n => n.id)) : lastId,
   });
 });
 
-app.get('/api/notifications/latest', verifyApiKey, (req, res) => {
-  const { device_id: deviceId, last_check: lastCheck, platform = 'android' } = req.query;
-  if (!deviceId) return res.status(400).json({ error: 'device_id is required' });
-
-  notificationSubscriptions.set(deviceId, { lastCheck: new Date().toISOString(), platform, lastSeen: lastCheck });
-
-  let relevant = notificationsCache.filter(n => {
-    const notifTime    = new Date(n.timestamp).getTime();
-    const lastCheckTime = lastCheck ? new Date(lastCheck).getTime() : 0;
-    return notifTime > lastCheckTime && !isNotifExpired(n);
-  });
-
-  relevant.sort((a, b) => {
-    if (a.priority === 'high' && b.priority !== 'high') return -1;
-    if (a.priority !== 'high' && b.priority === 'high') return 1;
-    return b.id - a.id;
-  });
-
-  res.json({
-    success: true, notifications: relevant, count: relevant.length,
-    serverTime: new Date().toISOString(),
-    serverConfig: { pollInterval: 15000, maxNotifications: 10 },
-  });
-});
-
 app.get('/api/config', (req, res) => {
   const clientVersion = parseInt(req.query.version) || 0;
   res.json({
-    features: { videoCall: true, hdVideo: clientVersion >= 2, groupCall: false, screenShare: clientVersion >= 3, reporting: true, safetyFeatures: true },
-    videoQuality: appConfig.videoQuality, iceServers: ICE_SERVERS, safety: appConfig.safety,
+    features: { 
+      videoCall: true, 
+      hdVideo: clientVersion >= 2, 
+      groupCall: false, 
+      screenShare: clientVersion >= 3, 
+      reporting: true, 
+      safetyFeatures: true 
+    },
+    videoQuality: appConfig.videoQuality, 
+    iceServers: ICE_SERVERS, 
+    safety: appConfig.safety,
     reportReasons: { highPriority: HIGH_PRIORITY_REASONS, regular: REGULAR_REASONS },
     urls: {
       mainApp:    process.env.MAIN_APP_URL || 'https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/',
@@ -556,12 +479,20 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// ─── Device & Report Endpoints ────────────────────────────────────────────────
+// ─── Device & Report Endpoints (Protected with API Key) ───────────────────────
 app.post('/api/device/register', verifyApiKey, (req, res) => {
   const { deviceId, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const banInfo = isDeviceBanned(deviceId);
-  if (banInfo) return res.status(403).json({ error: 'Device is banned', banned: true, reason: banInfo.reason, timestamp: banInfo.timestamp, expiresAt: banInfo.expiresAt || null, durationHours: banInfo.durationHours || null, permanent: !banInfo.expiresAt });
+  if (banInfo) return res.status(403).json({ 
+    error: 'Device is banned', 
+    banned: true, 
+    reason: banInfo.reason, 
+    timestamp: banInfo.timestamp, 
+    expiresAt: banInfo.expiresAt || null, 
+    durationHours: banInfo.durationHours || null, 
+    permanent: !banInfo.expiresAt 
+  });
   console.log(`📱 Device registered: ${deviceId.substring(0, 12)}... (${platform || 'unknown'})`);
   res.json({ success: true, deviceId, registered: true, timestamp: new Date().toISOString() });
 });
@@ -580,9 +511,7 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
   if (!reporterDeviceId)             return res.status(400).json({ error: 'reporterDeviceId is required' });
   if (reporterDeviceId === reportedDeviceId) return res.status(400).json({ error: 'Cannot report yourself' });
 
-  // Check duplicate report using DB
-  const existing = await ReportCount.findOne({ deviceId: reporterDeviceId, reportedBy: reportedDeviceId }).lean();
-  // reportedBy is actually a list on the REPORTED device, so we check differently:
+  // Check duplicate report
   const reportedDoc = await ReportCount.findOne({ deviceId: reportedDeviceId }).lean();
   if (reportedDoc && reportedDoc.reportedBy && reportedDoc.reportedBy.includes(reporterDeviceId)) {
     return res.status(400).json({ error: 'Already reported this user', alreadyReported: true });
@@ -610,7 +539,6 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
   const highPriorityCount = counter.highPriority;
 
   console.log(`🚨 Report #${reportId}: ${reportedDeviceId.substring(0, 12)}... for "${reason}" (HP:${isHighPriority})`);
-  console.log(`📊 Report count: ${currentCount} total, ${highPriorityCount} high priority`);
 
   let autoBanned = false, banInfo = null;
   const shouldAutoBan = (isHighPriority && highPriorityCount >= HIGH_PRIORITY_BAN_THRESHOLD) ||
@@ -634,7 +562,16 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     console.log(`🤖 AUTO-BANNED: ${reportedDeviceId.substring(0, 12)}... - ${banInfo.permanent ? 'PERMANENT' : `${banInfo.durationHours} hours`}`);
   }
 
-  res.json({ success: true, reportId, reportCount: currentCount, highPriorityCount, isHighPriority, autoBanned, banInfo: banInfo || null, thresholds: { regular: AUTO_BAN_THRESHOLD, highPriority: HIGH_PRIORITY_BAN_THRESHOLD } });
+  res.json({ 
+    success: true, 
+    reportId, 
+    reportCount: currentCount, 
+    highPriorityCount, 
+    isHighPriority, 
+    autoBanned, 
+    banInfo: banInfo || null, 
+    thresholds: { regular: AUTO_BAN_THRESHOLD, highPriority: HIGH_PRIORITY_BAN_THRESHOLD } 
+  });
 });
 
 // ─── Notification Read Endpoints ──────────────────────────────────────────────
@@ -643,7 +580,9 @@ app.put('/api/notifications/:id/read', verifyApiKey, async (req, res) => {
   const notif = notificationsCache.find(n => n.id === id);
   if (!notif) return res.status(404).json({ error: 'Notification not found' });
   const deviceId = req.body.deviceId || 'unknown';
-  notif.isRead = true; notif.readAt = new Date().toISOString(); notif.readBy = deviceId;
+  notif.isRead = true; 
+  notif.readAt = new Date().toISOString(); 
+  notif.readBy = deviceId;
   await Notification.findOneAndUpdate({ id }, { $set: { isRead: true, readAt: notif.readAt, readBy: deviceId } }).catch(() => {});
   res.json({ success: true, notification: notif });
 });
@@ -652,17 +591,29 @@ app.put('/api/notifications/read-all', verifyApiKey, async (req, res) => {
   const deviceId = req.body.deviceId || 'unknown';
   let marked = 0;
   for (const n of notificationsCache) {
-    if (!n.isRead) { n.isRead = true; n.readAt = new Date().toISOString(); n.readBy = deviceId; marked++; }
+    if (!n.isRead) { 
+      n.isRead = true; 
+      n.readAt = new Date().toISOString(); 
+      n.readBy = deviceId; 
+      marked++; 
+    }
   }
   await Notification.updateMany({ isRead: false }, { $set: { isRead: true, readAt: new Date().toISOString(), readBy: deviceId } }).catch(() => {});
   res.json({ success: true, markedAsRead: marked });
 });
 
-app.put('/api/version', ...verifyAdminFull, async (req, res) => {
+// ─── Admin Endpoints (Protected with Admin Key) ───────────────────────────────
+app.put('/api/version', verifyAdminKey, async (req, res) => {
   const { platform, versionCode, versionName, updateType, updateMessage, downloadUrl, whatsNew } = req.body;
   if (!platform || !versionCode) return res.status(400).json({ error: 'Platform and versionCode required' });
   if (!appConfig[platform]) appConfig[platform] = {};
-  Object.assign(appConfig[platform], { versionCode, versionName: versionName || `v${versionCode}`, updateType: updateType || 'flexible', updateMessage: updateMessage || 'New update available!', downloadUrl: downloadUrl || appConfig[platform].downloadUrl });
+  Object.assign(appConfig[platform], { 
+    versionCode, 
+    versionName: versionName || `v${versionCode}`, 
+    updateType: updateType || 'flexible', 
+    updateMessage: updateMessage || 'New update available!', 
+    downloadUrl: downloadUrl || appConfig[platform].downloadUrl 
+  });
   if (whatsNew) appConfig[platform].whatsNew = whatsNew;
   await persistAppConfig();
   io.emit('update-available', appConfig[platform]);
@@ -670,36 +621,59 @@ app.put('/api/version', ...verifyAdminFull, async (req, res) => {
 });
 
 // ─── Admin Notification Endpoints ─────────────────────────────────────────────
-app.get('/admin/notifications', ...verifyAdminFull, (req, res) => {
+app.get('/admin/notifications', verifyAdminKey, (req, res) => {
   const active = notificationsCache.filter(n => !isNotifExpired(n));
   res.json({ notifications: notificationsCache, total: notificationsCache.length, active: active.length });
 });
 
-app.post('/admin/notifications', ...verifyAdminFull, async (req, res) => {
+app.post('/admin/notifications', verifyAdminKey, async (req, res) => {
   const { title, message, type, priority, actionUrl, icon, imageUrl, expiresIn, targetPlatform } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
+  
   const newNotification = {
-    id: notificationIdCounter++, title, message, type: type || 'info', priority: priority || 'normal',
-    targetPlatform: targetPlatform || 'all', timestamp: new Date().toISOString(),
-    actionUrl: actionUrl || '/', icon: icon || '📢', imageUrl: imageUrl || null,
-    isRead: false, expiresIn: expiresIn || 30,
+    id: notificationIdCounter++, 
+    title, 
+    message, 
+    type: type || 'info', 
+    priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all', 
+    timestamp: new Date().toISOString(),
+    actionUrl: actionUrl || '/', 
+    icon: icon || '📢', 
+    imageUrl: imageUrl || null,
+    isRead: false, 
+    expiresIn: expiresIn || 30,
   };
+  
   await saveNotification(newNotification);
   io.emit('new-notification', newNotification);
+  
   console.log(`📢 Notification sent: "${title}" to ${io.engine.clientsCount} clients`);
   res.json({ success: true, notification: newNotification, activeClients: io.engine.clientsCount });
 });
 
-app.post('/admin/notifications/targeted', ...verifyAdminFull, async (req, res) => {
+app.post('/admin/notifications/targeted', verifyAdminKey, async (req, res) => {
   const { title, message, type, priority, targetPlatform, targetDeviceIds, actionUrl, icon, imageUrl, expiresIn } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
+  
   const newNotification = {
-    id: notificationIdCounter++, title, message, type: type || 'info', priority: priority || 'normal',
-    targetPlatform: targetPlatform || 'all', targetDeviceIds: targetDeviceIds || [],
-    timestamp: new Date().toISOString(), actionUrl: actionUrl || '/', icon: icon || '📢',
-    imageUrl: imageUrl || null, isRead: false, expiresIn: expiresIn || 30,
+    id: notificationIdCounter++, 
+    title, 
+    message, 
+    type: type || 'info', 
+    priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all', 
+    targetDeviceIds: targetDeviceIds || [],
+    timestamp: new Date().toISOString(), 
+    actionUrl: actionUrl || '/', 
+    icon: icon || '📢',
+    imageUrl: imageUrl || null, 
+    isRead: false, 
+    expiresIn: expiresIn || 30,
   };
+  
   await saveNotification(newNotification);
+  
   if (targetDeviceIds && targetDeviceIds.length > 0) {
     for (const [, socket] of io.sockets.sockets) {
       if (targetDeviceIds.includes(socket.data.deviceId)) socket.emit('new-notification', newNotification);
@@ -709,36 +683,33 @@ app.post('/admin/notifications/targeted', ...verifyAdminFull, async (req, res) =
     io.emit('new-notification', newNotification);
     console.log(`📢 Notification broadcast to all ${io.engine.clientsCount} clients: "${title}"`);
   }
+  
   res.json({ success: true, notification: newNotification, targeted: targetDeviceIds && targetDeviceIds.length > 0, activeClients: io.engine.clientsCount });
 });
 
-app.post('/admin/notifications/bulk', ...verifyAdminFull, async (req, res) => {
-  const { notifications: newNotifications } = req.body;
-  if (!newNotifications || !Array.isArray(newNotifications)) return res.status(400).json({ error: 'notifications array is required' });
-  const created = [];
-  for (const notif of newNotifications) {
-    if (!notif.title || !notif.message) continue;
-    const n = { id: notificationIdCounter++, title: notif.title, message: notif.message, type: notif.type || 'info', priority: notif.priority || 'normal', targetPlatform: notif.targetPlatform || 'all', timestamp: new Date().toISOString(), actionUrl: notif.actionUrl || '/', icon: notif.icon || '📢', imageUrl: notif.imageUrl || null, isRead: false, expiresIn: notif.expiresIn || 30 };
-    await saveNotification(n);
-    created.push(n);
-  }
-  io.emit('bulk-notifications', created);
-  console.log(`📢 ${created.length} bulk notifications sent to ${io.engine.clientsCount} clients`);
-  res.json({ success: true, created: created.length, notifications: created });
-});
-
-app.get('/admin/notifications/stats', ...verifyAdminFull, (req, res) => {
-  const stats = { total: notificationsCache.length, active: 0, unread: 0, byType: {}, byPriority: {}, subscriptions: notificationSubscriptions.size, deliveredCount: 0 };
+app.get('/admin/notifications/stats', verifyAdminKey, (req, res) => {
+  const stats = { 
+    total: notificationsCache.length, 
+    active: 0, 
+    unread: 0, 
+    byType: {}, 
+    byPriority: {}, 
+    subscriptions: notificationSubscriptions.size, 
+    deliveredCount: 0 
+  };
+  
   for (const n of notificationsCache) {
     if (!isNotifExpired(n)) stats.active++;
-    if (!n.isRead) stats.unread++; else stats.deliveredCount++;
+    if (!n.isRead) stats.unread++; 
+    else stats.deliveredCount++;
     stats.byType[n.type]     = (stats.byType[n.type] || 0) + 1;
     stats.byPriority[n.priority] = (stats.byPriority[n.priority] || 0) + 1;
   }
+  
   res.json(stats);
 });
 
-app.delete('/admin/notifications/:id', ...verifyAdminFull, async (req, res) => {
+app.delete('/admin/notifications/:id', verifyAdminKey, async (req, res) => {
   const id = parseInt(req.params.id);
   const idx = notificationsCache.findIndex(n => n.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Notification not found' });
@@ -748,7 +719,7 @@ app.delete('/admin/notifications/:id', ...verifyAdminFull, async (req, res) => {
 });
 
 // ─── Admin Config Endpoints ───────────────────────────────────────────────────
-app.post('/admin/maintenance', ...verifyAdminFull, async (req, res) => {
+app.post('/admin/maintenance', verifyAdminKey, async (req, res) => {
   const { enabled, message } = req.body;
   appConfig.maintenance = { enabled: enabled || false, message: message || '' };
   await persistAppConfig();
@@ -757,7 +728,7 @@ app.post('/admin/maintenance', ...verifyAdminFull, async (req, res) => {
   res.json({ success: true, maintenance: appConfig.maintenance });
 });
 
-app.put('/admin/video-quality', ...verifyAdminFull, async (req, res) => {
+app.put('/admin/video-quality', verifyAdminKey, async (req, res) => {
   const { default: def, autoAdjust, maxBitrate } = req.body;
   if (def && VIDEO_QUALITY[def]) appConfig.videoQuality.default = def;
   if (autoAdjust !== undefined) appConfig.videoQuality.autoAdjust = autoAdjust;
@@ -767,7 +738,7 @@ app.put('/admin/video-quality', ...verifyAdminFull, async (req, res) => {
   res.json({ success: true, videoQuality: appConfig.videoQuality });
 });
 
-app.put('/admin/safety-settings', ...verifyAdminFull, async (req, res) => {
+app.put('/admin/safety-settings', verifyAdminKey, async (req, res) => {
   const { autoBanEnabled, autoBanThreshold, highPriorityThreshold, reportingEnabled, contentModeration } = req.body;
   if (autoBanEnabled !== undefined)         appConfig.safety.autoBanEnabled         = autoBanEnabled;
   if (autoBanThreshold)                     appConfig.safety.autoBanThreshold        = autoBanThreshold;
@@ -780,13 +751,14 @@ app.put('/admin/safety-settings', ...verifyAdminFull, async (req, res) => {
 });
 
 // ─── Admin Report Endpoints ───────────────────────────────────────────────────
-app.get('/admin/reports', ...verifyAdminFull, async (req, res) => {
+app.get('/admin/reports', verifyAdminKey, async (req, res) => {
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
   const allReports = await Report.find(filter).sort({ timestamp: -1 }).lean();
   const total = await Report.countDocuments({});
   res.json({
-    reports: allReports, total: allReports.length,
+    reports: allReports, 
+    total: allReports.length,
     pending:    await Report.countDocuments({ status: 'pending' }),
     autoBanned: await Report.countDocuments({ status: 'auto_banned' }),
     highPriority: await Report.countDocuments({ isHighPriority: true }),
@@ -794,7 +766,7 @@ app.get('/admin/reports', ...verifyAdminFull, async (req, res) => {
   });
 });
 
-app.post('/admin/reports/:reportId/action', ...verifyAdminFull, async (req, res) => {
+app.post('/admin/reports/:reportId/action', verifyAdminKey, async (req, res) => {
   const { reportId } = req.params;
   const { action, banDuration, notes } = req.body;
   const report = await Report.findOne({ id: reportId });
@@ -807,12 +779,23 @@ app.post('/admin/reports/:reportId/action', ...verifyAdminFull, async (req, res)
   switch (action) {
     case 'ban': {
       const d = banDuration || DEFAULT_BAN_DURATION_HOURS;
-      const bi = { deviceId: report.reportedDeviceId, reason: report.reason, timestamp: new Date().toISOString(), expiresAt: d > 0 ? new Date(Date.now() + d * 3600000) : null, durationHours: d > 0 ? d : null, permanent: d === 0, source: 'admin', reportIds: [reportId] };
+      const bi = { 
+        deviceId: report.reportedDeviceId, 
+        reason: report.reason, 
+        timestamp: new Date().toISOString(), 
+        expiresAt: d > 0 ? new Date(Date.now() + d * 3600000) : null, 
+        durationHours: d > 0 ? d : null, 
+        permanent: d === 0, 
+        source: 'admin', 
+        reportIds: [reportId] 
+      };
       await banDeviceAndDisconnect(report.reportedDeviceId, bi);
       report.status = 'banned';
       break;
     }
-    case 'dismiss': report.status = 'dismissed'; break;
+    case 'dismiss': 
+      report.status = 'dismissed'; 
+      break;
     case 'warn': {
       report.status = 'warned';
       for (const [, s] of io.sockets.sockets) {
@@ -829,21 +812,28 @@ app.post('/admin/reports/:reportId/action', ...verifyAdminFull, async (req, res)
 });
 
 // ─── Admin Ban Endpoints ──────────────────────────────────────────────────────
-app.post('/admin/ban-device', ...verifyAdminFull, async (req, res) => {
+app.post('/admin/ban-device', verifyAdminKey, async (req, res) => {
   const { deviceId, reason, durationHours } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const existing = isDeviceBanned(deviceId);
   if (existing) return res.status(400).json({ error: 'Device is already banned', existingBan: existing });
-  const bi = { deviceId, reason: reason || 'Violation of terms', timestamp: new Date().toISOString(), expiresAt: durationHours ? new Date(Date.now() + durationHours * 3600000) : null, durationHours: durationHours || null, permanent: !durationHours, source: 'manual' };
+  const bi = { 
+    deviceId, 
+    reason: reason || 'Violation of terms', 
+    timestamp: new Date().toISOString(), 
+    expiresAt: durationHours ? new Date(Date.now() + durationHours * 3600000) : null, 
+    durationHours: durationHours || null, 
+    permanent: !durationHours, 
+    source: 'manual' 
+  };
   const dced = await banDeviceAndDisconnect(deviceId, bi);
   res.json({ success: true, deviceId: deviceId.substring(0, 12) + '...', banInfo: bi, socketsDisconnected: dced });
 });
 
-app.delete('/admin/ban-device/:deviceId', ...verifyAdminFull, async (req, res) => {
+app.delete('/admin/ban-device/:deviceId', verifyAdminKey, async (req, res) => {
   let { deviceId } = req.params;
   try { deviceId = decodeURIComponent(deviceId); } catch (e) {}
 
-  // Try exact match first, then case-insensitive, then partial
   let found = null;
   if (bannedDevicesCache.has(deviceId)) {
     found = deviceId;
@@ -866,8 +856,7 @@ app.delete('/admin/ban-device/:deviceId', ...verifyAdminFull, async (req, res) =
   res.json({ success: true, message: 'Device unbanned successfully', matchedId: found.substring(0, 20) + '...' });
 });
 
-app.get('/admin/banned-devices', ...verifyAdminFull, async (req, res) => {
-  // Sync expired bans from cache
+app.get('/admin/banned-devices', verifyAdminKey, async (req, res) => {
   for (const [deviceId, info] of bannedDevicesCache.entries()) {
     if (info.expiresAt && Date.now() > new Date(info.expiresAt).getTime()) {
       bannedDevicesCache.delete(deviceId);
@@ -882,13 +871,17 @@ app.get('/admin/banned-devices', ...verifyAdminFull, async (req, res) => {
   res.json({ bannedDevices: list, total: list.length, permanent: list.filter(b => b.permanent).length, temporary: list.filter(b => !b.permanent).length });
 });
 
-app.get('/admin/stats', ...verifyAdminFull, async (req, res) => {
+app.get('/admin/stats', verifyAdminKey, async (req, res) => {
   const activeSubscribers = [...notificationSubscriptions.entries()]
     .filter(([, data]) => (Date.now() - new Date(data.lastCheck).getTime()) < 60000).length;
   res.json({
-    activeConnections: io.engine.clientsCount, totalOreyIds: oreyIds.size, activeRooms: rooms.size,
-    queueLength: randomQueue.length, totalNotifications: notificationsCache.length,
-    activeNotificationSubscribers: activeSubscribers, totalNotificationSubscriptions: notificationSubscriptions.size,
+    activeConnections: io.engine.clientsCount, 
+    totalOreyIds: oreyIds.size, 
+    activeRooms: rooms.size,
+    queueLength: randomQueue.length, 
+    totalNotifications: notificationsCache.length,
+    activeNotificationSubscribers: activeSubscribers, 
+    totalNotificationSubscriptions: notificationSubscriptions.size,
     bannedDevices: bannedDevicesCache.size,
     totalReports:    await Report.countDocuments({}),
     pendingReports:  await Report.countDocuments({ status: 'pending' }),
@@ -899,7 +892,6 @@ app.get('/admin/stats', ...verifyAdminFull, async (req, res) => {
     memoryMB: +(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
     safetySettings: appConfig.safety,
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    totpConfigured: !!totpSecret,
   });
 });
 
@@ -1109,21 +1101,16 @@ io.on('connection', (socket) => {
 });
 
 // ─── Periodic Cleanup ─────────────────────────────────────────────────────────
-// Expired notifications (hourly)
 setInterval(async () => {
   const before = notificationsCache.length;
   notificationsCache = notificationsCache.filter(n => !isNotifExpired(n));
   const cleaned = before - notificationsCache.length;
   if (cleaned > 0) {
     console.log(`🧹 Cleaned ${cleaned} expired notifications from cache`);
-    // Also purge from DB
-    const now = new Date();
-    await Notification.deleteMany({}).catch(() => {}); // We'll re-seed from cache; or selectively delete expired
   }
-}, 3_600_000);
+}, 3600000); // Every hour
 
-// Expired Orey IDs (every 10 min)
-setInterval(cleanExpiredOreyIds, 10 * 60 * 1000);
+setInterval(cleanExpiredOreyIds, 10 * 60 * 1000); // Every 10 minutes
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 async function start() {
@@ -1142,7 +1129,6 @@ async function start() {
       console.log(`🛡️  Safety Features: ${appConfig.safety.autoBanEnabled ? 'ENABLED' : 'DISABLED'}`);
       console.log(`🔔 Notification System: ACTIVE`);
       console.log(`🗄️  Database: MongoDB`);
-      console.log(`🔐 TOTP 2FA: ${totpSecret ? 'CONFIGURED' : 'NOT CONFIGURED — POST /admin/totp/setup'}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
   } catch (err) {
