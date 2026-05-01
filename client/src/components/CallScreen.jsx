@@ -5,7 +5,7 @@ import {
   Shield, VolumeX, Heart, Sparkles,
   Eye, EyeOff, SkipForward, MoreHorizontal
 } from 'lucide-react';
-import styles from './App.css';
+import styles from './CallScreen.module.css';
 
 const CallScreen = ({
   partner = null,
