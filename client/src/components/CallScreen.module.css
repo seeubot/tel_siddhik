@@ -35,6 +35,23 @@
   object-fit: cover;
 }
 
+/* Hide native HTML5 video controls on Android/iOS */
+.video::-webkit-media-controls,
+.localVideo::-webkit-media-controls {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+.video::-webkit-media-controls-start-playback-button,
+.localVideo::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+.video::-webkit-media-controls-enclosure,
+.localVideo::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
 /* ── Swipe Card ── */
 .swipeCard {
   position: absolute;
@@ -251,54 +268,6 @@
   color: #22c55e;
   font-size: 0.65rem;
   font-weight: 600;
-}
-
-/* ── PiP ── */
-.pipContainer {
-  position: absolute;
-  top: 60px;
-  right: 10px;
-  width: clamp(80px, 20vw, 120px);
-  height: clamp(110px, 27vw, 170px);
-  z-index: 25;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-}
-
-.pipVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1);
-}
-
-.pipCameraOff {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.pipLabel {
-  position: absolute;
-  bottom: 4px;
-  left: 4px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-radius: 4px;
-  font-size: 0.55rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
 }
 
 /* ── Searching Overlay ── */
@@ -771,13 +740,6 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .controlBarWrapper {
     padding-bottom: 8px;
-  }
-  
-  .pipContainer {
-    top: 40px;
-    right: 6px;
-    width: 60px;
-    height: 85px;
   }
 
   .topBar {
