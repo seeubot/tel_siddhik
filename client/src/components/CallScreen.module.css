@@ -1,176 +1,192 @@
-/* ════════════════════════════════════════════════
-   CALL SCREEN — iOS Native Feel
-   ════════════════════════════════════════════════ */
-
-* {
-  -webkit-tap-highlight-color: transparent;
-  box-sizing: border-box;
-}
+/* ════════════════════════════════════
+   CALL SCREEN - iOS Minimal Theme
+   ════════════════════════════════════ */
 
 .container {
   position: fixed;
   inset: 0;
   background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
   user-select: none;
   -webkit-user-select: none;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── REMOTE VIEW (top 60%) ── */
+/* ── REMOTE VIEW (60%) ── */
 .remoteView {
   position: relative;
   flex: 6;
+  background: #0a0a14;
   overflow: hidden;
-  background: #000;
 }
 
-.dragContainer {
-  position: absolute;
-  inset: 0;
-  cursor: grab;
-  touch-action: pan-y;
-}
-
-.dragContainer:active {
-  cursor: grabbing;
-}
-
-/* Remote video — always rendered, visibility toggled */
 .video {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   background: #000;
 }
 
-/* ── POSTER (shown when no remote video) ── */
-.posterContainer {
+.idBadge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.idBadge:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Brand Overlay ── */
+.brandOverlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 50% 40%, #131320 0%, #080810 100%);
-  z-index: 2;
+  background: linear-gradient(135deg, #0a0a14, #0f0a1e);
+  z-index: 5;
 }
 
-.oreyMark {
-  font-size: 4.5rem;
+.brandText {
+  font-size: 4rem;
   font-weight: 900;
-  letter-spacing: -0.06em;
-  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #c084fc 100%);
+  background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: breathe 4s ease-in-out infinite;
+  animation: brandGlow 3s ease-in-out infinite;
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.04); }
+@keyframes brandGlow {
+  0%, 100% { filter: drop-shadow(0 0 20px rgba(129, 140, 248, 0.3)); }
+  50% { filter: drop-shadow(0 0 40px rgba(192, 132, 252, 0.5)); }
 }
 
-/* ── SEARCHING OVERLAY ── */
+/* ── Status Badge ── */
+.statusBadge {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  color: #f87171;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 10;
+}
+
+/* ── Searching Overlay ── */
 .searchingOverlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 50% 40%, #131320 0%, #080810 100%);
+  background: linear-gradient(135deg, #0a0a14, #0f0a1e);
   z-index: 10;
 }
 
-.searchingAnimation {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.searchingContent {
+  text-align: center;
 }
 
-.wave {
-  position: absolute;
-  inset: 0;
-  border: 1.5px solid rgba(129, 140, 248, 0.5);
+.searchingRing {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(99, 102, 241, 0.3);
+  border-top-color: #818cf8;
   border-radius: 50%;
-  animation: ripple 2s ease-out infinite;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
 }
 
-.wave:nth-child(2) { animation-delay: 0.5s; }
-.wave:nth-child(3) { animation-delay: 1s; }
-
-@keyframes ripple {
-  0% { transform: scale(0.4); opacity: 1; }
-  100% { transform: scale(1.6); opacity: 0; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.searchingIcon {
-  position: relative;
-  z-index: 1;
-  color: #818cf8;
+.searchingTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px;
 }
 
-/* ── COUNTDOWN ── */
+.searchingSubtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+}
+
+/* ── Countdown ── */
 .countdownContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
+  text-align: center;
 }
 
 .countdownNumber {
-  font-size: clamp(6rem, 18vw, 10rem);
+  font-size: 5rem;
   font-weight: 900;
-  line-height: 1;
-  background: linear-gradient(135deg, #fff 30%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: pulse 1s ease-in-out infinite;
+  color: #fff;
+  display: block;
+  margin-bottom: 12px;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+.countdownLabel {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 16px;
 }
 
 .cancelBtn {
-  padding: 0.55rem 1.4rem;
+  padding: 10px 24px;
   background: rgba(255, 255, 255, 0.08);
-  border: 0.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: 2rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.78rem;
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
 }
 
 .cancelBtn:active {
   background: rgba(255, 255, 255, 0.15);
-  transform: scale(0.96);
 }
 
-/* ── LOCAL VIEW (bottom 40%) ── */
+/* ── LOCAL VIEW (40%) ── */
 .localView {
   position: relative;
   flex: 4;
+  background: #0a0a14;
   overflow: hidden;
-  background: #050508;
   border-top: 0.5px solid rgba(255, 255, 255, 0.08);
 }
 
 .localVideo {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -178,239 +194,114 @@
   background: #000;
 }
 
-/* ════════════════════════════════════════════════
-   iOS STYLE CONTROL BAR
-   ════════════════════════════════════════════════ */
+/* ════════════════════════════════════
+   iOS CONTROL BAR
+   ════════════════════════════════════ */
 
 .controlBarWrapper {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: 30;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  padding: 0 24px 32px;
-  padding-bottom: max(32px, env(safe-area-inset-bottom));
-  pointer-events: none;
+  padding: 0 16px 34px;
+  padding-bottom: max(34px, env(safe-area-inset-bottom));
 }
 
 .controlBar {
-  pointer-events: all;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 10px;
-  background: rgba(28, 28, 32, 0.72);
-  backdrop-filter: blur(48px) saturate(180%);
-  -webkit-backdrop-filter: blur(48px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50px;
-  box-shadow:
-    0 0 0 0.5px rgba(0,0,0,0.4),
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255,255,255,0.08);
+  gap: 12px;
+  padding: 8px 8px;
+  background: rgba(28, 28, 30, 0.7);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 34px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ── Base control button ── */
 .controlBtn {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: none;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
   cursor: pointer;
-  transition:
-    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background 0.15s ease,
-    box-shadow 0.15s ease;
-  outline: none;
-  position: relative;
+  transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Active (on) state */
-.controlBtnOn {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 2px 8px rgba(0,0,0,0.25);
+.controlBtn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.22);
 }
 
-/* Off / muted state */
 .controlBtnOff {
-  background: rgba(255, 55, 48, 0.22);
+  background: rgba(255, 59, 48, 0.2);
   color: #ff453a;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    0 2px 8px rgba(255,55,48,0.2);
 }
 
-/* Skip button */
-.controlBtnSkip {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    0 2px 6px rgba(0,0,0,0.2);
+.controlBtnOff:active {
+  background: rgba(255, 59, 48, 0.35);
 }
 
-/* Press states */
-.controlBtnOn:active,
-.controlBtnOff:active,
-.controlBtnSkip:active {
-  transform: scale(0.88);
-}
-
-/* ── End Call Button ── */
-.endBtn {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: none;
+.skipBtn {
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  outline: none;
-  background: #ff3b30;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.skipBtn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.endBtn {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ff453a;
+  border: none;
   color: #fff;
-  box-shadow:
-    0 4px 18px rgba(255, 59, 48, 0.55),
-    inset 0 1px 0 rgba(255,255,255,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.15);
-  transition:
-    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background 0.15s ease,
-    box-shadow 0.15s ease;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(255, 69, 58, 0.4);
   -webkit-tap-highlight-color: transparent;
 }
 
 .endBtn:active {
-  background: #c0392b;
-  transform: scale(0.86);
-  box-shadow:
-    0 2px 8px rgba(255, 59, 48, 0.4),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+  transform: scale(0.88);
+  background: #d63b33;
+  box-shadow: 0 2px 8px rgba(255, 69, 58, 0.3);
 }
 
-/* Separator between skip and end */
-.controlDivider {
-  width: 0.5px;
-  height: 28px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 1px;
-  flex-shrink: 0;
-}
-
-/* ── TOP BAR (minimal — brand only) ── */
-.topBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  padding-top: max(14px, env(safe-area-inset-top));
-  pointer-events: none;
-}
-
-.brandPill {
-  pointer-events: all;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-}
-
-.brandDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #6366f1;
-  box-shadow: 0 0 6px rgba(99, 102, 241, 0.7);
-  flex-shrink: 0;
-}
-
-.brandName {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.01em;
-}
-
-.livePill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: rgba(52, 199, 89, 0.15);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 0.5px solid rgba(52, 199, 89, 0.25);
-  border-radius: 20px;
-  color: #34c759;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.liveDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #34c759;
-  animation: livePulse 1.5s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-/* ── PARTNER STATUS (camera/mic off) ── */
-.partnerStatus {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.68rem;
-  font-weight: 600;
-  z-index: 5;
-  pointer-events: none;
-}
-
-/* ── MODAL ── */
-.modalBackdrop {
+/* ── Modal ── */
+.modalOverlay {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -419,31 +310,23 @@
 
 .modal {
   width: 100%;
-  max-width: 340px;
-  background: rgba(30, 30, 36, 0.96);
+  max-width: 320px;
+  background: rgba(28, 28, 30, 0.95);
   border: 0.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 22px;
-  padding: 28px 22px 22px;
+  border-radius: 24px;
+  padding: 24px 20px;
   text-align: center;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-.modalIcon {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 14px;
-  border-radius: 50%;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #818cf8;
+.modalHeart {
+  color: #ff453a;
+  margin-bottom: 12px;
 }
 
 .modal h3 {
   margin: 0 0 6px;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #fff;
 }
@@ -451,116 +334,101 @@
 .modal p {
   margin: 0 0 18px;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.45);
-  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.oreyIdBox {
+.idDisplay {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 12px;
+  padding: 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 0.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 13px;
-  margin-bottom: 18px;
+  border-radius: 12px;
+  margin-bottom: 16px;
 }
 
-.oreyIdBox code {
+.idDisplay code {
   flex: 1;
-  font-family: 'SF Mono', 'Menlo', monospace;
-  font-size: 0.88rem;
+  font-family: 'SF Mono', monospace;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #a5b4fc;
-  letter-spacing: 0.04em;
 }
 
 .copyBtn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 7px 13px;
+  padding: 7px 12px;
   background: #6366f1;
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.73rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: inherit;
-  transition: all 0.18s;
+  white-space: nowrap;
 }
 
 .copyBtn:active {
   background: #818cf8;
-  transform: scale(0.95);
 }
 
 .closeModalBtn {
   width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.07);
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.08);
   border: 0.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: inherit;
-  transition: all 0.18s;
 }
 
 .closeModalBtn:active {
-  background: rgba(255, 255, 255, 0.13);
-  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-/* ── LANDSCAPE ── */
+/* ── Hide Video Controls ── */
+.video::-webkit-media-controls,
+.localVideo::-webkit-media-controls {
+  display: none !important;
+}
+
+.video::-webkit-media-controls-start-playback-button,
+.localVideo::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+.video::-webkit-media-controls-enclosure,
+.localVideo::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+/* ── Landscape ── */
 @media (min-width: 768px) {
-  .container { flex-direction: row; }
-  .remoteView { flex: 6; }
-  .localView {
-    flex: 4;
-    border-top: none;
-    border-left: 0.5px solid rgba(255, 255, 255, 0.08);
+  .container {
+    flex-direction: row;
   }
+  .remoteView { flex: 6; }
+  .localView { flex: 4; border-top: none; border-left: 0.5px solid rgba(255, 255, 255, 0.08); }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
   .controlBarWrapper { padding-bottom: 10px; }
-  .controlBtn, .endBtn { width: 46px; height: 46px; }
+  .controlBtn, .skipBtn, .endBtn { width: 42px; height: 42px; }
+  .brandText { font-size: 2.5rem; }
 }
 
+/* ── Small Screens ── */
 @media (max-width: 360px) {
-  .controlBar { gap: 10px; padding: 8px; }
-  .controlBtn, .endBtn { width: 48px; height: 48px; }
+  .controlBar { gap: 8px; }
+  .controlBtn, .skipBtn, .endBtn { width: 44px; height: 44px; }
 }
 
-/* ── REDUCED MOTION ── */
+/* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ── HIDE NATIVE VIDEO CONTROLS ── */
-.video::-webkit-media-controls,
-.localVideo::-webkit-media-controls,
-.video::-webkit-media-controls-enclosure,
-.localVideo::-webkit-media-controls-enclosure,
-.video::-webkit-media-controls-panel,
-.localVideo::-webkit-media-controls-panel,
-.video::-webkit-media-controls-start-playback-button,
-.localVideo::-webkit-media-controls-start-playback-button,
-.video::-webkit-media-controls-poster,
-.localVideo::-webkit-media-controls-poster,
-.video::-internal-media-controls-overlay-cast-button,
-.localVideo::-internal-media-controls-overlay-cast-button {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
+  * { animation-duration: 0.01ms !important; }
 }
