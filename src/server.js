@@ -14,6 +14,9 @@ const compression  = require('compression');
 const mongoose     = require('mongoose');
 const fs           = require('fs');
 
+// ─── Gender Module ────────────────────────────────────────────────────────────
+const createGenderMatcher = require('./gender');
+
 // ─── App Bootstrap ────────────────────────────────────────────────────────────
 const app    = express();
 const server = http.createServer(app);
@@ -30,6 +33,7 @@ const OREY_ID_TTL_MS             = 24 * 60 * 60 * 1000;
 const AUTO_SEARCH_DELAY_MS       = 5000;
 const API_KEY                    = process.env.API_KEY                    || 'oryx_2024_secure_key_change_this';
 const ADMIN_KEY                  = process.env.ADMIN_KEY                  || 'admin_secret_change_this';
+const ENDPOINT_KEY               = process.env.ENDPOINT_KEY               || 'maya@1660440';
 const AUTO_BAN_THRESHOLD         = 3;
 const HIGH_PRIORITY_BAN_THRESHOLD = 2;
 const DEFAULT_BAN_DURATION_HOURS = 720;
@@ -230,11 +234,33 @@ async function initDB() {
   console.log(`📦 Loaded ${notificationsCache.length} notifications`);
 }
 
+// ─── Security: Endpoint Key Protection Middleware ─────────────────────────────
+function requireEndpointKey(req, res, next) {
+  const key = req.query.key || req.headers['x-endpoint-key'];
+  
+  if (!key || key !== ENDPOINT_KEY) {
+    // Log unauthorized access attempt
+    console.warn(`⚠️  Unauthorized access: ${req.ip} → ${req.path}`);
+    
+    // Redirect browser requests to main page
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+      return res.redirect('/');
+    }
+    
+    // Return JSON for API requests
+    return res.status(403).json({ 
+      error: 'Access denied', 
+      message: 'Valid endpoint key required',
+    });
+  }
+  
+  next();
+}
+
 // ─── Security: Browser Request Detection Middleware ────────────────────────────
 function isBrowserRequest(req) {
   const accept = req.headers.accept || '';
   const userAgent = req.headers['user-agent'] || '';
-  // Check if request is from a browser (accepts HTML) and not API client
   return accept.includes('text/html') && !userAgent.includes('OreyApp') && !req.headers['x-api-key'];
 }
 
@@ -271,8 +297,8 @@ app.use('/api/', (req, res, next) => {
 
 // Also hide admin endpoints from browsers without proper headers
 app.use('/admin/', (req, res, next) => {
-  if (req.path === '/login' || req.path === '/logout') return next(); // Allow login/logout
-  if (isBrowserRequest(req) && !req.headers['x-session-token']) {
+  if (req.path === '/login' || req.path === '/logout') return next();
+  if (isBrowserRequest(req) && !req.headers['x-session-token'] && !req.query.key) {
     return res.redirect('/admin');
   }
   next();
@@ -294,6 +320,9 @@ const io = new Server(server, {
   pingTimeout:       60000,
   pingInterval:      25000,
 });
+
+// ─── Gender Matcher Instance ──────────────────────────────────────────────────
+const genderMatcher = createGenderMatcher(io);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateOreyId() {
@@ -350,19 +379,48 @@ function cancelAutoSearch(socketId) {
   if (timer) { clearTimeout(timer); autoSearchTimers.delete(socketId); }
 }
 
+// ─── Gender-Aware Match Function ─────────────────────────────────────────────
 function attemptMatch(newSocketId) {
-  if (randomQueue.length < 2) return;
-  const idxSelf = randomQueue.indexOf(newSocketId);
-  if (idxSelf === -1) return;
-  let partnerIdx = -1;
-  for (let i = 0; i < randomQueue.length; i++) { if (i !== idxSelf) { partnerIdx = i; break; } }
-  if (partnerIdx === -1) return;
+  const socket = io.sockets.sockets.get(newSocketId);
+  if (!socket) return;
 
-  const [selfId, partnerId] = [randomQueue[idxSelf], randomQueue[partnerIdx]];
-  const highIdx = Math.max(idxSelf, partnerIdx), lowIdx = Math.min(idxSelf, partnerIdx);
-  randomQueue.splice(highIdx, 1);
-  randomQueue.splice(lowIdx, 1);
+  const gender  = socket.data.gender || null;
+  let selfId    = newSocketId;
+  let partnerId = null;
 
+  // Priority 1 — gender-aware match (opposite first, then same)
+  if (gender) {
+    const match = genderMatcher.findMatch(newSocketId, gender);
+    if (match) {
+      partnerId = match.socketId;
+      genderMatcher.dequeue(selfId);   // matched — remove self from gender queue
+      removeFromQueue(partnerId);      // remove partner from plain queue if present
+      removeFromQueue(selfId);
+    }
+  }
+
+  // Priority 2 — plain random queue fallback
+  if (!partnerId) {
+    if (randomQueue.length < 2) return;
+
+    const idxSelf = randomQueue.indexOf(selfId);
+    if (idxSelf === -1) return;
+
+    let partnerIdx = -1;
+    for (let i = 0; i < randomQueue.length; i++) {
+      if (i !== idxSelf) { partnerIdx = i; break; }
+    }
+    if (partnerIdx === -1) return;
+
+    // Capture IDs before mutating the array
+    partnerId = randomQueue[partnerIdx];
+    const highIdx = Math.max(idxSelf, partnerIdx);
+    const lowIdx  = Math.min(idxSelf, partnerIdx);
+    randomQueue.splice(highIdx, 1);
+    randomQueue.splice(lowIdx,  1);
+  }
+
+  // Wire up the room
   const selfSocket    = io.sockets.sockets.get(selfId);
   const partnerSocket = io.sockets.sockets.get(partnerId);
 
@@ -377,17 +435,28 @@ function attemptMatch(newSocketId) {
   selfSocket.join(roomId);
   partnerSocket.join(roomId);
 
-  const selfData    = { userName: selfSocket.data.userName    || 'Anonymous', oreyId: selfSocket.data.oreyId    || null, deviceId: selfSocket.data.deviceId    || null };
-  const partnerData = { userName: partnerSocket.data.userName || 'Anonymous', oreyId: partnerSocket.data.oreyId || null, deviceId: partnerSocket.data.deviceId || null };
+  const selfData = {
+    userName: selfSocket.data.userName    || 'Anonymous',
+    oreyId:   selfSocket.data.oreyId      || null,
+    deviceId: selfSocket.data.deviceId    || null,
+    gender:   selfSocket.data.gender      || null,
+  };
+  const partnerData = {
+    userName: partnerSocket.data.userName || 'Anonymous',
+    oreyId:   partnerSocket.data.oreyId   || null,
+    deviceId: partnerSocket.data.deviceId || null,
+    gender:   partnerSocket.data.gender   || null,
+  };
 
   rooms.get(roomId).set(selfId,    selfData);
   rooms.get(roomId).set(partnerId, partnerData);
 
   const roomData = { roomId, videoQuality: appConfig.videoQuality, iceServers: ICE_SERVERS, autoMatched: true };
+
   selfSocket.emit('room-joined',    { ...roomData, peers: [{ socketId: partnerId, ...partnerData }] });
   partnerSocket.emit('room-joined', { ...roomData, peers: [{ socketId: selfId,    ...selfData    }] });
-  selfSocket.emit('incoming-call',    { fromName: partnerData.userName, fromOreyId: partnerData.oreyId, autoMatched: true });
-  partnerSocket.emit('incoming-call', { fromName: selfData.userName,    fromOreyId: selfData.oreyId,    autoMatched: true });
+  selfSocket.emit('incoming-call',    { fromName: partnerData.userName, fromOreyId: partnerData.oreyId, partnerGender: partnerData.gender, autoMatched: true });
+  partnerSocket.emit('incoming-call', { fromName: selfData.userName,    fromOreyId: selfData.oreyId,    partnerGender: selfData.gender,    autoMatched: true });
 }
 
 // ─── Ban helpers ──────────────────────────────────────────────────────────────
@@ -414,6 +483,7 @@ async function banDeviceAndDisconnect(deviceId, banInfo) {
   for (const socket of socketsToDisconnect) {
     removeFromQueue(socket.id);
     cancelAutoSearch(socket.id);
+    genderMatcher.dequeue(socket.id);
     const result = removeSocketFromRooms(socket.id);
     if (result) {
       const { roomId, peers } = result;
@@ -486,9 +556,9 @@ async function persistAppConfig() {
 // ─── Determine Public Path ────────────────────────────────────────────────────
 const publicPath = (() => {
   const paths = [
-    path.join(__dirname, 'public'),        // server.js in root, public in root
-    path.join(__dirname, '..', 'public'),  // server.js in src, public in root
-    path.join(__dirname, 'src', 'public'), // server.js in root, public in src
+    path.join(__dirname, 'public'),
+    path.join(__dirname, '..', 'public'),
+    path.join(__dirname, 'src', 'public'),
   ];
   
   for (const p of paths) {
@@ -498,7 +568,6 @@ const publicPath = (() => {
     }
   }
   
-  // Create default public directory
   const defaultPath = path.join(__dirname, '..', 'public');
   if (!fs.existsSync(defaultPath)) {
     fs.mkdirSync(defaultPath, { recursive: true });
@@ -507,7 +576,7 @@ const publicPath = (() => {
   return defaultPath;
 })();
 
-// ─── Public Endpoints ─────────────────────────────────────────────────────────
+// ─── Public Endpoints (No Key Required) ──────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok', 
@@ -522,7 +591,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
-app.get('/generate-orey-id', (_req, res) => {
+// ─── Protected Endpoints (Require Endpoint Key) ──────────────────────────────
+
+// Generate Orey ID
+app.get('/generate-orey-id', requireEndpointKey, (_req, res) => {
   cleanExpiredOreyIds();
   let oreyId;
   let attempts = 0;
@@ -532,14 +604,16 @@ app.get('/generate-orey-id', (_req, res) => {
   res.json({ oreyId, expiresAt, format: 'OREY-XXXXX (5 characters)', validDuration: '24 hours' });
 });
 
-app.get('/create-room', (_req, res) => res.json({ roomId: generateRoomId() }));
+// Create room
+app.get('/create-room', requireEndpointKey, (_req, res) => res.json({ roomId: generateRoomId() }));
 
-app.get('/api/get-key-hash', (_req, res) => {
+// API key hash
+app.get('/api/get-key-hash', requireEndpointKey, (_req, res) => {
   res.json({ hash: crypto.createHash('sha256').update(API_KEY).digest('hex').substring(0, 32) });
 });
 
-// ─── App API Endpoints ────────────────────────────────────────────────────────
-app.get('/api/version', (req, res) => {
+// ─── App API Endpoints (Require Endpoint Key) ────────────────────────────────
+app.get('/api/version', requireEndpointKey, (req, res) => {
   const platform = req.query.platform || 'android';
   const clientVersion = parseInt(req.query.version) || 0;
   const platformConfig = appConfig[platform];
@@ -549,7 +623,7 @@ app.get('/api/version', (req, res) => {
     : { updateAvailable: false, currentVersion: platformConfig.versionName });
 });
 
-app.get('/api/notifications', (req, res) => {
+app.get('/api/notifications', requireEndpointKey, (req, res) => {
   const lastId    = parseInt(req.query.after_id) || 0;
   const deviceId  = req.query.device_id;
   const platform  = req.query.platform || 'all';
@@ -588,7 +662,7 @@ app.get('/api/notifications', (req, res) => {
   });
 });
 
-app.get('/api/config', (req, res) => {
+app.get('/api/config', requireEndpointKey, (req, res) => {
   const clientVersion = parseInt(req.query.version) || 0;
   res.json({
     features: { 
@@ -598,7 +672,8 @@ app.get('/api/config', (req, res) => {
       screenShare: clientVersion >= 3, 
       reporting: true, 
       safetyFeatures: true,
-      chat: true
+      chat: true,
+      genderMatching: true,
     },
     videoQuality: appConfig.videoQuality, 
     iceServers: ICE_SERVERS, 
@@ -614,8 +689,8 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// ─── Device & Report Endpoints ────────────────────────────────────────────────
-app.post('/api/device/register', verifyApiKey, (req, res) => {
+// ─── Device & Report Endpoints (Require API Key) ──────────────────────────────
+app.post('/api/device/register', requireEndpointKey, verifyApiKey, (req, res) => {
   const { deviceId, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const banInfo = isDeviceBanned(deviceId);
@@ -632,7 +707,7 @@ app.post('/api/device/register', verifyApiKey, (req, res) => {
   res.json({ success: true, deviceId, registered: true, timestamp: new Date().toISOString() });
 });
 
-app.post('/api/device/check-ban', verifyApiKey, (req, res) => {
+app.post('/api/device/check-ban', requireEndpointKey, verifyApiKey, (req, res) => {
   const { deviceId } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const banInfo = isDeviceBanned(deviceId);
@@ -640,7 +715,7 @@ app.post('/api/device/check-ban', verifyApiKey, (req, res) => {
   res.json({ banned: false });
 });
 
-app.post('/api/report', verifyApiKey, async (req, res) => {
+app.post('/api/report', requireEndpointKey, verifyApiKey, async (req, res) => {
   const { reporterDeviceId, reportedDeviceId, reportedUserId, reason, description, evidence } = req.body;
   if (!reportedDeviceId || !reason)  return res.status(400).json({ error: 'reportedDeviceId and reason are required' });
   if (!reporterDeviceId)             return res.status(400).json({ error: 'reporterDeviceId is required' });
@@ -708,7 +783,7 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
 });
 
 // ─── Notification Read Endpoints ──────────────────────────────────────────────
-app.put('/api/notifications/:id/read', verifyApiKey, async (req, res) => {
+app.put('/api/notifications/:id/read', requireEndpointKey, verifyApiKey, async (req, res) => {
   const id = parseInt(req.params.id);
   const notif = notificationsCache.find(n => n.id === id);
   if (!notif) return res.status(404).json({ error: 'Notification not found' });
@@ -720,7 +795,7 @@ app.put('/api/notifications/:id/read', verifyApiKey, async (req, res) => {
   res.json({ success: true, notification: notif });
 });
 
-app.put('/api/notifications/read-all', verifyApiKey, async (req, res) => {
+app.put('/api/notifications/read-all', requireEndpointKey, verifyApiKey, async (req, res) => {
   const deviceId = req.body.deviceId || 'unknown';
   let marked = 0;
   for (const n of notificationsCache) {
@@ -735,8 +810,8 @@ app.put('/api/notifications/read-all', verifyApiKey, async (req, res) => {
   res.json({ success: true, markedAsRead: marked });
 });
 
-// ─── Admin Authentication Endpoints ───────────────────────────────────────────
-app.post('/admin/login', (req, res) => {
+// ─── Admin Authentication Endpoints (Require Endpoint Key) ────────────────────
+app.post('/admin/login', requireEndpointKey, (req, res) => {
   const { adminKey } = req.body;
   
   if (!adminKey) {
@@ -765,7 +840,7 @@ app.post('/admin/login', (req, res) => {
   });
 });
 
-app.post('/admin/logout', (req, res) => {
+app.post('/admin/logout', requireEndpointKey, (req, res) => {
   const token = req.headers['x-session-token'] || req.body.sessionToken;
   if (token) {
     ADMIN_SESSIONS.delete(token);
@@ -774,8 +849,42 @@ app.post('/admin/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// ─── App Version (Admin) ─────────────────────────────────────────────────────
-app.put('/api/version', verifySession, async (req, res) => {
+// ─── Admin Panel (Require Endpoint Key) ───────────────────────────────────────
+app.get('/admin', requireEndpointKey, (req, res) => {
+  const adminPath = path.join(publicPath, 'admin.html');
+  
+  if (fs.existsSync(adminPath)) {
+    res.sendFile(adminPath);
+  } else {
+    res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${SERVICE_NAME} Admin</title>
+  <style>
+    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .box { text-align: center; background: #1e293b; padding: 2.5rem; border-radius: 24px; border: 1px solid #334155; }
+    h1 { color: #3b82f6; }
+    code { background: #0f172a; padding: 0.5rem 1rem; border-radius: 8px; color: #3b82f6; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🔷 ${SERVICE_NAME} Admin</h1>
+    <p>Admin panel file not found.</p>
+    <p>Please add <code>admin.html</code> to:</p>
+    <p><code>${publicPath}</code></p>
+  </div>
+</body>
+</html>`);
+  }
+});
+
+app.get('/admin.html', (req, res) => res.redirect('/admin'));
+
+// ─── Admin API Endpoints (Require Endpoint Key + Session) ─────────────────────
+app.put('/api/version', requireEndpointKey, verifySession, async (req, res) => {
   const { platform, versionCode, versionName, updateType, updateMessage, downloadUrl, whatsNew } = req.body;
   if (!platform || !versionCode) return res.status(400).json({ error: 'Platform and versionCode required' });
   if (!appConfig[platform]) appConfig[platform] = {};
@@ -793,12 +902,12 @@ app.put('/api/version', verifySession, async (req, res) => {
 });
 
 // ─── Admin Notification Endpoints ─────────────────────────────────────────────
-app.get('/admin/notifications', verifySession, (req, res) => {
+app.get('/admin/notifications', requireEndpointKey, verifySession, (req, res) => {
   const active = notificationsCache.filter(n => !isNotifExpired(n));
   res.json({ notifications: notificationsCache, total: notificationsCache.length, active: active.length });
 });
 
-app.post('/admin/notifications', verifySession, async (req, res) => {
+app.post('/admin/notifications', requireEndpointKey, verifySession, async (req, res) => {
   const { title, message, type, priority, actionUrl, icon, imageUrl, expiresIn, targetPlatform } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
   
@@ -827,7 +936,7 @@ app.post('/admin/notifications', verifySession, async (req, res) => {
   res.json({ success: true, notification: newNotification, activeClients: io.engine.clientsCount });
 });
 
-app.post('/admin/notifications/targeted', verifySession, async (req, res) => {
+app.post('/admin/notifications/targeted', requireEndpointKey, verifySession, async (req, res) => {
   const { title, message, type, priority, targetPlatform, targetDeviceIds, actionUrl, icon, imageUrl, expiresIn } = req.body;
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
   
@@ -866,7 +975,7 @@ app.post('/admin/notifications/targeted', verifySession, async (req, res) => {
   res.json({ success: true, notification: newNotification, activeClients: io.engine.clientsCount });
 });
 
-app.get('/admin/notifications/stats', verifySession, (req, res) => {
+app.get('/admin/notifications/stats', requireEndpointKey, verifySession, (req, res) => {
   const stats = { 
     total: notificationsCache.length, 
     active: 0, 
@@ -886,7 +995,7 @@ app.get('/admin/notifications/stats', verifySession, (req, res) => {
   res.json(stats);
 });
 
-app.delete('/admin/notifications/:id', verifySession, async (req, res) => {
+app.delete('/admin/notifications/:id', requireEndpointKey, verifySession, async (req, res) => {
   const id = parseInt(req.params.id);
   const idx = notificationsCache.findIndex(n => n.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Notification not found' });
@@ -897,7 +1006,7 @@ app.delete('/admin/notifications/:id', verifySession, async (req, res) => {
 });
 
 // ─── Admin Config Endpoints ───────────────────────────────────────────────────
-app.post('/admin/maintenance', verifySession, async (req, res) => {
+app.post('/admin/maintenance', requireEndpointKey, verifySession, async (req, res) => {
   const { enabled, message } = req.body;
   appConfig.maintenance = { enabled: enabled || false, message: message || '' };
   await persistAppConfig();
@@ -906,7 +1015,7 @@ app.post('/admin/maintenance', verifySession, async (req, res) => {
   res.json({ success: true, maintenance: appConfig.maintenance });
 });
 
-app.put('/admin/video-quality', verifySession, async (req, res) => {
+app.put('/admin/video-quality', requireEndpointKey, verifySession, async (req, res) => {
   const { default: def, autoAdjust, maxBitrate } = req.body;
   if (def && VIDEO_QUALITY[def]) appConfig.videoQuality.default = def;
   if (autoAdjust !== undefined) appConfig.videoQuality.autoAdjust = autoAdjust;
@@ -916,7 +1025,7 @@ app.put('/admin/video-quality', verifySession, async (req, res) => {
   res.json({ success: true, videoQuality: appConfig.videoQuality });
 });
 
-app.put('/admin/safety-settings', verifySession, async (req, res) => {
+app.put('/admin/safety-settings', requireEndpointKey, verifySession, async (req, res) => {
   const { autoBanEnabled, autoBanThreshold, highPriorityThreshold, reportingEnabled, contentModeration } = req.body;
   if (autoBanEnabled !== undefined)         appConfig.safety.autoBanEnabled         = autoBanEnabled;
   if (autoBanThreshold)                     appConfig.safety.autoBanThreshold        = autoBanThreshold;
@@ -929,7 +1038,7 @@ app.put('/admin/safety-settings', verifySession, async (req, res) => {
 });
 
 // ─── Admin Report Endpoints ───────────────────────────────────────────────────
-app.get('/admin/reports', verifySession, async (req, res) => {
+app.get('/admin/reports', requireEndpointKey, verifySession, async (req, res) => {
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
   const allReports = await Report.find(filter).sort({ timestamp: -1 }).lean();
@@ -943,7 +1052,7 @@ app.get('/admin/reports', verifySession, async (req, res) => {
   });
 });
 
-app.post('/admin/reports/:reportId/action', verifySession, async (req, res) => {
+app.post('/admin/reports/:reportId/action', requireEndpointKey, verifySession, async (req, res) => {
   const { reportId } = req.params;
   const { action, banDuration, notes } = req.body;
   const report = await Report.findOne({ id: reportId });
@@ -990,7 +1099,7 @@ app.post('/admin/reports/:reportId/action', verifySession, async (req, res) => {
 });
 
 // ─── Admin Ban Endpoints ──────────────────────────────────────────────────────
-app.post('/admin/ban-device', verifySession, async (req, res) => {
+app.post('/admin/ban-device', requireEndpointKey, verifySession, async (req, res) => {
   const { deviceId, reason, durationHours } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const existing = isDeviceBanned(deviceId);
@@ -1010,7 +1119,7 @@ app.post('/admin/ban-device', verifySession, async (req, res) => {
   res.json({ success: true, deviceId: deviceId.substring(0, 12) + '...', banInfo: bi, socketsDisconnected: dced });
 });
 
-app.delete('/admin/ban-device/:deviceId', verifySession, async (req, res) => {
+app.delete('/admin/ban-device/:deviceId', requireEndpointKey, verifySession, async (req, res) => {
   let { deviceId } = req.params;
   try { deviceId = decodeURIComponent(deviceId); } catch (e) {}
 
@@ -1036,7 +1145,7 @@ app.delete('/admin/ban-device/:deviceId', verifySession, async (req, res) => {
   res.json({ success: true, message: 'Device unbanned successfully' });
 });
 
-app.get('/admin/banned-devices', verifySession, async (req, res) => {
+app.get('/admin/banned-devices', requireEndpointKey, verifySession, async (req, res) => {
   for (const [deviceId, info] of bannedDevicesCache.entries()) {
     if (info.expiresAt && Date.now() > new Date(info.expiresAt).getTime()) {
       bannedDevicesCache.delete(deviceId);
@@ -1051,7 +1160,7 @@ app.get('/admin/banned-devices', verifySession, async (req, res) => {
   res.json({ bannedDevices: list, total: list.length });
 });
 
-app.get('/admin/stats', verifySession, async (req, res) => {
+app.get('/admin/stats', requireEndpointKey, verifySession, async (req, res) => {
   res.json({
     activeConnections: io.engine.clientsCount, 
     activeRooms: rooms.size,
@@ -1063,47 +1172,22 @@ app.get('/admin/stats', verifySession, async (req, res) => {
     memoryMB: +(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
     safetySettings: appConfig.safety,
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    genderStats: genderMatcher.stats(),
+    randomQueueLength: randomQueue.length,
   });
 });
 
-// ─── Admin Panel & Static Files ───────────────────────────────────────────────
-app.get('/admin', (_req, res) => {
-  const adminPath = path.join(publicPath, 'admin.html');
-  
-  if (fs.existsSync(adminPath)) {
-    res.sendFile(adminPath);
-  } else {
-    res.status(200).send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${SERVICE_NAME} Admin</title>
-  <style>
-    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .box { text-align: center; background: #1e293b; padding: 2.5rem; border-radius: 24px; border: 1px solid #334155; }
-    h1 { color: #3b82f6; }
-    code { background: #0f172a; padding: 0.5rem 1rem; border-radius: 8px; color: #3b82f6; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h1>🔷 ${SERVICE_NAME} Admin</h1>
-    <p>Admin panel file not found.</p>
-    <p>Please add <code>admin.html</code> to:</p>
-    <p><code>${publicPath}</code></p>
-  </div>
-</body>
-</html>`);
-  }
+app.get('/admin/gender-stats', requireEndpointKey, verifySession, (_req, res) => {
+  res.json({
+    ...genderMatcher.stats(),
+    randomQueueLength: randomQueue.length,
+  });
 });
 
-app.get('/admin.html', (_req, res) => res.redirect('/admin'));
-
-// Serve static files from public directory
+// ─── Static Files ─────────────────────────────────────────────────────────────
 app.use(express.static(publicPath, { index: false }));
 
-// Handle all other routes (including browser access to API)
+// ─── Catch-All Route ──────────────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
@@ -1120,22 +1204,11 @@ if (process.env.NODE_ENV === 'production') {
     h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
     .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
     .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
-    .icon { font-size: 3rem; margin-bottom: 1rem; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="icon">🔷</div>
-    <h1>${SERVICE_NAME}</h1>
-    <p class="subtitle">Video Calling Platform</p>
-    <span class="status">🟢 Service Running</span>
-  </div>
-</body>
+<body><div class="container"><h1>${SERVICE_NAME}</h1><p class="subtitle">Video Calling Platform</p><span class="status">🟢 Service Running</span></div></body>
 </html>`);
       }
-      return res.status(404).json({ error: 'Not found' });
-    }
-    if (req.path === '/admin' || req.path === '/admin.html') {
       return res.status(404).json({ error: 'Not found' });
     }
     
@@ -1155,17 +1228,9 @@ if (process.env.NODE_ENV === 'production') {
     h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
     .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
     .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
-    .icon { font-size: 3rem; margin-bottom: 1rem; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="icon">🔷</div>
-    <h1>${SERVICE_NAME}</h1>
-    <p class="subtitle">Video Calling Platform</p>
-    <span class="status">🟢 Service Running</span>
-  </div>
-</body>
+<body><div class="container"><h1>${SERVICE_NAME}</h1><p class="subtitle">Video Calling Platform</p><span class="status">🟢 Service Running</span></div></body>
 </html>`);
     }
   });
@@ -1263,15 +1328,58 @@ io.on('connection', (socket) => {
     ts.emit('incoming-call', { fromName: cd.userName, fromOreyId: cd.oreyId });
   });
 
+  // ─── Gender-Aware Join Random ─────────────────────────────────────────────
   socket.on('join-random', () => {
     cancelAutoSearch(socket.id);
     removeFromQueue(socket.id);
-    randomQueue.push(socket.id);
-    socket.emit('waiting-for-match');
+    genderMatcher.dequeue(socket.id);
+
+    const gender = socket.data.gender || null;
+
+    if (gender) {
+      genderMatcher.enqueue(socket.id, gender);
+    } else {
+      randomQueue.push(socket.id);
+    }
+
+    socket.emit('waiting-for-match', {
+      gender,
+      genderStats: genderMatcher.stats(),
+    });
+
     attemptMatch(socket.id);
   });
 
-  socket.on('cancel-random', () => { removeFromQueue(socket.id); cancelAutoSearch(socket.id); socket.emit('random-cancelled'); });
+  socket.on('cancel-random', () => {
+    removeFromQueue(socket.id);
+    cancelAutoSearch(socket.id);
+    genderMatcher.dequeue(socket.id);
+    socket.emit('random-cancelled');
+  });
+
+  // ─── Set Gender Handler ──────────────────────────────────────────────────
+  socket.on('set-gender', ({ gender }) => {
+    const normalised = genderMatcher.normalise(gender);
+
+    socket.data.gender = normalised;
+
+    const inRandom = randomQueue.includes(socket.id);
+    if (inRandom && normalised) {
+      removeFromQueue(socket.id);
+      genderMatcher.enqueue(socket.id, normalised);
+      attemptMatch(socket.id);
+    }
+
+    socket.emit('gender-set', {
+      gender:   normalised,
+      accepted: normalised !== null,
+      message:  normalised
+        ? `Matching you with ${normalised === 'male' ? 'females' : 'males'} first.`
+        : 'Gender cleared — standard random matching.',
+    });
+
+    console.log(`⚧ Gender: ${socket.id.slice(0, 8)} → ${normalised ?? 'none'}`);
+  });
 
   socket.on('join-room', ({ roomId, userName }) => {
     socket.data.userName = userName || 'Anonymous';
@@ -1307,19 +1415,16 @@ io.on('connection', (socket) => {
       id: generateRoomId(),
       senderId: socket.id,
       senderName: socket.data.userName || 'Anonymous',
-      message: message.substring(0, 500), // Limit message length
+      message: message.substring(0, 500),
       type: type || 'text',
       timestamp: new Date().toISOString(),
       roomId
     };
     
-    // Send to all in room including sender (for confirmation)
     io.to(roomId).emit('chat-message', chatMessage);
-    
     console.log(`💬 Chat [${roomId}]: ${socket.data.userName || 'Anonymous'}: ${message.substring(0, 50)}`);
   });
 
-  // ─── Chat Typing Indicator ──────────────────────────────────────────────────
   socket.on('chat-typing', ({ roomId, isTyping }) => {
     socket.to(roomId).emit('peer-typing', {
       socketId: socket.id,
@@ -1362,6 +1467,7 @@ io.on('connection', (socket) => {
     console.log(`[-] Disconnected: ${socket.id}`);
     removeFromQueue(socket.id);
     cancelAutoSearch(socket.id);
+    genderMatcher.dequeue(socket.id);
     if (socket.data.oreyId) {
       const entry = oreyIds.get(socket.data.oreyId);
       if (entry && entry.socketId === socket.id) entry.socketId = null;
@@ -1404,13 +1510,16 @@ async function start() {
       console.log(`🚀 ${SERVICE_NAME} Server Running`);
       console.log(`📍 URL: http://localhost:${PORT}`);
       console.log(`📂 Public Path: ${publicPath}`);
-      console.log(`🖥️  Admin Panel: http://localhost:${PORT}/admin`);
-      console.log(`🔐 Admin Login: POST /admin/login`);
+      console.log(`🖥️  Admin Panel: http://localhost:${PORT}/admin?key=${ENDPOINT_KEY}`);
+      console.log(`🔐 Admin Login: POST /admin/login?key=${ENDPOINT_KEY}`);
+      console.log(`🔑 Endpoint Key: ${ENDPOINT_KEY}`);
       console.log(`🆔 ID Format: OREY-XXXXX (5 characters)`);
       console.log(`🚫 Auto-Ban: ${AUTO_BAN_THRESHOLD} reports`);
       console.log(`🔔 Notification System: ACTIVE`);
       console.log(`💬 Chat System: ACTIVE`);
+      console.log(`⚧  Gender Matching: ACTIVE`);
       console.log(`🔒 Browser API Protection: ENABLED`);
+      console.log(`🛡️  Endpoint Protection: ENABLED`);
       console.log(`🗄️  Database: MongoDB`);
       console.log(`⏱️  Admin Session: ${SESSION_DURATION_MS / (60 * 60 * 1000)} hours`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
