@@ -510,7 +510,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Active state for all buttons */
+/* Active state */
 .controlBtnOn {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
