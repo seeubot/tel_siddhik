@@ -35,23 +35,6 @@
   object-fit: cover;
 }
 
-/* Hide native HTML5 video controls on Android/iOS */
-.video::-webkit-media-controls,
-.localVideo::-webkit-media-controls {
-  display: none !important;
-  -webkit-appearance: none;
-}
-
-.video::-webkit-media-controls-start-playback-button,
-.localVideo::-webkit-media-controls-start-playback-button {
-  display: none !important;
-}
-
-.video::-webkit-media-controls-enclosure,
-.localVideo::-webkit-media-controls-enclosure {
-  display: none !important;
-}
-
 /* ── Swipe Card ── */
 .swipeCard {
   position: absolute;
@@ -805,4 +788,77 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ════════════════════════════════════════════════
+   REMOVE GREY PLAY BUTTON - COMPREHENSIVE FIX
+   ════════════════════════════════════════════════ */
+
+/* Base video styling - black background prevents grey flash */
+.video,
+.localVideo {
+  background: #000 !important;
+  object-fit: cover !important;
+}
+
+/* Hide ALL WebKit media controls */
+.video::-webkit-media-controls,
+.localVideo::-webkit-media-controls {
+  display: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Hide the play button specifically */
+.video::-webkit-media-controls-start-playback-button,
+.localVideo::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide the poster image overlay */
+.video::-webkit-media-controls-poster,
+.localVideo::-webkit-media-controls-poster {
+  display: none !important;
+  background: #000 !important;
+}
+
+/* Hide the controls enclosure */
+.video::-webkit-media-controls-enclosure,
+.localVideo::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+/* Hide timeline and other controls */
+.video::-webkit-media-controls-panel,
+.localVideo::-webkit-media-controls-panel,
+.video::-webkit-media-controls-timeline,
+.localVideo::-webkit-media-controls-timeline,
+.video::-webkit-media-controls-current-time-display,
+.localVideo::-webkit-media-controls-current-time-display,
+.video::-webkit-media-controls-time-remaining-display,
+.localVideo::-webkit-media-controls-time-remaining-display,
+.video::-webkit-media-controls-mute-button,
+.localVideo::-webkit-media-controls-mute-button,
+.video::-webkit-media-controls-volume-slider,
+.localVideo::-webkit-media-controls-volume-slider,
+.video::-webkit-media-controls-fullscreen-button,
+.localVideo::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+
+/* Handle default poster attribute */
+.video[poster],
+.localVideo[poster] {
+  background: #000 !important;
+}
+
+/* Additional pseudo-elements that might show on some WebViews */
+.video::-internal-media-controls-overlay-cast-button,
+.localVideo::-internal-media-controls-overlay-cast-button,
+.video::-internal-media-controls-overflow-button,
+.localVideo::-internal-media-controls-overflow-button {
+  display: none !important;
 }
