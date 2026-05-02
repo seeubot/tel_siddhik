@@ -1,17 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { 
-  motion, 
-  useMotionValue, 
-  useTransform, 
-  useAnimation, 
-  AnimatePresence 
-} from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, Loader, Sparkles,
-  MessageCircle, MessageSquare, X, Send,
-  SkipForward, Heart, Shield, Zap, VolumeX,
-  Copy, Check, Users, Wifi
+  PhoneOff, Loader, MessageCircle,
+  Send, SkipForward, Heart,
+  Copy, Check, Shield, Users, Wifi, MoreHorizontal,
+  ChevronRight, Info, UserPlus
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -22,8 +16,6 @@ const CallScreen = ({
   audioEnabled = true,
   videoEnabled = true,
   partnerMedia = { video: true, audio: true },
-  localStream = null,
-  partnerStream = null,
   searching = false,
   autoSearchCountdown = null,
   onToggleAudio = () => {},
@@ -31,113 +23,67 @@ const CallScreen = ({
   onSkip = () => {},
   onLeave = () => {},
   onCancelAutoSearch = () => {},
-  onFindRandomPeer = () => {},
   onSendMessage = () => {},
   messages = [],
+  peerTyping = false,
+  onTyping = () => {},
+  currentUserName = 'You',
   userOreyId = null,
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
-  const [isSkipping, setIsSkipping] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [copiedOreyId, setCopiedOreyId] = useState(false);
   const [showOreyIdModal, setShowOreyIdModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
   const chatEndRef = useRef(null);
   const hideTimerRef = useRef(null);
-  const skipTimerRef = useRef(null);
-  const localStreamRef = useRef(localStream);
-  const partnerStreamRef = useRef(partnerStream);
-  
-  const [statusMessages, setStatusMessages] = useState({
-    audio: false,
-    video: false,
-    message: false
-  });
-  const messageTimers = useRef({ audio: null, video: null, message: null });
-
-  // Update refs when streams change
-  useEffect(() => {
-    localStreamRef.current = localStream;
-  }, [localStream]);
-
-  useEffect(() => {
-    partnerStreamRef.current = partnerStream;
-  }, [partnerStream]);
-
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    if (chatEndRef.current && showChat) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, showChat]);
+  const chatInputRef = useRef(null);
+  const prevMessagesLength = useRef(0);
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
+  // Track unread messages when chat is closed
+  useEffect(() => {
+    if (!showChat && messages.length > prevMessagesLength.current) {
+      const newMessages = messages.length - prevMessagesLength.current;
+      setUnreadCount(prev => prev + newMessages);
+    }
+    if (showChat) {
+      setUnreadCount(0);
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages.length, showChat]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatEndRef.current && showChat) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, showChat, peerTyping]);
+
+  // Focus chat input when opened
+  useEffect(() => {
+    if (showChat && chatInputRef.current) {
+      setTimeout(() => chatInputRef.current?.focus(), 100);
+    }
+  }, [showChat]);
+
   // Handle video stream sources
   useEffect(() => {
-    if (remoteVideoRef.current && partnerStream) {
-      const videoElement = remoteVideoRef.current;
-      videoElement.srcObject = partnerStream;
-      
-      return () => {
-        if (videoElement.srcObject === partnerStream) {
-          videoElement.srcObject = null;
-        }
-      };
+    if (remoteVideoRef.current && partner?.stream) {
+      remoteVideoRef.current.srcObject = partner.stream;
     }
-  }, [partnerStream, remoteVideoRef]);
+  }, [partner?.stream, remoteVideoRef]);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      const videoElement = localVideoRef.current;
-      videoElement.srcObject = localStream;
-      
-      return () => {
-        if (videoElement.srcObject === localStream) {
-          videoElement.srcObject = null;
-        }
-      };
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localVideoRef.current.srcObject;
     }
-  }, [localStream, localVideoRef]);
-
-  // Cleanup tracks on unmount
-  useEffect(() => {
-    return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => {
-          if (track.readyState === 'live') {
-            track.stop();
-          }
-        });
-      }
-      if (partnerStreamRef.current) {
-        partnerStreamRef.current.getTracks().forEach(track => {
-          if (track.readyState === 'live') {
-            track.stop();
-          }
-        });
-      }
-      clearTimeout(hideTimerRef.current);
-      clearTimeout(skipTimerRef.current);
-      Object.values(messageTimers.current).forEach(timer => clearTimeout(timer));
-    };
   }, []);
-
-  const triggerStatusMessage = (type, isActive) => {
-    if (!isActive) {
-      setStatusMessages(prev => ({ ...prev, [type]: true }));
-      
-      if (messageTimers.current[type]) clearTimeout(messageTimers.current[type]);
-      
-      messageTimers.current[type] = setTimeout(() => {
-        setStatusMessages(prev => ({ ...prev, [type]: false }));
-      }, 3000);
-    } else {
-      setStatusMessages(prev => ({ ...prev, [type]: false }));
-    }
-  };
 
   // Auto-hide UI controls
   useEffect(() => {
@@ -145,11 +91,11 @@ const CallScreen = ({
       if (!showChat) {
         setUiVisible(true);
         clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = setTimeout(() => setUiVisible(false), 5000);
+        hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
       }
     };
     
-    const events = ['mousemove', 'touchstart', 'keydown', 'click'];
+    const events = ['mousemove', 'touchstart', 'click'];
     events.forEach(e => window.addEventListener(e, resetTimer));
     resetTimer();
     
@@ -164,24 +110,20 @@ const CallScreen = ({
     const handleKeyPress = (e) => {
       if (e.target.matches('input, textarea, [contenteditable]')) return;
       
-      switch(e.key) {
+      switch(e.key.toLowerCase()) {
         case 'm':
           e.preventDefault();
-          handleToggleAudio();
+          onToggleAudio();
           break;
         case 'v':
           e.preventDefault();
-          handleToggleVideo();
-          break;
-        case 'n':
-          e.preventDefault();
-          handleSkip();
+          onToggleVideo();
           break;
         case 'c':
           e.preventDefault();
           setShowChat(prev => !prev);
           break;
-        case 'Escape':
+        case 'escape':
           if (showChat) setShowChat(false);
           break;
         default:
@@ -191,47 +133,20 @@ const CallScreen = ({
     
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [audioEnabled, videoEnabled, showChat]);
-
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 300], [-10, 10]);
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
-  const cardControls = useAnimation();
-
-  const handleToggleAudio = useCallback(() => {
-    const newState = !audioEnabled;
-    onToggleAudio();
-    triggerStatusMessage('audio', newState);
-  }, [audioEnabled, onToggleAudio]);
-
-  const handleToggleVideo = useCallback(() => {
-    const newState = !videoEnabled;
-    onToggleVideo();
-    triggerStatusMessage('video', newState);
-  }, [videoEnabled, onToggleVideo]);
-
-  const handleSkip = useCallback(() => {
-    if (isSkipping) return;
-    setIsSkipping(true);
-    onFindRandomPeer?.();
-    
-    if (skipTimerRef.current) {
-      clearTimeout(skipTimerRef.current);
-    }
-    
-    skipTimerRef.current = setTimeout(() => {
-      setIsSkipping(false);
-      onSkip?.();
-    }, 2000);
-  }, [isSkipping, onFindRandomPeer, onSkip]);
+  }, [showChat, audioEnabled, videoEnabled]);
 
   const handleSendMessage = useCallback(() => {
-    if (chatMessage.trim() && onSendMessage) {
-      onSendMessage(chatMessage.trim());
+    const trimmed = chatMessage.trim();
+    if (trimmed && onSendMessage) {
+      onSendMessage(trimmed);
       setChatMessage('');
-      triggerStatusMessage('message', false);
     }
   }, [chatMessage, onSendMessage]);
+
+  const handleInputChange = (e) => {
+    setChatMessage(e.target.value);
+    if (onTyping) onTyping();
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -248,376 +163,357 @@ const CallScreen = ({
     }
   };
 
-  const handleDragEnd = (event, info) => {
-    if (Math.abs(info.offset.x) > 120) {
-      handleSkip();
-    } else {
-      cardControls.start({ x: 0, opacity: 1, rotate: 0 });
+  const formatTime = (timestamp) => {
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
     }
   };
 
   return (
     <div className={styles.container}>
       
-      {/* TOP: PARTNER VIEWPORT */}
+      {/* ── REMOTE VIEW (Full Screen) ── */}
       <div className={styles.remoteView}>
         
-        {/* BRANDING: TOP LEFT */}
-        <div className={styles.branding}>
-          <div className={styles.brandIconWrapper}>
-            <Zap size={14} className={styles.brandIcon} />
-          </div>
-          <span className={styles.brandText}>Orey</span>
-          <button 
-            onClick={() => setShowOreyIdModal(true)} 
-            className={styles.oreyIdButton}
-          >
-            <Heart size={12} />
-            <span>{userOreyId || 'Get ID'}</span>
-          </button>
-        </div>
-
-        {/* Connection Quality Indicator */}
-        {isRemoteConnected && (
-          <div className={styles.qualityIndicator}>
-            <Wifi size={12} />
-            <span>Connected</span>
-          </div>
-        )}
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            style={{ x, rotate, opacity }}
-            animate={cardControls}
-            onDragEnd={handleDragEnd}
-            className={styles.dragContainer}
-          >
-            {searching || autoSearchCountdown !== null ? (
-              <div className={styles.searchingOverlay}>
-                {autoSearchCountdown !== null ? (
-                  <div className={styles.countdownContent}>
-                    <motion.div 
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className={styles.countdownNumber}
-                    >
-                      {autoSearchCountdown}
-                    </motion.div>
-                    <div className={styles.secureBadge}>
-                      <Shield size={14} className={styles.shieldIcon} />
-                      <span>Secure connection ready</span>
-                    </div>
-                    <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.searchingContent}>
-                    <motion.div 
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className={styles.searchingAnimation}
-                    >
-                      <div className={styles.waveRing}>
-                        <div className={styles.wave} />
-                        <div className={styles.wave} style={{ animationDelay: '0.2s' }} />
-                        <div className={styles.wave} style={{ animationDelay: '0.4s' }} />
-                      </div>
-                      <Users className={styles.searchingIcon} size={28} />
-                    </motion.div>
-                    <p className={styles.searchingLabel}>Finding your match</p>
-                    <p className={styles.searchingSublabel}>
-                      Someone awesome is on the way...
-                    </p>
+        {/* Top Bar */}
+        <AnimatePresence>
+          {uiVisible && (
+            <motion.div
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              className={styles.topBar}
+            >
+              <div className={styles.topBarLeft}>
+                <div className={styles.brandBadge}>
+                  <span className={styles.brandDot} />
+                  <span className={styles.brandName}>Orey!</span>
+                </div>
+                {userOreyId && (
+                  <button onClick={() => setShowOreyIdModal(true)} className={styles.idBadge}>
+                    <Heart size={11} />
+                    <span>{userOreyId}</span>
+                  </button>
+                )}
+              </div>
+              <div className={styles.topBarRight}>
+                {isRemoteConnected && (
+                  <div className={styles.connectionBadge}>
+                    <Wifi size={11} />
+                    <span>Live</span>
                   </div>
                 )}
               </div>
-            ) : (
-              <>
-                {/* Remote Video Stream */}
-                <video
-                  ref={remoteVideoRef}
-                  className={styles.video}
-                  autoPlay
-                  playsInline
-                  style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
-                  aria-label="Remote video stream"
-                />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                {/* Attractive Orey! Text Poster */}
-                {(!isRemoteConnected || isPartnerVideoOff) && !searching && (
-                  <div className={styles.posterContainer}>
-                    <div className={styles.oreyPoster}>
-                      <motion.div 
-                        className={styles.oreyLogo}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <span className={styles.oreyLetter}>O</span>
-                        <span className={styles.oreyLetter}>r</span>
-                        <span className={styles.oreyLetter}>e</span>
-                        <span className={styles.oreyLetter}>y</span>
-                        <span className={styles.oreyExclamation}>!</span>
-                      </motion.div>
-                      <motion.p 
-                        className={styles.oreySubtext}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                      >
-                        Connect • Chat • Share
-                      </motion.p>
-                      {userOreyId && (
-                        <motion.button
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 }}
-                          onClick={() => setShowOreyIdModal(true)}
-                          className={styles.showIdButton}
-                        >
-                          <Heart size={14} />
-                          Share your Orey ID
-                        </motion.button>
-                      )}
+        {/* Video / Poster / Searching */}
+        <div className={styles.videoContainer}>
+          {searching || autoSearchCountdown !== null ? (
+            <div className={styles.searchingOverlay}>
+              {autoSearchCountdown !== null ? (
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className={styles.countdownContent}
+                >
+                  <div className={styles.countdownRing}>
+                    <span className={styles.countdownNumber}>{autoSearchCountdown}</span>
+                  </div>
+                  <p className={styles.countdownLabel}>Connecting...</p>
+                  <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
+                    Cancel
+                  </button>
+                </motion.div>
+              ) : (
+                <div className={styles.searchingContent}>
+                  <div className={styles.searchingAnimation}>
+                    <div className={styles.rippleContainer}>
+                      <div className={styles.ripple} />
+                      <div className={styles.ripple} style={{ animationDelay: '0.3s' }} />
+                      <div className={styles.ripple} style={{ animationDelay: '0.6s' }} />
+                    </div>
+                    <div className={styles.searchingIconWrapper}>
+                      <Users size={24} />
                     </div>
                   </div>
-                )}
-
-                {/* Partner muted chip */}
-                {isRemoteConnected && isPartnerMuted && (
-                  <div className={styles.statusChipLeft}>
-                    <VolumeX size={12} />
-                    <span>Mic off</span>
-                  </div>
-                )}
-
-                {/* STATUS MESSAGE OVERLAY */}
-                <div className={styles.statusOverlay}>
-                  <AnimatePresence>
-                    {statusMessages.audio && (
-                      <StatusPill text="Mic Muted" icon={MicOff} color="rose" />
-                    )}
-                    {statusMessages.video && (
-                      <StatusPill text="Camera Off" icon={VideoOff} color="rose" />
-                    )}
-                    {statusMessages.message && (
-                      <StatusPill text="Message Sent" icon={Send} color="green" />
-                    )}
-                  </AnimatePresence>
+                  <h3 className={styles.searchingTitle}>Finding your match</h3>
+                  <p className={styles.searchingSubtitle}>Hold tight, connecting you with someone amazing</p>
                 </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <video
+                ref={remoteVideoRef}
+                className={styles.video}
+                autoPlay
+                playsInline
+                style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
+              />
 
-                {/* Gradient overlay */}
-                <div className={styles.gradientOverlay} />
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
+              {(!isRemoteConnected || isPartnerVideoOff) && (
+                <div className={styles.posterOverlay}>
+                  <div className={styles.posterContent}>
+                    <div className={styles.posterLogo}>
+                      <span className={styles.logoLetter}>O</span>
+                      <span className={styles.logoLetter}>r</span>
+                      <span className={styles.logoLetter}>e</span>
+                      <span className={styles.logoLetter}>y</span>
+                      <span className={styles.logoExclaim}>!</span>
+                    </div>
+                    <p className={styles.posterTagline}>Video Chat Platform</p>
+                    <div className={styles.posterFeatures}>
+                      <span>🔒 Secure</span>
+                      <span>⚡ Fast</span>
+                      <span>🌍 Global</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isRemoteConnected && isPartnerMuted && (
+                <div className={styles.peerStatusBadge}>
+                  <MicOff size={12} />
+                  <span>Mic off</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
-      {/* BOTTOM: LOCAL VIEWPORT */}
-      <div className={styles.localView}>
-        <div className={styles.localVideoContainer}>
-          {/* Local Video Stream */}
-          <video
-            ref={localVideoRef}
-            className={`${styles.localVideo} ${!videoEnabled ? styles.localVideoHidden : styles.localVideoVisible}`}
-            autoPlay
-            muted
-            playsInline
-            aria-label="Local video stream"
-          />
-          
-          {/* You muted chip */}
-          {!audioEnabled && (
-            <div className={styles.statusChipRight}>
-              <MicOff size={12} />
-              <span>Mic off</span>
+      {/* ── LOCAL VIEW (Picture-in-Picture) ── */}
+      <AnimatePresence>
+        {!showChat && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className={styles.pipContainer}
+            drag
+            dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+            dragElastic={0.1}
+            dragMomentum={false}
+          >
+            <video
+              ref={localVideoRef}
+              className={styles.pipVideo}
+              autoPlay
+              muted
+              playsInline
+            />
+            {!videoEnabled && (
+              <div className={styles.pipCameraOff}>
+                <VideoOff size={20} />
+              </div>
+            )}
+            <div className={styles.pipLabel}>
+              <span>You</span>
+              {!audioEnabled && <MicOff size={10} />}
             </div>
-          )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Self view label */}
-          <div className={styles.selfViewLabel}>
-            <span>You</span>
-          </div>
-        </div>
-
-        {/* CHAT PANEL */}
-        <AnimatePresence>
-          {showChat && (
-            <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className={styles.chatPanel}
-            >
+      {/* ── CHAT PANEL ── */}
+      <AnimatePresence>
+        {showChat && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            className={styles.chatPanel}
+          >
+            <div className={styles.chatPanelInner}>
+              {/* Chat Header */}
               <div className={styles.chatHeader}>
-                <div className={styles.chatHeaderContent}>
+                <div className={styles.chatHeaderLeft}>
                   <MessageCircle size={18} />
-                  <span>Chat with partner</span>
+                  <div>
+                    <h4>Chat</h4>
+                    <span>{partner?.userName || 'Partner'}</span>
+                  </div>
                 </div>
-                <button onClick={() => setShowChat(false)} className={styles.closeChat}>
-                  <X size={18} />
+                <button onClick={() => setShowChat(false)} className={styles.chatCloseBtn}>
+                  <ChevronRight size={18} />
                 </button>
               </div>
 
+              {/* Messages */}
               <div className={styles.chatMessages}>
                 {messages.length === 0 ? (
-                  <div className={styles.emptyChat}>
-                    <MessageSquare size={32} />
-                    <p>No messages yet</p>
-                    <span>Start a conversation!</span>
+                  <div className={styles.chatEmpty}>
+                    <div className={styles.chatEmptyIcon}>
+                      <MessageCircle size={28} />
+                    </div>
+                    <h4>No messages yet</h4>
+                    <p>Say hello to break the ice!</p>
                   </div>
                 ) : (
-                  messages.map((msg, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`${styles.chatMessage} ${msg.isOwn ? styles.ownMessage : styles.otherMessage}`}
-                    >
-                      <div className={styles.messageBubble}>
-                        <p>{msg.text}</p>
-                        <span className={styles.messageTime}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                  messages.map((msg, idx) => {
+                    const showAvatar = idx === 0 || messages[idx - 1]?.isOwn !== msg.isOwn;
+                    return (
+                      <div
+                        key={msg.id || idx}
+                        className={`${styles.messageRow} ${msg.isOwn ? styles.messageRowOwn : styles.messageRowOther}`}
+                      >
+                        {!msg.isOwn && showAvatar && (
+                          <div className={styles.messageAvatar}>
+                            {(partner?.userName || 'P')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className={`${styles.messageBubble} ${msg.isOwn ? styles.bubbleOwn : styles.bubbleOther}`}>
+                          {!msg.isOwn && showAvatar && (
+                            <span className={styles.bubbleName}>{msg.senderName || partner?.userName}</span>
+                          )}
+                          <p>{msg.text || msg.message}</p>
+                          <span className={styles.bubbleTime}>{formatTime(msg.timestamp)}</span>
+                        </div>
                       </div>
+                    );
+                  })
+                )}
+                {peerTyping && (
+                  <div className={styles.typingIndicator}>
+                    <div className={styles.typingBubble}>
+                      <span className={styles.typingDot} />
+                      <span className={styles.typingDot} style={{ animationDelay: '0.2s' }} />
+                      <span className={styles.typingDot} style={{ animationDelay: '0.4s' }} />
                     </div>
-                  ))
+                  </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              <div className={styles.chatInput}>
-                <textarea
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type a message..."
-                  className={styles.chatTextarea}
-                  rows={1}
-                />
-                <button 
-                  onClick={handleSendMessage}
-                  disabled={!chatMessage.trim()}
-                  className={styles.sendButton}
-                >
-                  <Send size={18} />
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* --- CONTROL BAR --- */}
-        <AnimatePresence>
-          {uiVisible && (
-            <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className={styles.controlBarContainer}
-            >
-              <div className={styles.controlBar}>
-                
-                {/* Left Controls */}
-                <div className={styles.controlGroup}>
-                  <ControlButton 
-                    onClick={handleToggleAudio}
-                    Icon={audioEnabled ? Mic : MicOff} 
-                    isActive={audioEnabled}
-                    label={audioEnabled ? "Mute" : "Unmute"}
+              {/* Chat Input */}
+              <div className={styles.chatInputContainer}>
+                <div className={styles.chatInputWrapper}>
+                  <input
+                    ref={chatInputRef}
+                    type="text"
+                    value={chatMessage}
+                    onChange={handleInputChange}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type a message..."
+                    className={styles.chatInput}
+                    maxLength={500}
                   />
-                  <ControlButton 
-                    onClick={handleToggleVideo}
-                    Icon={videoEnabled ? Video : VideoOff} 
-                    isActive={videoEnabled}
-                    label={videoEnabled ? "Turn off camera" : "Turn on camera"}
-                  />
-                </div>
-
-                {/* Center Action */}
-                <button
-                  onClick={handleSkip}
-                  disabled={isSkipping}
-                  className={styles.nextButton}
-                >
-                  {isSkipping ? (
-                    <Loader className={styles.spinner} size={18} />
-                  ) : (
-                    <>
-                      <SkipForward size={18} />
-                      <span className={styles.nextButtonLabel}>Skip</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Right Controls */}
-                <div className={styles.controlGroup}>
-                  <ControlButton 
-                    onClick={() => setShowChat(prev => !prev)}
-                    Icon={MessageCircle} 
-                    isActive={showChat}
-                    isAccent={showChat}
-                    label="Chat"
-                  />
-                  <button 
-                    onClick={onLeave}
-                    className={styles.endButton}
-                    aria-label="End call"
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!chatMessage.trim()}
+                    className={styles.chatSendBtn}
                   >
-                    <PhoneOff size={20} />
+                    <Send size={16} />
                   </button>
                 </div>
-
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* OREY ID MODAL */}
+      {/* ── CONTROL BAR ── */}
+      <AnimatePresence>
+        {uiVisible && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className={styles.controlBarWrapper}
+          >
+            <div className={styles.controlBar}>
+              {/* Mic */}
+              <button
+                onClick={onToggleAudio}
+                className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
+                aria-label={audioEnabled ? 'Mute' : 'Unmute'}
+              >
+                {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
+              </button>
+
+              {/* Video */}
+              <button
+                onClick={onToggleVideo}
+                className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
+                aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+              >
+                {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+              </button>
+
+              {/* Chat */}
+              <button
+                onClick={() => setShowChat(prev => !prev)}
+                className={`${styles.controlBtn} ${showChat ? styles.controlBtnActive : ''}`}
+                aria-label="Chat"
+              >
+                <MessageCircle size={20} />
+                {unreadCount > 0 && (
+                  <span className={styles.chatBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </button>
+
+              {/* Skip */}
+              <button
+                onClick={onSkip}
+                className={styles.controlBtn}
+                aria-label="Skip"
+              >
+                <SkipForward size={20} />
+              </button>
+
+              {/* End */}
+              <button
+                onClick={onLeave}
+                className={styles.endBtn}
+                aria-label="End call"
+              >
+                <PhoneOff size={22} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── OREY ID MODAL ── */}
       <AnimatePresence>
         {showOreyIdModal && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={styles.modalOverlay}
+            className={styles.modalBackdrop}
             onClick={() => setShowOreyIdModal(false)}
           >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
               className={styles.modal}
               onClick={e => e.stopPropagation()}
             >
-              <div className={styles.modalIcon}>
-                <Heart size={28} />
+              <div className={styles.modalIconWrapper}>
+                <Heart size={24} />
               </div>
-              <h2 className={styles.modalTitle}>Your Orey ID</h2>
-              <p className={styles.modalText}>
-                Share this ID with friends to connect directly. They can call you using this unique code.
-              </p>
-              
-              <div className={styles.oreyIdDisplay}>
-                <code className={styles.oreyIdCode}>{userOreyId || 'Not registered'}</code>
+              <h3>Your Orey ID</h3>
+              <p>Share this ID with friends to connect instantly</p>
+              <div className={styles.modalIdBox}>
+                <code>{userOreyId || 'Not registered'}</code>
                 {userOreyId && (
-                  <button onClick={copyOreyIdToClipboard} className={styles.copyIdButton}>
+                  <button onClick={copyOreyIdToClipboard} className={styles.modalCopyBtn}>
                     {copiedOreyId ? <Check size={16} /> : <Copy size={16} />}
-                    {copiedOreyId ? 'Copied!' : 'Copy'}
+                    <span>{copiedOreyId ? 'Copied' : 'Copy'}</span>
                   </button>
                 )}
               </div>
-
-              <div className={styles.modalActions}>
-                <button onClick={() => setShowOreyIdModal(false)} className={styles.modalConfirmBtn}>
-                  Got it
-                </button>
-              </div>
+              <button onClick={() => setShowOreyIdModal(false)} className={styles.modalCloseBtn}>
+                Done
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -625,31 +521,5 @@ const CallScreen = ({
     </div>
   );
 };
-
-// Status Pill Component
-const StatusPill = ({ text, icon: Icon, color }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.9, y: 10 }}
-    className={`${styles.statusPill} ${styles[color]}`}
-  >
-    <Icon size={14} />
-    <span>{text}</span>
-  </motion.div>
-);
-
-// Control Button Component
-const ControlButton = ({ onClick, Icon, isActive, isAccent, label }) => (
-  <motion.button
-    whileTap={{ scale: 0.95 }}
-    onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`${styles.controlButton} ${!isActive ? styles.inactive : ''} ${isAccent ? styles.accent : ''}`}
-    aria-label={label}
-    title={label}
-  >
-    <Icon size={18} />
-  </motion.button>
-);
 
 export default CallScreen;
