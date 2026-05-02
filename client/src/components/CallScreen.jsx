@@ -4,7 +4,7 @@ import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, SkipForward,
   Heart, Copy, Check,
-  Users, Wifi
+  Users, Wifi, Sparkles
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -35,7 +35,6 @@ const CallScreen = ({
 
   // Swipe gesture values
   const dragX = useMotionValue(0);
-  const dragProgress = useTransform(dragX, [-200, 0, 200], [-1, 0, 1]);
   const cardRotation = useTransform(dragX, [-300, 0, 300], [-15, 0, 15]);
   const cardOpacity = useTransform(dragX, [-300, -150, 0], [0.6, 0.9, 1]);
   const nextHintOpacity = useTransform(dragX, [-200, -50, 0], [1, 0, 0]);
@@ -48,6 +47,8 @@ const CallScreen = ({
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
+  const showRemotePoster = !isRemoteConnected || isPartnerVideoOff;
+  const showLocalPoster = !localStream || !videoEnabled;
 
   // Update local stream ref
   useEffect(() => {
@@ -129,17 +130,14 @@ const CallScreen = ({
     if (Math.abs(info.offset.x) > skipThreshold) {
       const direction = info.offset.x > 0 ? 'right' : 'left';
       
-      // Fly off animation
       const flyX = direction === 'right' ? 800 : -800;
       dragX.set(flyX);
       
-      // Trigger skip after animation
       setTimeout(() => {
         onSkip();
         dragX.set(0);
       }, 200);
     } else {
-      // Snap back
       dragX.set(0);
     }
   };
@@ -158,6 +156,38 @@ const CallScreen = ({
       setTimeout(() => setCopiedOreyId(false), 2000);
     }
   };
+
+  // Poster Component (reusable for both screens)
+  const PosterDisplay = ({ variant = 'remote' }) => (
+    <div className={`${styles.posterOverlay} ${variant === 'local' ? styles.posterLocal : ''}`}>
+      <div className={styles.posterContent}>
+        {/* Logo Image */}
+        <div className={styles.posterLogoContainer}>
+          <img 
+            src="https://i.ibb.co/tPBR3kw2/a-clean-modern-app-logo-featuring-the-te-x-YWv-IIez-Rp-Sy-T3-W8-BKNw-GQ-7fw-fmxk-Qn-KAB9t-Nm-OM47-A-sd.jpg"
+            alt="Orey Logo"
+            className={styles.posterLogo}
+          />
+        </div>
+        
+        {/* Animated Brand Text */}
+        <div className={styles.posterBrandText}>
+          <span className={styles.posterBrandName}>Orey!</span>
+        </div>
+        
+        <p className={styles.posterTagline}>
+          {variant === 'remote' ? 'Swipe to discover new connections' : 'Your camera will appear here'}
+        </p>
+        
+        {/* Decorative elements */}
+        <div className={styles.posterDecorations}>
+          <span>🔒 Secure</span>
+          <span>⚡ Fast</span>
+          <span>🌍 Global</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className={styles.container}>
@@ -233,126 +263,96 @@ const CallScreen = ({
                 </div>
               )}
             </div>
-          ) : (
-            <>
-              {isRemoteConnected && !isPartnerVideoOff ? (
-                <motion.div
-                  className={styles.swipeCard}
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.9}
-                  style={{
-                    x: dragX,
-                    rotate: cardRotation,
-                    opacity: cardOpacity,
-                  }}
-                  onDrag={handleDrag}
-                  onDragEnd={handleDragEnd}
-                  whileTap={{ cursor: 'grabbing' }}
-                >
-                  <video
-                    ref={remoteVideoRef}
-                    className={styles.video}
-                    autoPlay
-                    playsInline
-                  />
-                  
-                  {/* Swipe direction indicator */}
-                  <AnimatePresence>
-                    {isDragging && swipeDirection && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className={`${styles.swipeIndicator} ${
-                          swipeDirection === 'left' ? styles.swipeLeft : styles.swipeRight
-                        }`}
-                      >
-                        <SkipForward size={24} />
-                        <span>Skip</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  {/* Next hint overlay */}
+          ) : isRemoteConnected && !isPartnerVideoOff ? (
+            <motion.div
+              className={styles.swipeCard}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.9}
+              style={{
+                x: dragX,
+                rotate: cardRotation,
+                opacity: cardOpacity,
+              }}
+              onDrag={handleDrag}
+              onDragEnd={handleDragEnd}
+              whileTap={{ cursor: 'grabbing' }}
+            >
+              <video
+                ref={remoteVideoRef}
+                className={styles.video}
+                autoPlay
+                playsInline
+              />
+              
+              {/* Swipe direction indicator */}
+              <AnimatePresence>
+                {isDragging && swipeDirection && (
                   <motion.div
-                    className={styles.nextHint}
-                    style={{
-                      opacity: nextHintOpacity,
-                      scale: nextHintScale,
-                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`${styles.swipeIndicator} ${
+                      swipeDirection === 'left' ? styles.swipeLeft : styles.swipeRight
+                    }`}
                   >
-                    <SkipForward size={16} />
-                    <span>Next</span>
+                    <SkipForward size={24} />
+                    <span>Skip</span>
                   </motion.div>
-                </motion.div>
-              ) : (
-                <video
-                  ref={remoteVideoRef}
-                  className={styles.video}
-                  autoPlay
-                  playsInline
-                  style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
-                />
-              )}
+                )}
+              </AnimatePresence>
+              
+              {/* Next hint overlay */}
+              <motion.div
+                className={styles.nextHint}
+                style={{
+                  opacity: nextHintOpacity,
+                  scale: nextHintScale,
+                }}
+              >
+                <SkipForward size={16} />
+                <span>Next</span>
+              </motion.div>
+            </motion.div>
+          ) : (
+            <PosterDisplay variant="remote" />
+          )}
 
-              {(!isRemoteConnected || isPartnerVideoOff) && (
-                <div className={styles.posterOverlay}>
-                  <div className={styles.posterContent}>
-                    <div className={styles.posterLogo}>
-                      <span className={styles.logoLetter}>O</span>
-                      <span className={styles.logoLetter}>r</span>
-                      <span className={styles.logoLetter}>e</span>
-                      <span className={styles.logoLetter}>y</span>
-                      <span className={styles.logoExclaim}>!</span>
-                    </div>
-                    <p className={styles.posterTagline}>Video Chat Platform</p>
-                    <div className={styles.posterFeatures}>
-                      <span>Mana</span>
-                      <span>⚡</span>
-                      <span>App</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {isRemoteConnected && isPartnerMuted && (
-                <div className={styles.peerStatusBadge}>
-                  <MicOff size={12} />
-                  <span>Partner muted</span>
-                </div>
-              )}
-            </>
+          {isRemoteConnected && isPartnerMuted && (
+            <div className={styles.peerStatusBadge}>
+              <MicOff size={12} />
+              <span>Partner muted</span>
+            </div>
           )}
         </div>
       </div>
 
       {/* ── 40% BOTTOM SECTION ── */}
       <div className={styles.bottomSection}>
-        <video
-          ref={localVideoRef}
-          className={styles.localVideo}
-          autoPlay
-          muted
-          playsInline
-        />
-        {!videoEnabled && (
-          <div className={styles.localCameraOff}>
-            <div className={styles.cameraOffIcon}>
-              <VideoOff size={28} />
-            </div>
-            <span>Camera is off</span>
-          </div>
+        {videoEnabled && localStream ? (
+          <video
+            ref={localVideoRef}
+            className={styles.localVideo}
+            autoPlay
+            muted
+            playsInline
+          />
+        ) : (
+          <PosterDisplay variant="local" />
         )}
-        {!audioEnabled && (
+        
+        {videoEnabled && localStream && !audioEnabled && (
           <div className={styles.localMicOff}>
             <MicOff size={12} />
             <span>Muted</span>
           </div>
         )}
-        <div className={styles.localLabel}>You</div>
+        
+        {videoEnabled && localStream && (
+          <div className={styles.localLabel}>You</div>
+        )}
 
-        {/* ── Control Bar ── */}
+        {/* ── Redesigned Control Bar ── */}
         <AnimatePresence>
           {uiVisible && (
             <motion.div
@@ -363,19 +363,18 @@ const CallScreen = ({
               className={styles.controlBarWrapper}
             >
               <div className={styles.controlBar}>
+                
                 {/* Mic Button */}
                 <motion.button
                   onClick={onToggleAudio}
                   className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
                   aria-label={audioEnabled ? 'Mute' : 'Unmute'}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
                 >
-                  <div className={styles.controlBtnInner}>
-                    {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+                  <div className={styles.controlIconCircle}>
+                    {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
                   </div>
-                  <span className={styles.controlLabel}>
-                    {audioEnabled ? 'Mute' : 'Unmute'}
-                  </span>
                 </motion.button>
 
                 {/* Video Button */}
@@ -383,14 +382,12 @@ const CallScreen = ({
                   onClick={onToggleVideo}
                   className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
                   aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
                 >
-                  <div className={styles.controlBtnInner}>
-                    {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+                  <div className={styles.controlIconCircle}>
+                    {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
                   </div>
-                  <span className={styles.controlLabel}>
-                    {videoEnabled ? 'Camera' : 'Camera Off'}
-                  </span>
                 </motion.button>
 
                 {/* Skip Button */}
@@ -398,12 +395,12 @@ const CallScreen = ({
                   onClick={onSkip}
                   className={styles.controlBtn}
                   aria-label="Skip"
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
                 >
-                  <div className={styles.controlBtnInner}>
-                    <SkipForward size={18} />
+                  <div className={styles.controlIconCircle}>
+                    <SkipForward size={20} />
                   </div>
-                  <span className={styles.controlLabel}>Skip</span>
                 </motion.button>
 
                 {/* End Call Button */}
@@ -412,12 +409,11 @@ const CallScreen = ({
                   className={styles.endBtn}
                   aria-label="End call"
                   whileTap={{ scale: 0.9 }}
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.08 }}
                 >
-                  <div className={styles.endBtnInner}>
-                    <PhoneOff size={22} />
-                  </div>
+                  <PhoneOff size={24} />
                 </motion.button>
+
               </div>
             </motion.div>
           )}
