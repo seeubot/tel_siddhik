@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, MessageCircle,
-  SkipForward, Heart, Copy, Check,
-  Users, Wifi, X
+  PhoneOff, SkipForward,
+  Heart, Copy, Check,
+  Users, Wifi
 } from 'lucide-react';
-import ChatPanel from './ChatPanel';
 import styles from './CallScreen.module.css';
 
 const CallScreen = ({
@@ -24,38 +23,31 @@ const CallScreen = ({
   onSkip = () => {},
   onLeave = () => {},
   onCancelAutoSearch = () => {},
-  onSendMessage = () => {},
-  messages = [],
-  peerTyping = false,
-  onTyping = () => {},
   currentUserName = 'You',
   userOreyId = null,
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
-  const [showChat, setShowChat] = useState(false);
   const [copiedOreyId, setCopiedOreyId] = useState(false);
   const [showOreyIdModal, setShowOreyIdModal] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   
   const hideTimerRef = useRef(null);
-  const prevMessagesLength = useRef(0);
   const localStreamRef = useRef(localStream);
+
+  // Swipe gesture values
+  const dragX = useMotionValue(0);
+  const dragProgress = useTransform(dragX, [-200, 0, 200], [-1, 0, 1]);
+  const cardRotation = useTransform(dragX, [-300, 0, 300], [-15, 0, 15]);
+  const cardOpacity = useTransform(dragX, [-300, -150, 0], [0.6, 0.9, 1]);
+  const nextHintOpacity = useTransform(dragX, [-200, -50, 0], [1, 0, 0]);
+  const nextHintScale = useTransform(dragX, [-200, 0], [1, 0.8]);
+  
+  const [isDragging, setIsDragging] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const skipThreshold = typeof window !== 'undefined' ? window.innerWidth * 0.3 : 300;
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
-
-  // Track unread messages
-  useEffect(() => {
-    if (!showChat && messages.length > prevMessagesLength.current) {
-      const newMessages = messages.length - prevMessagesLength.current;
-      setUnreadCount(prev => prev + newMessages);
-    }
-    if (showChat) {
-      setUnreadCount(0);
-    }
-    prevMessagesLength.current = messages.length;
-  }, [messages.length, showChat]);
 
   // Update local stream ref
   useEffect(() => {
@@ -87,14 +79,12 @@ const CallScreen = ({
     };
   }, []);
 
-  // Auto-hide UI controls (only when chat is closed)
+  // Auto-hide UI controls
   useEffect(() => {
     const resetTimer = () => {
       setUiVisible(true);
       clearTimeout(hideTimerRef.current);
-      if (!showChat) {
-        hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
-      }
+      hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
     
     const events = ['mousemove', 'touchstart', 'click'];
@@ -105,7 +95,7 @@ const CallScreen = ({
       events.forEach(e => window.removeEventListener(e, resetTimer));
       clearTimeout(hideTimerRef.current);
     };
-  }, [showChat]);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -121,12 +111,7 @@ const CallScreen = ({
           e.preventDefault();
           onToggleVideo();
           break;
-        case 'c':
-          e.preventDefault();
-          setShowChat(prev => !prev);
-          break;
         case 'escape':
-          if (showChat) setShowChat(false);
           break;
         default:
           break;
@@ -135,7 +120,37 @@ const CallScreen = ({
     
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [showChat, audioEnabled, videoEnabled]);
+  }, [audioEnabled, videoEnabled]);
+
+  const handleDragEnd = (event, info) => {
+    setIsDragging(false);
+    setSwipeDirection(null);
+    
+    if (Math.abs(info.offset.x) > skipThreshold) {
+      const direction = info.offset.x > 0 ? 'right' : 'left';
+      const velocity = info.velocity.x;
+      
+      // Fly off animation
+      const flyX = direction === 'right' ? 800 : -800;
+      dragX.set(flyX);
+      
+      // Trigger skip after animation
+      setTimeout(() => {
+        onSkip();
+        dragX.set(0);
+      }, 200);
+    } else {
+      // Snap back
+      dragX.set(0);
+    }
+  };
+
+  const handleDrag = (event, info) => {
+    setIsDragging(true);
+    if (info.offset.x < -20) setSwipeDirection('left');
+    else if (info.offset.x > 20) setSwipeDirection('right');
+    else setSwipeDirection(null);
+  };
 
   const copyOreyIdToClipboard = () => {
     if (userOreyId) {
@@ -149,7 +164,7 @@ const CallScreen = ({
     <div className={styles.container}>
       
       {/* ── 60% REMOTE VIEW ── */}
-      <div className={`${styles.remoteView} ${showChat ? styles.remoteViewChat : ''}`}>
+      <div className={styles.remoteView}>
         
         {/* Top Bar */}
         <AnimatePresence>
@@ -178,11 +193,6 @@ const CallScreen = ({
                     <Wifi size={11} />
                     <span>Live</span>
                   </div>
-                )}
-                {showChat && (
-                  <button onClick={() => setShowChat(false)} className={styles.closeChatTopBtn}>
-                    <X size={16} />
-                  </button>
                 )}
               </div>
             </motion.div>
@@ -226,13 +236,66 @@ const CallScreen = ({
             </div>
           ) : (
             <>
-              <video
-                ref={remoteVideoRef}
-                className={styles.video}
-                autoPlay
-                playsInline
-                style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
-              />
+              {isRemoteConnected && !isPartnerVideoOff ? (
+                <motion.div
+                  className={styles.swipeCard}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.9}
+                  style={{
+                    x: dragX,
+                    rotate: cardRotation,
+                    opacity: cardOpacity,
+                  }}
+                  onDrag={handleDrag}
+                  onDragEnd={handleDragEnd}
+                  whileTap={{ cursor: 'grabbing' }}
+                >
+                  <video
+                    ref={remoteVideoRef}
+                    className={styles.video}
+                    autoPlay
+                    playsInline
+                  />
+                  
+                  {/* Swipe direction indicator */}
+                  <AnimatePresence>
+                    {isDragging && swipeDirection && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={`${styles.swipeIndicator} ${
+                          swipeDirection === 'left' ? styles.swipeLeft : styles.swipeRight
+                        }`}
+                      >
+                        <SkipForward size={24} />
+                        <span>Skip</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Next hint overlay */}
+                  <motion.div
+                    className={styles.nextHint}
+                    style={{
+                      opacity: nextHintOpacity,
+                      scale: nextHintScale,
+                    }}
+                  >
+                    <SkipForward size={16} />
+                    <span>Next</span>
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <video
+                  ref={remoteVideoRef}
+                  className={styles.video}
+                  autoPlay
+                  playsInline
+                  style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
+                />
+              )}
 
               {(!isRemoteConnected || isPartnerVideoOff) && (
                 <div className={styles.posterOverlay}>
@@ -246,9 +309,9 @@ const CallScreen = ({
                     </div>
                     <p className={styles.posterTagline}>Video Chat Platform</p>
                     <div className={styles.posterFeatures}>
-                      <span>🔒 Secure</span>
-                      <span>⚡ Fast</span>
-                      <span>🌍 Global</span>
+                      <span>Mana</span>
+                      <span>⚡</span>
+                      <span>App</span>
                     </div>
                   </div>
                 </div>
@@ -264,9 +327,9 @@ const CallScreen = ({
           )}
         </div>
 
-        {/* Local PiP - hide when chat is open */}
+        {/* Local PiP */}
         <AnimatePresence>
-          {!showChat && !searching && isRemoteConnected && (
+          {!searching && isRemoteConnected && (
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -295,47 +358,33 @@ const CallScreen = ({
       </div>
 
       {/* ── 40% BOTTOM SECTION ── */}
-      <div className={`${styles.bottomSection} ${showChat ? styles.bottomSectionChat : ''}`}>
-        {showChat ? (
-          <ChatPanel
-            messages={messages}
-            peerTyping={peerTyping}
-            onSendMessage={onSendMessage}
-            onTyping={onTyping}
-            onClose={() => setShowChat(false)}
-            partnerName={partner?.userName || 'Partner'}
-          />
-        ) : (
-          <>
-            {/* Local Video in 40% */}
-            <video
-              ref={localVideoRef}
-              className={styles.localVideo}
-              autoPlay
-              muted
-              playsInline
-            />
-            {!videoEnabled && (
-              <div className={styles.localCameraOff}>
-                <div className={styles.cameraOffIcon}>
-                  <VideoOff size={28} />
-                </div>
-                <span>Camera is off</span>
-              </div>
-            )}
-            {!audioEnabled && (
-              <div className={styles.localMicOff}>
-                <MicOff size={12} />
-                <span>Muted</span>
-              </div>
-            )}
-            <div className={styles.localLabel}>You</div>
-          </>
+      <div className={styles.bottomSection}>
+        <video
+          ref={localVideoRef}
+          className={styles.localVideo}
+          autoPlay
+          muted
+          playsInline
+        />
+        {!videoEnabled && (
+          <div className={styles.localCameraOff}>
+            <div className={styles.cameraOffIcon}>
+              <VideoOff size={28} />
+            </div>
+            <span>Camera is off</span>
+          </div>
         )}
+        {!audioEnabled && (
+          <div className={styles.localMicOff}>
+            <MicOff size={12} />
+            <span>Muted</span>
+          </div>
+        )}
+        <div className={styles.localLabel}>You</div>
 
-        {/* ── Control Bar (hidden when chat open) ── */}
+        {/* ── Redesigned Control Bar ── */}
         <AnimatePresence>
-          {uiVisible && !showChat && (
+          {uiVisible && (
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -344,40 +393,61 @@ const CallScreen = ({
               className={styles.controlBarWrapper}
             >
               <div className={styles.controlBar}>
-                <button
+                {/* Mic Button */}
+                <motion.button
                   onClick={onToggleAudio}
                   className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
                   aria-label={audioEnabled ? 'Mute' : 'Unmute'}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-                </button>
+                  <div className={styles.controlBtnInner}>
+                    {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+                  </div>
+                  <span className={styles.controlLabel}>
+                    {audioEnabled ? 'Mute' : 'Unmute'}
+                  </span>
+                </motion.button>
 
-                <button
+                {/* Video Button */}
+                <motion.button
                   onClick={onToggleVideo}
                   className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
                   aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
-                </button>
+                  <div className={styles.controlBtnInner}>
+                    {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+                  </div>
+                  <span className={styles.controlLabel}>
+                    {videoEnabled ? 'Camera' : 'Camera Off'}
+                  </span>
+                </motion.button>
 
-                <button
-                  onClick={() => setShowChat(true)}
+                {/* Skip Button */}
+                <motion.button
+                  onClick={onSkip}
                   className={styles.controlBtn}
-                  aria-label="Chat"
+                  aria-label="Skip"
+                  whileTap={{ scale: 0.9 }}
                 >
-                  <MessageCircle size={18} />
-                  {unreadCount > 0 && (
-                    <span className={styles.chatBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
-                  )}
-                </button>
+                  <div className={styles.controlBtnInner}>
+                    <SkipForward size={18} />
+                  </div>
+                  <span className={styles.controlLabel}>Skip</span>
+                </motion.button>
 
-                <button onClick={onSkip} className={styles.controlBtn} aria-label="Skip">
-                  <SkipForward size={18} />
-                </button>
-
-                <button onClick={onLeave} className={styles.endBtn} aria-label="End call">
-                  <PhoneOff size={20} />
-                </button>
+                {/* End Call Button */}
+                <motion.button
+                  onClick={onLeave}
+                  className={styles.endBtn}
+                  aria-label="End call"
+                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <div className={styles.endBtnInner}>
+                    <PhoneOff size={22} />
+                  </div>
+                </motion.button>
               </div>
             </motion.div>
           )}
