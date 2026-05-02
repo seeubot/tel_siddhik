@@ -62,8 +62,8 @@ function createGenderMatcher(io) {
    * Drain dead sockets from both queues (called opportunistically).
    */
   function _cleanQueues() {
-    for (let i = maleQueue.length - 1;   i >= 0; i--) {
-      if (!_isSocketAlive(maleQueue[i].socketId))   maleQueue.splice(i, 1);
+    for (let i = maleQueue.length - 1; i >= 0; i--) {
+      if (!_isSocketAlive(maleQueue[i].socketId)) maleQueue.splice(i, 1);
     }
     for (let i = femaleQueue.length - 1; i >= 0; i--) {
       if (!_isSocketAlive(femaleQueue[i].socketId)) femaleQueue.splice(i, 1);
@@ -91,7 +91,7 @@ function createGenderMatcher(io) {
    */
   function enqueue(socketId, gender) {
     // Always clean stale entries first
-    _remove(maleQueue,   socketId);
+    _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
 
     const q = _queueFor(gender);
@@ -106,7 +106,7 @@ function createGenderMatcher(io) {
    * Remove a socket from all gender queues.
    */
   function dequeue(socketId) {
-    _remove(maleQueue,   socketId);
+    _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
   }
 
@@ -126,7 +126,7 @@ function createGenderMatcher(io) {
     _cleanQueues();
 
     // Remove self from any queue so we don't match with ourselves
-    _remove(maleQueue,   socketId);
+    _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
 
     const opposite = _opposite(gender);
@@ -136,8 +136,8 @@ function createGenderMatcher(io) {
       const oppQ = _queueFor(opposite);
       while (oppQ.length > 0) {
         const candidate = _popFirst(oppQ);
-        if (candidate.socketId === socketId) continue;        // skip self (safety)
-        if (!_isSocketAlive(candidate.socketId)) continue;    // skip dead sockets
+        if (candidate.socketId === socketId) continue;     // skip self (safety)
+        if (!_isSocketAlive(candidate.socketId)) continue; // skip dead sockets
         return candidate;
       }
     }
