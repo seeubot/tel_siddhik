@@ -10,9 +10,17 @@ import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, Loader, Sparkles,
   Eye, EyeOff, SkipForward,
-  Heart, Shield, Zap, VolumeX
+  Heart, Shield, Zap, VolumeX,
+  Users, Wifi, Music
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
+
+// Default poster images (base64 or URLs)
+const DEFAULT_POSTER = {
+  waiting: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%236366f1;stop-opacity:0.2'/%3E%3Cstop offset='100%25' style='stop-color:%23a855f7;stop-opacity:0.05'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='300' fill='%2318181b'/%3E%3Crect width='400' height='300' fill='url(%23grad)'/%3E%3Ccircle cx='200' cy='150' r='40' fill='none' stroke='%236366f1' stroke-width='1' stroke-dasharray='4 4' /%3E%3Cpath d='M170 140 L230 140 M200 110 L200 170' stroke='%236366f1' stroke-width='1'/%3E%3C/svg%3E",
+  connecting: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%236366f1;stop-opacity:0.3'/%3E%3Cstop offset='100%25' style='stop-color:%23a855f7;stop-opacity:0.1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='300' fill='%2318181b'/%3E%3Crect width='400' height='300' fill='url(%23grad)'/%3E%3Ccircle cx='200' cy='150' r='30' fill='%236366f1' opacity='0.3' /%3E%3Ccircle cx='200' cy='150' r='20' fill='none' stroke='%236366f1' stroke-width='2' /%3E%3C/svg%3E",
+  cameraOff: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%236366f1;stop-opacity:0.1'/%3E%3Cstop offset='100%25' style='stop-color:%23a855f7;stop-opacity:0.03'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='300' fill='%23101015'/%3E%3Crect width='400' height='300' fill='url(%23grad)'/%3E%3C/svg%3E"
+};
 
 const CallScreen = ({
   partner = null,
@@ -37,18 +45,29 @@ const CallScreen = ({
   const [isSkipping, setIsSkipping] = useState(false);
   const [isBlurred, setIsBlurred] = useState(false);
   const [showBlurConfirm, setShowBlurConfirm] = useState(false);
+  const [remotePoster, setRemotePoster] = useState(DEFAULT_POSTER.waiting);
   const hideTimerRef = useRef(null);
   const skipTimerRef = useRef(null);
   const localStreamRef = useRef(localStream);
   const partnerStreamRef = useRef(partnerStream);
   
-  // Status messages for partner feedback (5s duration)
   const [statusMessages, setStatusMessages] = useState({
     audio: false,
     video: false,
     blur: false
   });
   const messageTimers = useRef({ audio: null, video: null, blur: null });
+
+  // Update poster based on connection state
+  useEffect(() => {
+    if (searching) {
+      setRemotePoster(DEFAULT_POSTER.connecting);
+    } else if (!partner) {
+      setRemotePoster(DEFAULT_POSTER.waiting);
+    } else if (partner && !partnerMedia?.video) {
+      setRemotePoster(DEFAULT_POSTER.cameraOff);
+    }
+  }, [searching, partner, partnerMedia?.video]);
 
   // Update refs when streams change
   useEffect(() => {
@@ -63,11 +82,18 @@ const CallScreen = ({
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Handle video stream sources with proper cleanup
+  // Handle video stream sources with poster
   useEffect(() => {
-    if (remoteVideoRef.current && partnerStream) {
+    if (remoteVideoRef.current) {
       const videoElement = remoteVideoRef.current;
-      videoElement.srcObject = partnerStream;
+      
+      if (partnerStream && !isPartnerVideoOff) {
+        videoElement.srcObject = partnerStream;
+        videoElement.poster = '';
+      } else {
+        videoElement.srcObject = null;
+        videoElement.poster = remotePoster;
+      }
       
       return () => {
         if (videoElement.srcObject === partnerStream) {
@@ -75,12 +101,19 @@ const CallScreen = ({
         }
       };
     }
-  }, [partnerStream, remoteVideoRef]);
+  }, [partnerStream, remoteVideoRef, isPartnerVideoOff, remotePoster]);
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
+    if (localVideoRef.current) {
       const videoElement = localVideoRef.current;
-      videoElement.srcObject = localStream;
+      
+      if (localStream && videoEnabled) {
+        videoElement.srcObject = localStream;
+        videoElement.poster = '';
+      } else {
+        videoElement.srcObject = null;
+        videoElement.poster = DEFAULT_POSTER.waiting;
+      }
       
       return () => {
         if (videoElement.srcObject === localStream) {
@@ -88,7 +121,7 @@ const CallScreen = ({
         }
       };
     }
-  }, [localStream, localVideoRef]);
+  }, [localStream, localVideoRef, videoEnabled]);
 
   // Cleanup tracks on unmount
   useEffect(() => {
@@ -109,12 +142,10 @@ const CallScreen = ({
       }
       clearTimeout(hideTimerRef.current);
       clearTimeout(skipTimerRef.current);
-      // Clear message timers
       Object.values(messageTimers.current).forEach(timer => clearTimeout(timer));
     };
   }, []);
 
-  // Status message timeout logic
   const triggerStatusMessage = (type, isActive) => {
     if (!isActive) {
       setStatusMessages(prev => ({ ...prev, [type]: true }));
@@ -181,7 +212,6 @@ const CallScreen = ({
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [audioEnabled, videoEnabled, isBlurred, showBlurConfirm]);
 
-  // --- MOTION VALUES ---
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-10, 10]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]);
@@ -249,9 +279,20 @@ const CallScreen = ({
         
         {/* BRANDING: TOP LEFT */}
         <div className={styles.branding}>
-          <Zap size={16} className={styles.brandIcon} />
-          <span className={styles.brandText}>Orey!</span>
+          <div className={styles.brandIconWrapper}>
+            <Zap size={14} className={styles.brandIcon} />
+          </div>
+          <span className={styles.brandText}>Orey</span>
+          <div className={styles.brandBadge}>beta</div>
         </div>
+
+        {/* Connection Quality Indicator */}
+        {isRemoteConnected && (
+          <div className={styles.qualityIndicator}>
+            <Wifi size={12} />
+            <span>Excellent</span>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -274,7 +315,7 @@ const CallScreen = ({
                       {autoSearchCountdown}
                     </motion.div>
                     <div className={styles.secureBadge}>
-                      <Shield size={16} className={styles.shieldIcon} />
+                      <Shield size={14} className={styles.shieldIcon} />
                       <span>Secure connection ready</span>
                     </div>
                     <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
@@ -288,56 +329,76 @@ const CallScreen = ({
                       animate={{ scale: 1, opacity: 1 }}
                       className={styles.searchingAnimation}
                     >
-                      <div className={styles.spinnerRing} />
-                      <Heart className={styles.spinnerHeart} size={24} />
+                      <div className={styles.waveRing}>
+                        <div className={styles.wave} />
+                        <div className={styles.wave} style={{ animationDelay: '0.2s' }} />
+                        <div className={styles.wave} style={{ animationDelay: '0.4s' }} />
+                      </div>
+                      <Music className={styles.searchingIcon} size={28} />
                     </motion.div>
-                    <p className={styles.searchingLabel}>Searching</p>
+                    <p className={styles.searchingLabel}>Finding your match</p>
                     <p className={styles.searchingSublabel}>
-                      Someone great is just around the corner…
+                      Someone awesome is on the way...
                     </p>
                   </div>
                 )}
               </div>
             ) : (
               <>
-                {/* Remote Video Stream */}
+                {/* Remote Video Stream with Poster */}
                 <video
                   ref={remoteVideoRef}
                   className={styles.video}
                   autoPlay
                   playsInline
+                  poster={remotePoster}
                   style={{ display: isRemoteConnected && !isPartnerVideoOff ? 'block' : 'none' }}
                   aria-label="Remote video stream"
                 />
 
-                {/* Partner camera off */}
-                {isRemoteConnected && isPartnerVideoOff && (
-                  <div className={styles.partnerCameraOff}>
-                    <div className={styles.cameraOffIcon}>
-                      <VideoOff size={48} />
-                    </div>
-                    <h2 className={styles.cameraOffTitle}>Camera Off</h2>
-                    <p className={styles.cameraOffText}>Your match turned their camera off</p>
-                    <div className={styles.cameraOffStatus}>
-                      <div className={styles.pulseDot} />
-                      <span>Audio still connected</span>
-                    </div>
+                {/* Poster visible when no video */}
+                {(!isRemoteConnected || isPartnerVideoOff) && (
+                  <div className={styles.posterContainer}>
+                    {!isRemoteConnected && !searching && (
+                      <div className={styles.waitingPoster}>
+                        <div className={styles.posterGlow}>
+                          <Users size={48} className={styles.posterIcon} />
+                        </div>
+                        <h3>Ready to connect?</h3>
+                        <p>Find someone to talk to</p>
+                      </div>
+                    )}
+                    {isPartnerVideoOff && isRemoteConnected && (
+                      <div className={styles.posterContainer}>
+                        <div className={styles.posterGlow}>
+                          <VideoOff size={48} className={styles.posterIcon} />
+                        </div>
+                        <h3>Camera is off</h3>
+                        <p>Their camera is disabled</p>
+                        {!isPartnerMuted && (
+                          <div className={styles.audioOnlyBadge}>
+                            <Mic size={12} />
+                            <span>Audio only</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Partner muted chip */}
                 {isRemoteConnected && isPartnerMuted && (
                   <div className={styles.statusChipLeft}>
-                    <VolumeX size={13} />
-                    <span>Their mic is off</span>
+                    <VolumeX size={12} />
+                    <span>Mic off</span>
                   </div>
                 )}
 
-                {/* STATUS MESSAGE OVERLAY FOR SELF ACTIONS */}
+                {/* STATUS MESSAGE OVERLAY */}
                 <div className={styles.statusOverlay}>
                   <AnimatePresence>
                     {statusMessages.audio && (
-                      <StatusPill text="You Muted" icon={MicOff} color="rose" />
+                      <StatusPill text="Mic Muted" icon={MicOff} color="rose" />
                     )}
                     {statusMessages.video && (
                       <StatusPill text="Camera Off" icon={VideoOff} color="rose" />
@@ -354,33 +415,19 @@ const CallScreen = ({
             )}
           </motion.div>
         </AnimatePresence>
-
-        {/* Waiting state - no partner connected */}
-        {!isRemoteConnected && !searching && autoSearchCountdown === null && (
-          <div className={styles.waitingState}>
-            <div className={styles.waitingContent}>
-              <Sparkles size={16} className={styles.waitingIcon} />
-              <p className={styles.waitingText}>Ready to meet someone new?</p>
-              <div className={styles.loadingDots}>
-                <span className={styles.dot} />
-                <span className={styles.dot} />
-                <span className={styles.dot} />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* BOTTOM: LOCAL VIEWPORT */}
       <div className={styles.localView}>
         <div className={styles.localVideoContainer}>
-          {/* Local Video Stream */}
+          {/* Local Video Stream with Poster */}
           <video
             ref={localVideoRef}
             className={`${styles.localVideo} ${!videoEnabled ? styles.localVideoHidden : styles.localVideoVisible} ${isBlurred ? styles.localVideoBlurred : ''}`}
             autoPlay
             muted
             playsInline
+            poster={DEFAULT_POSTER.waiting}
             aria-label="Local video stream"
           />
           
@@ -393,7 +440,7 @@ const CallScreen = ({
                 exit={{ opacity: 0 }}
                 className={styles.blurOverlay}
               >
-                <EyeOff size={40} className={styles.blurIcon} />
+                <EyeOff size={32} className={styles.blurIcon} />
                 <span className={styles.blurText}>Privacy Mode</span>
               </motion.div>
             )}
@@ -402,81 +449,76 @@ const CallScreen = ({
           {/* You muted chip */}
           {!audioEnabled && (
             <div className={styles.statusChipRight}>
-              <MicOff size={13} />
-              <span>Your mic is off</span>
+              <MicOff size={12} />
+              <span>Mic off</span>
             </div>
           )}
-        </div>
 
-        {/* DEFAULT BRANDING (Visible until connection) */}
-        <AnimatePresence>
-          {!isRemoteConnected && !searching && autoSearchCountdown === null && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 0.08, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className={styles.placeholderBranding}
-            >
-              <h1 className={styles.placeholderLogo}>O!</h1>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {/* Self view label */}
+          <div className={styles.selfViewLabel}>
+            <span>You</span>
+          </div>
+        </div>
 
         {/* --- CONTROL BAR --- */}
         <AnimatePresence>
           {uiVisible && (
             <motion.div
-              initial={{ y: 60, opacity: 0 }}
+              initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className={styles.controlBarContainer}
             >
               <div className={styles.controlBar}>
                 
-                {/* Left Hardware Controls */}
+                {/* Left Controls */}
                 <div className={styles.controlGroup}>
-                  <FlexButton 
+                  <ControlButton 
                     onClick={handleToggleAudio}
                     Icon={audioEnabled ? Mic : MicOff} 
                     isActive={audioEnabled}
-                    isDanger={!audioEnabled}
+                    label={audioEnabled ? "Mute" : "Unmute"}
                   />
-                  <FlexButton 
+                  <ControlButton 
                     onClick={handleToggleVideo}
                     Icon={videoEnabled ? Video : VideoOff} 
                     isActive={videoEnabled}
-                    isDanger={!videoEnabled}
+                    label={videoEnabled ? "Turn off camera" : "Turn on camera"}
                   />
                 </div>
 
-                {/* Center Match Action */}
+                {/* Center Action */}
                 <button
                   onClick={handleSkip}
                   disabled={isSkipping}
                   className={styles.nextButton}
                 >
                   {isSkipping ? (
-                    <Loader className={styles.spinner} size={16} />
+                    <Loader className={styles.spinner} size={18} />
                   ) : (
-                    <SkipForward size={16} />
+                    <>
+                      <SkipForward size={18} />
+                      <span className={styles.nextButtonLabel}>Skip</span>
+                    </>
                   )}
-                  <span className={styles.nextButtonLabel}>Next</span>
                 </button>
 
-                {/* Right Feature Controls */}
+                {/* Right Controls */}
                 <div className={styles.controlGroup}>
-                  <FlexButton 
+                  <ControlButton 
                     onClick={handleBlurClick}
                     Icon={isBlurred ? EyeOff : Eye} 
                     isActive={!isBlurred}
                     isAccent={isBlurred}
+                    label={isBlurred ? "Remove blur" : "Blur video"}
                   />
                   <button 
                     onClick={onLeave}
                     className={styles.endButton}
                     aria-label="End call"
                   >
-                    <PhoneOff size={18} />
+                    <PhoneOff size={20} />
                   </button>
                 </div>
 
@@ -503,22 +545,22 @@ const CallScreen = ({
               className={styles.modal}
             >
               <div className={styles.modalIcon}>
-                {isBlurred ? <Eye size={32} /> : <EyeOff size={32} />}
+                {isBlurred ? <Eye size={28} /> : <EyeOff size={28} />}
               </div>
               <h2 className={styles.modalTitle}>
-                {isBlurred ? 'Remove Blur?' : 'Blur Video?'}
+                {isBlurred ? 'Show your face?' : 'Hide your face?'}
               </h2>
               <p className={styles.modalText}>
                 {isBlurred 
-                  ? 'Your video will become clear and visible to the other person.'
-                  : 'Your video will be blurred for privacy. You can undo this anytime.'}
+                  ? 'Your video will become visible to your match. They will be able to see you clearly.'
+                  : 'Your video will be blurred for privacy. Your match will see a blurred version of you.'}
               </p>
               <div className={styles.modalActions}>
                 <button onClick={handleCancelBlur} className={styles.modalCancelBtn}>
                   Cancel
                 </button>
                 <button onClick={handleConfirmBlur} className={styles.modalConfirmBtn}>
-                  {isBlurred ? 'Show Video' : 'Blur Video'}
+                  {isBlurred ? 'Show video' : 'Blur video'}
                 </button>
               </div>
             </motion.div>
@@ -529,35 +571,30 @@ const CallScreen = ({
   );
 };
 
-// Status Pill Component
+// Enhanced Status Pill Component
 const StatusPill = ({ text, icon: Icon, color }) => (
   <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, scale: 0.95 }}
-    className={`flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-2xl border border-white/5 shadow-2xl
-      ${color === 'rose' ? 'bg-rose-500/10 text-rose-400' : 'bg-indigo-500/10 text-indigo-400'}`}
+    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9, y: 10 }}
+    className={`${styles.statusPill} ${styles[color]}`}
   >
-    <Icon size={16} />
-    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{text}</span>
+    <Icon size={14} />
+    <span>{text}</span>
   </motion.div>
 );
 
-// Flex Button Component
-const FlexButton = ({ onClick, Icon, isActive, isDanger, isAccent }) => (
-  <button
+// Modern Control Button Component
+const ControlButton = ({ onClick, Icon, isActive, isAccent, label }) => (
+  <motion.button
+    whileTap={{ scale: 0.95 }}
     onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`
-      min-w-[40px] h-10 sm:min-w-[48px] sm:h-12 flex items-center justify-center rounded-full transition-all duration-300 border
-      ${isDanger 
-        ? 'bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-500/20' 
-        : isAccent 
-        ? 'bg-indigo-600 text-white border-indigo-400 shadow-lg shadow-indigo-600/20' 
-        : 'bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white'}
-    `}
+    className={`${styles.controlButton} ${!isActive ? styles.inactive : ''} ${isAccent ? styles.accent : ''}`}
+    aria-label={label}
+    title={label}
   >
     <Icon size={18} />
-  </button>
+  </motion.button>
 );
 
 export default CallScreen;
