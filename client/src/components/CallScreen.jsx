@@ -50,6 +50,9 @@ const CallScreen = ({
   const showRemotePoster = !isRemoteConnected || isPartnerVideoOff;
   const showLocalPoster = !localStream || !videoEnabled;
 
+  // Transparent 1x1 GIF as base64 to prevent grey play button
+  const transparentPoster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
   // Update local stream ref
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -181,9 +184,9 @@ const CallScreen = ({
         
         {/* Decorative elements */}
         <div className={styles.posterDecorations}>
-          <span>🔒 Secure</span>
-          <span>⚡ Fast</span>
-          <span>🌍 Global</span>
+          <span>Mana</span>
+          <span>⚡</span>
+          <span>App</span>
         </div>
       </div>
     </div>
@@ -283,6 +286,10 @@ const CallScreen = ({
                 className={styles.video}
                 autoPlay
                 playsInline
+                poster={transparentPoster}
+                disablePictureInPicture
+                controlsList="nodownload nofullscreen noremoteplayback"
+                x-webkit-airplay="deny"
               />
               
               {/* Swipe direction indicator */}
@@ -336,6 +343,10 @@ const CallScreen = ({
             autoPlay
             muted
             playsInline
+            poster={transparentPoster}
+            disablePictureInPicture
+            controlsList="nodownload nofullscreen noremoteplayback"
+            x-webkit-airplay="deny"
           />
         ) : (
           <PosterDisplay variant="local" />
