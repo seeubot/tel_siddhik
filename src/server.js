@@ -34,6 +34,7 @@ const AUTO_BAN_THRESHOLD         = 3;
 const HIGH_PRIORITY_BAN_THRESHOLD = 2;
 const DEFAULT_BAN_DURATION_HOURS = 720;
 const SESSION_DURATION_MS        = 2 * 60 * 60 * 1000; // 2 hours
+const SERVICE_NAME               = 'Orey! - Mana App';
 
 const VIDEO_QUALITY = {
   low:    { maxBitrate: 150000,   scaleResolutionDownBy: 4, maxFramerate: 15 },
@@ -228,6 +229,54 @@ async function initDB() {
   }
   console.log(`📦 Loaded ${notificationsCache.length} notifications`);
 }
+
+// ─── Security: Browser Request Detection Middleware ────────────────────────────
+function isBrowserRequest(req) {
+  const accept = req.headers.accept || '';
+  const userAgent = req.headers['user-agent'] || '';
+  // Check if request is from a browser (accepts HTML) and not API client
+  return accept.includes('text/html') && !userAgent.includes('OreyApp') && !req.headers['x-api-key'];
+}
+
+// Middleware to hide API responses from browsers
+app.use('/api/', (req, res, next) => {
+  if (isBrowserRequest(req)) {
+    return res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${SERVICE_NAME}</title>
+  <style>
+    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { text-align: center; background: #1e293b; padding: 3rem; border-radius: 24px; border: 1px solid #334155; max-width: 500px; }
+    h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
+    .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔷</div>
+    <h1>${SERVICE_NAME}</h1>
+    <p class="subtitle">Video Calling Platform</p>
+    <span class="status">🟢 Service Running</span>
+  </div>
+</body>
+</html>`);
+  }
+  next();
+});
+
+// Also hide admin endpoints from browsers without proper headers
+app.use('/admin/', (req, res, next) => {
+  if (req.path === '/login' || req.path === '/logout') return next(); // Allow login/logout
+  if (isBrowserRequest(req) && !req.headers['x-session-token']) {
+    return res.redirect('/admin');
+  }
+  next();
+});
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({ 
@@ -548,7 +597,8 @@ app.get('/api/config', (req, res) => {
       groupCall: false, 
       screenShare: clientVersion >= 3, 
       reporting: true, 
-      safetyFeatures: true 
+      safetyFeatures: true,
+      chat: true
     },
     videoQuality: appConfig.videoQuality, 
     iceServers: ICE_SERVERS, 
@@ -1023,13 +1073,12 @@ app.get('/admin', (_req, res) => {
   if (fs.existsSync(adminPath)) {
     res.sendFile(adminPath);
   } else {
-    // Serve a helpful message if admin.html doesn't exist
     res.status(200).send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orey Admin</title>
+  <title>${SERVICE_NAME} Admin</title>
   <style>
     body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
     .box { text-align: center; background: #1e293b; padding: 2.5rem; border-radius: 24px; border: 1px solid #334155; }
@@ -1039,7 +1088,7 @@ app.get('/admin', (_req, res) => {
 </head>
 <body>
   <div class="box">
-    <h1>🔷 OREY Admin</h1>
+    <h1>🔷 ${SERVICE_NAME} Admin</h1>
     <p>Admin panel file not found.</p>
     <p>Please add <code>admin.html</code> to:</p>
     <p><code>${publicPath}</code></p>
@@ -1054,10 +1103,36 @@ app.get('/admin.html', (_req, res) => res.redirect('/admin'));
 // Serve static files from public directory
 app.use(express.static(publicPath, { index: false }));
 
-// Handle all other routes
+// Handle all other routes (including browser access to API)
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
+      if (isBrowserRequest(req)) {
+        return res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${SERVICE_NAME}</title>
+  <style>
+    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { text-align: center; background: #1e293b; padding: 3rem; border-radius: 24px; border: 1px solid #334155; max-width: 500px; }
+    h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
+    .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔷</div>
+    <h1>${SERVICE_NAME}</h1>
+    <p class="subtitle">Video Calling Platform</p>
+    <span class="status">🟢 Service Running</span>
+  </div>
+</body>
+</html>`);
+      }
       return res.status(404).json({ error: 'Not found' });
     }
     if (req.path === '/admin' || req.path === '/admin.html') {
@@ -1068,11 +1143,30 @@ if (process.env.NODE_ENV === 'production') {
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      res.status(200).json({ 
-        message: 'Orey Server Running', 
-        adminPanel: '/admin',
-        timestamp: new Date().toISOString()
-      });
+      res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${SERVICE_NAME}</title>
+  <style>
+    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .container { text-align: center; background: #1e293b; padding: 3rem; border-radius: 24px; border: 1px solid #334155; max-width: 500px; }
+    h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
+    .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔷</div>
+    <h1>${SERVICE_NAME}</h1>
+    <p class="subtitle">Video Calling Platform</p>
+    <span class="status">🟢 Service Running</span>
+  </div>
+</body>
+</html>`);
     }
   });
 }
@@ -1196,6 +1290,44 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', ({ targetId, candidate}) => io.to(targetId).emit('ice-candidate', { candidate, fromId: socket.id }));
   socket.on('media-state',   ({ roomId, audioEnabled, videoEnabled }) => socket.to(roomId).emit('peer-media-state', { socketId: socket.id, audioEnabled, videoEnabled }));
 
+  // ─── Chat Message Handler ───────────────────────────────────────────────────
+  socket.on('chat-message', ({ roomId, message, type }) => {
+    if (!roomId || !message) {
+      socket.emit('chat-error', { error: 'roomId and message are required' });
+      return;
+    }
+    
+    const room = rooms.get(roomId);
+    if (!room || !room.has(socket.id)) {
+      socket.emit('chat-error', { error: 'Not in this room' });
+      return;
+    }
+    
+    const chatMessage = {
+      id: generateRoomId(),
+      senderId: socket.id,
+      senderName: socket.data.userName || 'Anonymous',
+      message: message.substring(0, 500), // Limit message length
+      type: type || 'text',
+      timestamp: new Date().toISOString(),
+      roomId
+    };
+    
+    // Send to all in room including sender (for confirmation)
+    io.to(roomId).emit('chat-message', chatMessage);
+    
+    console.log(`💬 Chat [${roomId}]: ${socket.data.userName || 'Anonymous'}: ${message.substring(0, 50)}`);
+  });
+
+  // ─── Chat Typing Indicator ──────────────────────────────────────────────────
+  socket.on('chat-typing', ({ roomId, isTyping }) => {
+    socket.to(roomId).emit('peer-typing', {
+      socketId: socket.id,
+      userName: socket.data.userName || 'Anonymous',
+      isTyping
+    });
+  });
+
   socket.on('skip', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
@@ -1269,7 +1401,7 @@ async function start() {
     await initDB();
     server.listen(PORT, () => {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🚀 Orey Server Running');
+      console.log(`🚀 ${SERVICE_NAME} Server Running`);
       console.log(`📍 URL: http://localhost:${PORT}`);
       console.log(`📂 Public Path: ${publicPath}`);
       console.log(`🖥️  Admin Panel: http://localhost:${PORT}/admin`);
@@ -1277,6 +1409,8 @@ async function start() {
       console.log(`🆔 ID Format: OREY-XXXXX (5 characters)`);
       console.log(`🚫 Auto-Ban: ${AUTO_BAN_THRESHOLD} reports`);
       console.log(`🔔 Notification System: ACTIVE`);
+      console.log(`💬 Chat System: ACTIVE`);
+      console.log(`🔒 Browser API Protection: ENABLED`);
       console.log(`🗄️  Database: MongoDB`);
       console.log(`⏱️  Admin Session: ${SESSION_DURATION_MS / (60 * 60 * 1000)} hours`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
