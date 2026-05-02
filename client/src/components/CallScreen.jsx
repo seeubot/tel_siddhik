@@ -4,7 +4,7 @@ import {
   Mic, MicOff, Video, VideoOff,
   PhoneOff, SkipForward,
   Heart, Copy, Check,
-  Users, Wifi, Sparkles
+  Users, Wifi
 } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
@@ -29,11 +29,12 @@ const CallScreen = ({
   const [uiVisible, setUiVisible] = useState(true);
   const [copiedOreyId, setCopiedOreyId] = useState(false);
   const [showOreyIdModal, setShowOreyIdModal] = useState(false);
+  const [localVideoReady, setLocalVideoReady] = useState(false);
+  const [remoteVideoReady, setRemoteVideoReady] = useState(false);
   
   const hideTimerRef = useRef(null);
   const localStreamRef = useRef(localStream);
-  const remoteVideoReadyRef = useRef(false);
-  const localVideoReadyRef = useRef(false);
+  const remoteStreamRef = useRef(null);
 
   // Swipe gesture values
   const dragX = useMotionValue(0);
@@ -50,66 +51,114 @@ const CallScreen = ({
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Transparent 1x1 GIF as base64 to prevent grey play button
   const transparentPoster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
   // Update local stream ref
   useEffect(() => {
     localStreamRef.current = localStream;
+    
+    // Reset video ready state when stream changes
     if (localStream) {
-      localVideoReadyRef.current = false;
+      setLocalVideoReady(false);
+      attachLocalStream(localStream);
+    } else {
+      setLocalVideoReady(false);
     }
   }, [localStream]);
 
   // Handle remote video stream
   useEffect(() => {
-    if (remoteVideoRef.current && partner?.stream) {
-      const video = remoteVideoRef.current;
-      
-      // Set srcObject only if it's different
-      if (video.srcObject !== partner.stream) {
-        video.srcObject = partner.stream;
-        
-        // Play the video once metadata is loaded
-        video.onloadedmetadata = () => {
-          video.play().catch(err => console.log('Remote video play error:', err));
-          remoteVideoReadyRef.current = true;
-        };
-        
-        // Also try to play immediately
-        video.play().catch(err => console.log('Remote video initial play error:', err));
+    if (partner?.stream && remoteVideoRef.current) {
+      // Only update if stream changed
+      if (remoteStreamRef.current !== partner.stream) {
+        remoteStreamRef.current = partner.stream;
+        attachRemoteStream(partner.stream);
       }
+    } else if (!partner?.stream) {
+      remoteStreamRef.current = null;
+      setRemoteVideoReady(false);
     }
   }, [partner?.stream, remoteVideoRef]);
 
-  // Handle local video stream
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      const video = localVideoRef.current;
-      
-      // Set srcObject only if it's different
-      if (video.srcObject !== localStream) {
-        video.srcObject = localStream;
-        
-        // Play the video once metadata is loaded
-        video.onloadedmetadata = () => {
-          video.play().catch(err => console.log('Local video play error:', err));
-          localVideoReadyRef.current = true;
-        };
-        
-        // Also try to play immediately
-        video.play().catch(err => console.log('Local video initial play error:', err));
-      }
+  const attachLocalStream = (stream) => {
+    if (!localVideoRef.current) return;
+    
+    const video = localVideoRef.current;
+    
+    // Remove old stream
+    if (video.srcObject) {
+      video.srcObject = null;
     }
-  }, [localStream, localVideoRef]);
+    
+    // Set new stream
+    video.srcObject = stream;
+    
+    // Handle video ready
+    const handleCanPlay = () => {
+      video.play()
+        .then(() => {
+          setLocalVideoReady(true);
+        })
+        .catch(err => {
+          console.log('Local video play error:', err);
+          // Retry once
+          setTimeout(() => {
+            video.play().catch(e => console.log('Retry failed:', e));
+          }, 1000);
+        });
+    };
+    
+    video.oncanplay = handleCanPlay;
+    
+    // Also try immediately
+    video.play().catch(() => {
+      // Silent fail, will retry on canplay
+    });
+  };
+
+  const attachRemoteStream = (stream) => {
+    if (!remoteVideoRef.current) return;
+    
+    const video = remoteVideoRef.current;
+    
+    // Remove old stream
+    if (video.srcObject) {
+      video.srcObject = null;
+    }
+    
+    // Set new stream
+    video.srcObject = stream;
+    
+    // Handle video ready
+    const handleCanPlay = () => {
+      video.play()
+        .then(() => {
+          setRemoteVideoReady(true);
+        })
+        .catch(err => {
+          console.log('Remote video play error:', err);
+          setTimeout(() => {
+            video.play().catch(e => console.log('Retry failed:', e));
+          }, 1000);
+        });
+    };
+    
+    video.oncanplay = handleCanPlay;
+    
+    // Try immediately
+    video.play().catch(() => {
+      // Silent fail
+    });
+  };
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => {
-          if (track.readyState === 'live') track.stop();
-        });
+      if (localVideoRef.current) {
+        localVideoRef.current.oncanplay = null;
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.oncanplay = null;
       }
       clearTimeout(hideTimerRef.current);
     };
@@ -146,8 +195,6 @@ const CallScreen = ({
         case 'v':
           e.preventDefault();
           onToggleVideo();
-          break;
-        case 'escape':
           break;
         default:
           break;
@@ -192,7 +239,7 @@ const CallScreen = ({
     }
   };
 
-  // Simple brand overlay - just the logo text
+  // Simple brand overlay
   const BrandOverlay = () => (
     <div className={styles.brandOverlay}>
       <div className={styles.brandTextContainer}>
@@ -276,7 +323,6 @@ const CallScreen = ({
               )}
             </div>
           ) : (
-            // Always show the video area
             <div className={styles.remoteVideoWrapper}>
               {isRemoteConnected && !isPartnerVideoOff ? (
                 <motion.div
@@ -298,11 +344,18 @@ const CallScreen = ({
                     className={styles.video}
                     autoPlay
                     playsInline
+                    muted={false}
                     poster={transparentPoster}
                     disablePictureInPicture
                     controlsList="nodownload nofullscreen noremoteplayback"
                     x-webkit-airplay="deny"
                   />
+                  
+                  {!remoteVideoReady && (
+                    <div className={styles.videoLoadingOverlay}>
+                      <div className={styles.videoLoadingSpinner} />
+                    </div>
+                  )}
                   
                   {/* Swipe direction indicator */}
                   <AnimatePresence>
@@ -334,7 +387,6 @@ const CallScreen = ({
                   </motion.div>
                 </motion.div>
               ) : (
-                // Show brand overlay when disconnected or video off
                 <BrandOverlay />
               )}
             </div>
@@ -350,7 +402,7 @@ const CallScreen = ({
           {isRemoteConnected && isPartnerVideoOff && (
             <div className={styles.peerStatusBadge}>
               <VideoOff size={12} />
-              <span>Partner camera off</span>
+              <span>Camera off</span>
             </div>
           )}
         </div>
@@ -359,21 +411,27 @@ const CallScreen = ({
       {/* ── 40% BOTTOM SECTION ── */}
       <div className={styles.bottomSection}>
         <div className={styles.localVideoWrapper}>
-          {videoEnabled && localStream ? (
-            <video
-              ref={localVideoRef}
-              className={styles.localVideo}
-              autoPlay
-              muted
-              playsInline
-              poster={transparentPoster}
-              disablePictureInPicture
-              controlsList="nodownload nofullscreen noremoteplayback"
-              x-webkit-airplay="deny"
-            />
-          ) : (
-            // Show brand overlay when camera is off
+          <video
+            ref={localVideoRef}
+            className={styles.localVideo}
+            autoPlay
+            muted
+            playsInline
+            poster={transparentPoster}
+            disablePictureInPicture
+            controlsList="nodownload nofullscreen noremoteplayback"
+            x-webkit-airplay="deny"
+            style={{ display: videoEnabled && localStream ? 'block' : 'none' }}
+          />
+          
+          {(!videoEnabled || !localStream) && (
             <BrandOverlay />
+          )}
+          
+          {videoEnabled && localStream && !localVideoReady && (
+            <div className={styles.videoLoadingOverlay}>
+              <div className={styles.videoLoadingSpinner} />
+            </div>
           )}
         </div>
         
@@ -388,7 +446,7 @@ const CallScreen = ({
           <div className={styles.localLabel}>You</div>
         )}
 
-        {/* ── Redesigned Control Bar ── */}
+        {/* ── iOS Style Control Bar ── */}
         <AnimatePresence>
           {uiVisible && (
             <motion.div
@@ -403,40 +461,31 @@ const CallScreen = ({
                 {/* Mic Button */}
                 <motion.button
                   onClick={onToggleAudio}
-                  className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
-                  aria-label={audioEnabled ? 'Mute' : 'Unmute'}
-                  whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.05 }}
+                  className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : styles.controlBtnOn}`}
+                  aria-label={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  <div className={styles.controlIconCircle}>
-                    {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
-                  </div>
+                  {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
                 </motion.button>
 
                 {/* Video Button */}
                 <motion.button
                   onClick={onToggleVideo}
-                  className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
+                  className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : styles.controlBtnOn}`}
                   aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-                  whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  <div className={styles.controlIconCircle}>
-                    {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-                  </div>
+                  {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
                 </motion.button>
 
                 {/* Skip Button */}
                 <motion.button
                   onClick={onSkip}
-                  className={styles.controlBtn}
+                  className={`${styles.controlBtn} ${styles.controlBtnSkip}`}
                   aria-label="Skip"
-                  whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  <div className={styles.controlIconCircle}>
-                    <SkipForward size={20} />
-                  </div>
+                  <SkipForward size={20} />
                 </motion.button>
 
                 {/* End Call Button */}
@@ -444,10 +493,9 @@ const CallScreen = ({
                   onClick={onLeave}
                   className={styles.endBtn}
                   aria-label="End call"
-                  whileTap={{ scale: 0.9 }}
-                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.85 }}
                 >
-                  <PhoneOff size={24} />
+                  <PhoneOff size={22} />
                 </motion.button>
 
               </div>
