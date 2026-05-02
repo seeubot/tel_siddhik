@@ -2,11 +2,11 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, MicOff, Video, VideoOff,
-  PhoneOff, Loader, MessageCircle,
-  Send, SkipForward, Heart,
-  Copy, Check, Shield, Users, Wifi, MoreHorizontal,
-  ChevronRight, Info, UserPlus
+  PhoneOff, MessageCircle,
+  SkipForward, Heart, Copy, Check,
+  Users, Wifi, X
 } from 'lucide-react';
+import ChatPanel from './ChatPanel';
 import styles from './CallScreen.module.css';
 
 const CallScreen = ({
@@ -16,6 +16,7 @@ const CallScreen = ({
   audioEnabled = true,
   videoEnabled = true,
   partnerMedia = { video: true, audio: true },
+  localStream = null,
   searching = false,
   autoSearchCountdown = null,
   onToggleAudio = () => {},
@@ -32,21 +33,19 @@ const CallScreen = ({
 }) => {
   const [uiVisible, setUiVisible] = useState(true);
   const [showChat, setShowChat] = useState(false);
-  const [chatMessage, setChatMessage] = useState('');
   const [copiedOreyId, setCopiedOreyId] = useState(false);
   const [showOreyIdModal, setShowOreyIdModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   
-  const chatEndRef = useRef(null);
   const hideTimerRef = useRef(null);
-  const chatInputRef = useRef(null);
   const prevMessagesLength = useRef(0);
+  const localStreamRef = useRef(localStream);
 
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // Track unread messages when chat is closed
+  // Track unread messages
   useEffect(() => {
     if (!showChat && messages.length > prevMessagesLength.current) {
       const newMessages = messages.length - prevMessagesLength.current;
@@ -58,19 +57,10 @@ const CallScreen = ({
     prevMessagesLength.current = messages.length;
   }, [messages.length, showChat]);
 
-  // Auto-scroll chat
+  // Update local stream ref
   useEffect(() => {
-    if (chatEndRef.current && showChat) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, showChat, peerTyping]);
-
-  // Focus chat input when opened
-  useEffect(() => {
-    if (showChat && chatInputRef.current) {
-      setTimeout(() => chatInputRef.current?.focus(), 100);
-    }
-  }, [showChat]);
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   // Handle video stream sources
   useEffect(() => {
@@ -80,17 +70,29 @@ const CallScreen = ({
   }, [partner?.stream, remoteVideoRef]);
 
   useEffect(() => {
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = localVideoRef.current.srcObject;
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
     }
+  }, [localStream, localVideoRef]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') track.stop();
+        });
+      }
+      clearTimeout(hideTimerRef.current);
+    };
   }, []);
 
-  // Auto-hide UI controls
+  // Auto-hide UI controls (only when chat is closed)
   useEffect(() => {
     const resetTimer = () => {
+      setUiVisible(true);
+      clearTimeout(hideTimerRef.current);
       if (!showChat) {
-        setUiVisible(true);
-        clearTimeout(hideTimerRef.current);
         hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
       }
     };
@@ -135,26 +137,6 @@ const CallScreen = ({
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [showChat, audioEnabled, videoEnabled]);
 
-  const handleSendMessage = useCallback(() => {
-    const trimmed = chatMessage.trim();
-    if (trimmed && onSendMessage) {
-      onSendMessage(trimmed);
-      setChatMessage('');
-    }
-  }, [chatMessage, onSendMessage]);
-
-  const handleInputChange = (e) => {
-    setChatMessage(e.target.value);
-    if (onTyping) onTyping();
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
   const copyOreyIdToClipboard = () => {
     if (userOreyId) {
       navigator.clipboard.writeText(userOreyId);
@@ -163,19 +145,11 @@ const CallScreen = ({
     }
   };
 
-  const formatTime = (timestamp) => {
-    try {
-      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return '';
-    }
-  };
-
   return (
     <div className={styles.container}>
       
-      {/* ── REMOTE VIEW (Full Screen) ── */}
-      <div className={styles.remoteView}>
+      {/* ── 60% REMOTE VIEW ── */}
+      <div className={`${styles.remoteView} ${showChat ? styles.remoteViewChat : ''}`}>
         
         {/* Top Bar */}
         <AnimatePresence>
@@ -204,6 +178,11 @@ const CallScreen = ({
                     <Wifi size={11} />
                     <span>Live</span>
                   </div>
+                )}
+                {showChat && (
+                  <button onClick={() => setShowChat(false)} className={styles.closeChatTopBtn}>
+                    <X size={16} />
+                  </button>
                 )}
               </div>
             </motion.div>
@@ -237,7 +216,7 @@ const CallScreen = ({
                       <div className={styles.ripple} style={{ animationDelay: '0.6s' }} />
                     </div>
                     <div className={styles.searchingIconWrapper}>
-                      <Users size={24} />
+                      <Users size={20} />
                     </div>
                   </div>
                   <h3 className={styles.searchingTitle}>Finding your match</h3>
@@ -278,207 +257,132 @@ const CallScreen = ({
               {isRemoteConnected && isPartnerMuted && (
                 <div className={styles.peerStatusBadge}>
                   <MicOff size={12} />
-                  <span>Mic off</span>
+                  <span>Partner muted</span>
                 </div>
               )}
             </>
           )}
         </div>
+
+        {/* Local PiP - hide when chat is open */}
+        <AnimatePresence>
+          {!showChat && !searching && isRemoteConnected && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className={styles.pipContainer}
+            >
+              <video
+                ref={localVideoRef}
+                className={styles.pipVideo}
+                autoPlay
+                muted
+                playsInline
+              />
+              {!videoEnabled && (
+                <div className={styles.pipCameraOff}>
+                  <VideoOff size={16} />
+                </div>
+              )}
+              <div className={styles.pipLabel}>
+                <span>You</span>
+                {!audioEnabled && <MicOff size={9} />}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── LOCAL VIEW (Picture-in-Picture) ── */}
-      <AnimatePresence>
-        {!showChat && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className={styles.pipContainer}
-            drag
-            dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
-            dragElastic={0.1}
-            dragMomentum={false}
-          >
+      {/* ── 40% BOTTOM SECTION ── */}
+      <div className={`${styles.bottomSection} ${showChat ? styles.bottomSectionChat : ''}`}>
+        {showChat ? (
+          <ChatPanel
+            messages={messages}
+            peerTyping={peerTyping}
+            onSendMessage={onSendMessage}
+            onTyping={onTyping}
+            onClose={() => setShowChat(false)}
+            partnerName={partner?.userName || 'Partner'}
+          />
+        ) : (
+          <>
+            {/* Local Video in 40% */}
             <video
               ref={localVideoRef}
-              className={styles.pipVideo}
+              className={styles.localVideo}
               autoPlay
               muted
               playsInline
             />
             {!videoEnabled && (
-              <div className={styles.pipCameraOff}>
-                <VideoOff size={20} />
+              <div className={styles.localCameraOff}>
+                <div className={styles.cameraOffIcon}>
+                  <VideoOff size={28} />
+                </div>
+                <span>Camera is off</span>
               </div>
             )}
-            <div className={styles.pipLabel}>
-              <span>You</span>
-              {!audioEnabled && <MicOff size={10} />}
-            </div>
-          </motion.div>
+            {!audioEnabled && (
+              <div className={styles.localMicOff}>
+                <MicOff size={12} />
+                <span>Muted</span>
+              </div>
+            )}
+            <div className={styles.localLabel}>You</div>
+          </>
         )}
-      </AnimatePresence>
 
-      {/* ── CHAT PANEL ── */}
-      <AnimatePresence>
-        {showChat && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className={styles.chatPanel}
-          >
-            <div className={styles.chatPanelInner}>
-              {/* Chat Header */}
-              <div className={styles.chatHeader}>
-                <div className={styles.chatHeaderLeft}>
+        {/* ── Control Bar (hidden when chat open) ── */}
+        <AnimatePresence>
+          {uiVisible && !showChat && (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={styles.controlBarWrapper}
+            >
+              <div className={styles.controlBar}>
+                <button
+                  onClick={onToggleAudio}
+                  className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
+                  aria-label={audioEnabled ? 'Mute' : 'Unmute'}
+                >
+                  {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+                </button>
+
+                <button
+                  onClick={onToggleVideo}
+                  className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
+                  aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                >
+                  {videoEnabled ? <Video size={18} /> : <VideoOff size={18} />}
+                </button>
+
+                <button
+                  onClick={() => setShowChat(true)}
+                  className={styles.controlBtn}
+                  aria-label="Chat"
+                >
                   <MessageCircle size={18} />
-                  <div>
-                    <h4>Chat</h4>
-                    <span>{partner?.userName || 'Partner'}</span>
-                  </div>
-                </div>
-                <button onClick={() => setShowChat(false)} className={styles.chatCloseBtn}>
-                  <ChevronRight size={18} />
+                  {unreadCount > 0 && (
+                    <span className={styles.chatBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  )}
+                </button>
+
+                <button onClick={onSkip} className={styles.controlBtn} aria-label="Skip">
+                  <SkipForward size={18} />
+                </button>
+
+                <button onClick={onLeave} className={styles.endBtn} aria-label="End call">
+                  <PhoneOff size={20} />
                 </button>
               </div>
-
-              {/* Messages */}
-              <div className={styles.chatMessages}>
-                {messages.length === 0 ? (
-                  <div className={styles.chatEmpty}>
-                    <div className={styles.chatEmptyIcon}>
-                      <MessageCircle size={28} />
-                    </div>
-                    <h4>No messages yet</h4>
-                    <p>Say hello to break the ice!</p>
-                  </div>
-                ) : (
-                  messages.map((msg, idx) => {
-                    const showAvatar = idx === 0 || messages[idx - 1]?.isOwn !== msg.isOwn;
-                    return (
-                      <div
-                        key={msg.id || idx}
-                        className={`${styles.messageRow} ${msg.isOwn ? styles.messageRowOwn : styles.messageRowOther}`}
-                      >
-                        {!msg.isOwn && showAvatar && (
-                          <div className={styles.messageAvatar}>
-                            {(partner?.userName || 'P')[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div className={`${styles.messageBubble} ${msg.isOwn ? styles.bubbleOwn : styles.bubbleOther}`}>
-                          {!msg.isOwn && showAvatar && (
-                            <span className={styles.bubbleName}>{msg.senderName || partner?.userName}</span>
-                          )}
-                          <p>{msg.text || msg.message}</p>
-                          <span className={styles.bubbleTime}>{formatTime(msg.timestamp)}</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                {peerTyping && (
-                  <div className={styles.typingIndicator}>
-                    <div className={styles.typingBubble}>
-                      <span className={styles.typingDot} />
-                      <span className={styles.typingDot} style={{ animationDelay: '0.2s' }} />
-                      <span className={styles.typingDot} style={{ animationDelay: '0.4s' }} />
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat Input */}
-              <div className={styles.chatInputContainer}>
-                <div className={styles.chatInputWrapper}>
-                  <input
-                    ref={chatInputRef}
-                    type="text"
-                    value={chatMessage}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    className={styles.chatInput}
-                    maxLength={500}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!chatMessage.trim()}
-                    className={styles.chatSendBtn}
-                  >
-                    <Send size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── CONTROL BAR ── */}
-      <AnimatePresence>
-        {uiVisible && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className={styles.controlBarWrapper}
-          >
-            <div className={styles.controlBar}>
-              {/* Mic */}
-              <button
-                onClick={onToggleAudio}
-                className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
-                aria-label={audioEnabled ? 'Mute' : 'Unmute'}
-              >
-                {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
-              </button>
-
-              {/* Video */}
-              <button
-                onClick={onToggleVideo}
-                className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
-                aria-label={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              >
-                {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
-              </button>
-
-              {/* Chat */}
-              <button
-                onClick={() => setShowChat(prev => !prev)}
-                className={`${styles.controlBtn} ${showChat ? styles.controlBtnActive : ''}`}
-                aria-label="Chat"
-              >
-                <MessageCircle size={20} />
-                {unreadCount > 0 && (
-                  <span className={styles.chatBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
-                )}
-              </button>
-
-              {/* Skip */}
-              <button
-                onClick={onSkip}
-                className={styles.controlBtn}
-                aria-label="Skip"
-              >
-                <SkipForward size={20} />
-              </button>
-
-              {/* End */}
-              <button
-                onClick={onLeave}
-                className={styles.endBtn}
-                aria-label="End call"
-              >
-                <PhoneOff size={22} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── OREY ID MODAL ── */}
       <AnimatePresence>
