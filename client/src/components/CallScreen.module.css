@@ -1,12 +1,16 @@
 /* ════════════════════════════════════════════════
-   CALL SCREEN - 60/40 Layout with Swipe Gestures
+   CALL SCREEN - iOS Inspired Design
    ════════════════════════════════════════════════ */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 
 .container {
   position: fixed;
   inset: 0;
   background: #000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Inter', sans-serif;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -19,8 +23,7 @@
   position: relative;
   flex: 6;
   overflow: hidden;
-  background: #0a0a14;
-  transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #000;
 }
 
 .videoContainer {
@@ -41,6 +44,32 @@
   height: 100%;
   object-fit: cover;
   background: #000 !important;
+}
+
+/* Video loading overlay */
+.videoLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.videoLoadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Swipe Card ── */
@@ -64,30 +93,30 @@
   align-items: center;
   gap: 6px;
   padding: 14px 18px;
-  background: rgba(15, 15, 25, 0.9);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   color: #fff;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   z-index: 10;
   pointer-events: none;
 }
 
 .swipeLeft {
   left: 20px;
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  background: rgba(255, 59, 48, 0.3);
+  border-color: rgba(255, 59, 48, 0.4);
+  color: #ff453a;
 }
 
 .swipeRight {
   right: 20px;
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: rgba(52, 199, 89, 0.3);
+  border-color: rgba(52, 199, 89, 0.4);
+  color: #34c759;
 }
 
 .nextHint {
@@ -99,10 +128,10 @@
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: rgba(15, 15, 25, 0.8);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.65rem;
@@ -116,9 +145,8 @@
   position: relative;
   flex: 4;
   overflow: hidden;
-  background: #0a0a14;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #000;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
 .localVideo {
@@ -131,16 +159,18 @@
 
 .localMicOff {
   position: absolute;
-  bottom: 90px;
+  bottom: 100px;
   left: 12px;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 59, 48, 0.3);
   border-radius: 20px;
-  color: #f87171;
+  color: #ff453a;
   font-size: 0.7rem;
   font-weight: 600;
   z-index: 5;
@@ -148,20 +178,21 @@
 
 .localLabel {
   position: absolute;
-  bottom: 90px;
+  bottom: 100px;
   right: 12px;
-  padding: 3px 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   font-size: 0.65rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
   z-index: 5;
 }
 
-/* ── Brand Overlay (Simple Orey! text) ── */
+/* ── Brand Overlay ── */
 .brandOverlay {
   position: absolute;
   inset: 0;
@@ -186,7 +217,6 @@
   background-clip: text;
   letter-spacing: -0.03em;
   animation: brandPulse 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.3));
 }
 
 @keyframes brandPulse {
@@ -196,7 +226,7 @@
   }
   50% { 
     filter: drop-shadow(0 0 40px rgba(99, 102, 241, 0.4));
-    transform: scale(1.05);
+    transform: scale(1.03);
   }
 }
 
@@ -210,27 +240,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
-  padding-top: max(10px, env(safe-area-inset-top));
-  background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%);
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
 }
 
 .topBarLeft,
 .topBarRight {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .brandBadge {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: rgba(15, 15, 25, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
 }
 
@@ -239,7 +268,7 @@
   height: 6px;
   background: #6366f1;
   border-radius: 50%;
-  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
 }
 
 .brandName {
@@ -252,36 +281,36 @@
 .idBadge {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 5px 9px;
-  background: rgba(15, 15, 25, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.idBadge:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.idBadge:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .connectionBadge {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 9px;
-  background: rgba(34, 197, 94, 0.12);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(34, 197, 94, 0.18);
+  padding: 6px 10px;
+  background: rgba(52, 199, 89, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(52, 199, 89, 0.2);
   border-radius: 20px;
-  color: #22c55e;
+  color: #34c759;
   font-size: 0.65rem;
   font-weight: 600;
 }
@@ -303,8 +332,8 @@
 
 .searchingAnimation {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 80px;
+  height: 80px;
   margin: 0 auto 20px;
   display: flex;
   align-items: center;
@@ -333,10 +362,10 @@
 .searchingIconWrapper {
   position: relative;
   z-index: 1;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   background: rgba(99, 102, 241, 0.12);
-  border: 2px solid rgba(99, 102, 241, 0.25);
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -359,7 +388,7 @@
 
 .searchingSubtitle {
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.35);
   margin: 0;
 }
 
@@ -369,8 +398,8 @@
 }
 
 .countdownRing {
-  width: 100px;
-  height: 100px;
+  width: 90px;
+  height: 90px;
   border: 3px solid #6366f1;
   border-radius: 50%;
   display: flex;
@@ -386,7 +415,7 @@
 }
 
 .countdownNumber {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 900;
   color: #fff;
 }
@@ -398,20 +427,20 @@
 }
 
 .cancelBtn {
-  padding: 8px 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.cancelBtn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+.cancelBtn:active {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.95);
 }
 
 /* ── Peer Status ── */
@@ -424,18 +453,21 @@
   align-items: center;
   gap: 5px;
   padding: 6px 14px;
-  background: rgba(15, 15, 25, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  color: #f87171;
+  color: #ff453a;
   font-size: 0.7rem;
   font-weight: 600;
   z-index: 10;
 }
 
-/* ── Control Bar ── */
+/* ════════════════════════════════════════════════
+   iOS STYLE CONTROL BAR
+   ════════════════════════════════════════════════ */
+
 .controlBarWrapper {
   position: absolute;
   bottom: 0;
@@ -444,130 +476,108 @@
   z-index: 30;
   display: flex;
   justify-content: center;
-  padding: 0 16px 24px;
-  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding: 0 20px 34px;
+  padding-bottom: max(34px, env(safe-area-inset-bottom));
 }
 
 .controlBar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px;
-  background: rgba(18, 18, 30, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 50px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  gap: 16px;
+  padding: 8px;
+  background: rgba(28, 28, 30, 0.65);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 40px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
 }
 
 .controlBtn {
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: none;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
   position: relative;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.controlBtn::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(168, 85, 247, 0.3));
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  z-index: -1;
+/* Active state for all buttons */
+.controlBtnOn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.controlBtn:hover::before {
-  opacity: 1;
+.controlBtnOn:active {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.92);
 }
 
-.controlBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2);
-}
-
-.controlBtn:active {
-  transform: translateY(0) scale(0.95);
-}
-
+/* Off state - red */
 .controlBtnOff {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: rgba(255, 59, 48, 0.2);
+  color: #ff453a;
+  box-shadow: 
+    0 2px 8px rgba(255, 59, 48, 0.2),
+    inset 0 1px 0 rgba(255, 59, 48, 0.1);
 }
 
-.controlBtnOff::before {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(248, 113, 113, 0.3));
+.controlBtnOff:active {
+  background: rgba(255, 59, 48, 0.35);
+  transform: scale(0.92);
 }
 
-.controlBtnOff:hover {
-  background: rgba(239, 68, 68, 0.22);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25);
+/* Skip button */
+.controlBtnSkip {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.controlIconCircle {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
+.controlBtnSkip:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.92);
 }
 
-.controlBtnOff .controlIconCircle {
-  background: rgba(239, 68, 68, 0.1);
-}
-
+/* End call button - iOS red style */
 .endBtn {
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #ff453a;
   border: none;
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4), 0 0 0 1px rgba(239, 68, 68, 0.2) inset;
-  position: relative;
-  overflow: hidden;
-}
-
-.endBtn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.endBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.6), 0 0 0 1px rgba(239, 68, 68, 0.3) inset;
-}
-
-.endBtn:hover::after {
-  opacity: 1;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  box-shadow: 
+    0 4px 16px rgba(255, 59, 48, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .endBtn:active {
-  transform: translateY(0) scale(0.95);
+  background: #d63b33;
+  transform: scale(0.88);
+  box-shadow: 
+    0 2px 8px rgba(255, 59, 48, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* ── Modal ── */
@@ -575,9 +585,9 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -587,94 +597,97 @@
 .modal {
   width: 100%;
   max-width: 340px;
-  background: rgba(20, 20, 30, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  background: rgba(28, 28, 30, 0.95);
+  border: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
   padding: 24px 20px;
   text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .modalIconWrapper {
-  width: 44px;
-  height: 44px;
-  margin: 0 auto 12px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 2px solid rgba(239, 68, 68, 0.15);
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.12), rgba(255, 69, 58, 0.12));
+  border: 1px solid rgba(255, 59, 48, 0.2);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f87171;
+  color: #ff453a;
 }
 
 .modal h3 {
   margin: 0 0 6px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #fff;
 }
 
 .modal p {
-  margin: 0 0 18px;
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 20px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .modalIdBox {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px;
+  gap: 8px;
+  padding: 12px;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  margin-bottom: 18px;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  margin-bottom: 20px;
 }
 
 .modalIdBox code {
   flex: 1;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.9rem;
+  font-family: 'SF Mono', 'Menlo', 'Fira Code', monospace;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #a5b4fc;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .modalCopyBtn {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 7px 12px;
+  gap: 4px;
+  padding: 8px 14px;
   background: #6366f1;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   color: #fff;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
-.modalCopyBtn:hover {
+.modalCopyBtn:active {
   background: #818cf8;
+  transform: scale(0.95);
 }
 
 .modalCloseBtn {
   width: 100%;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.modalCloseBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+.modalCloseBtn:active {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.98);
 }
 
 /* ── Landscape / Small Screens ── */
@@ -690,59 +703,47 @@
   .bottomSection {
     flex: 4;
     border-top: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 0.5px solid rgba(255, 255, 255, 0.1);
   }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
   .controlBarWrapper {
-    padding-bottom: 8px;
+    padding-bottom: 12px;
   }
 
   .topBar {
-    padding: 4px 10px;
+    padding: 8px 12px;
   }
 
-  .controlBtn {
-    width: 40px;
-    height: 40px;
+  .controlBar {
+    gap: 12px;
+    padding: 6px;
   }
 
-  .controlIconCircle {
-    width: 28px;
-    height: 28px;
-  }
-
-  .controlBtn .lucide,
-  .controlIconCircle .lucide {
-    width: 16px;
-    height: 16px;
-  }
-
+  .controlBtn,
   .endBtn {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .controlBtn svg,
+  .endBtn svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
 @media (max-width: 360px) {
   .controlBar {
-    gap: 8px;
+    gap: 12px;
+    padding: 6px;
   }
 
-  .controlBtn {
-    width: 44px;
-    height: 44px;
-  }
-
-  .controlIconCircle {
-    width: 30px;
-    height: 30px;
-  }
-
+  .controlBtn,
   .endBtn {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
   }
 }
 
@@ -758,14 +759,8 @@
 }
 
 /* ════════════════════════════════════════════════
-   REMOVE GREY PLAY BUTTON - COMPREHENSIVE FIX
+   REMOVE GREY PLAY BUTTON
    ════════════════════════════════════════════════ */
-
-.video,
-.localVideo {
-  background: #000 !important;
-  object-fit: cover !important;
-}
 
 .video::-webkit-media-controls,
 .localVideo::-webkit-media-controls {
@@ -785,7 +780,6 @@
 .video::-webkit-media-controls-poster,
 .localVideo::-webkit-media-controls-poster {
   display: none !important;
-  background: #000 !important;
 }
 
 .video::-webkit-media-controls-enclosure,
@@ -794,30 +788,6 @@
 }
 
 .video::-webkit-media-controls-panel,
-.localVideo::-webkit-media-controls-panel,
-.video::-webkit-media-controls-timeline,
-.localVideo::-webkit-media-controls-timeline,
-.video::-webkit-media-controls-current-time-display,
-.localVideo::-webkit-media-controls-current-time-display,
-.video::-webkit-media-controls-time-remaining-display,
-.localVideo::-webkit-media-controls-time-remaining-display,
-.video::-webkit-media-controls-mute-button,
-.localVideo::-webkit-media-controls-mute-button,
-.video::-webkit-media-controls-volume-slider,
-.localVideo::-webkit-media-controls-volume-slider,
-.video::-webkit-media-controls-fullscreen-button,
-.localVideo::-webkit-media-controls-fullscreen-button {
-  display: none !important;
-}
-
-.video[poster],
-.localVideo[poster] {
-  background: #000 !important;
-}
-
-.video::-internal-media-controls-overlay-cast-button,
-.localVideo::-internal-media-controls-overlay-cast-button,
-.video::-internal-media-controls-overflow-button,
-.localVideo::-internal-media-controls-overflow-button {
+.localVideo::-webkit-media-controls-panel {
   display: none !important;
 }
