@@ -1,341 +1,245 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
-import {
-  Mic, MicOff, Video, VideoOff,
-  PhoneOff, SkipForward,
-  Heart, Copy, Check, Users, MicOff as MicOffIcon
-} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, SkipForward, Copy, Check, Heart } from 'lucide-react';
 import styles from './CallScreen.module.css';
 
-const transparentGif =
-  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-/* ─────────────────────────────────────────────────
-   Stream attachment helpers
-───────────────────────────────────────────────── */
-function attachStream(videoEl, stream, onReady) {
-  if (!videoEl) return;
-  videoEl.srcObject = null;
-  videoEl.load();
-  videoEl.srcObject = stream;
-
-  const play = () => {
-    videoEl.play()
-      .then(() => onReady?.())
-      .catch(() => setTimeout(() => videoEl.play().catch(() => {}), 500));
-  };
-
-  if (videoEl.readyState >= 3) {
-    play();
-  } else {
-    const handler = () => {
-      videoEl.removeEventListener('canplay', handler);
-      play();
-    };
-    videoEl.addEventListener('canplay', handler);
-  }
-}
-
-/* ─────────────────────────────────────────────────
-   Main component
-───────────────────────────────────────────────── */
 const CallScreen = ({
-  partner         = null,
+  partner = null,
   localVideoRef,
   remoteVideoRef,
-  audioEnabled    = true,
-  videoEnabled    = true,
-  partnerMedia    = { video: true, audio: true },
-  localStream     = null,
-  partnerStream   = null,
-  searching       = false,
+  audioEnabled = true,
+  videoEnabled = true,
+  partnerMedia = { video: true, audio: true },
+  localStream = null,
+  partnerStream = null,
+  searching = false,
   autoSearchCountdown = null,
-  onToggleAudio   = () => {},
-  onToggleVideo   = () => {},
-  onSkip          = () => {},
-  onLeave         = () => {},
+  onToggleAudio = () => {},
+  onToggleVideo = () => {},
+  onSkip = () => {},
+  onLeave = () => {},
   onCancelAutoSearch = () => {},
-  userOreyId      = null,
+  userOreyId = null,
 }) => {
-  const [uiVisible,        setUiVisible]        = useState(true);
-  const [copiedOreyId,     setCopiedOreyId]     = useState(false);
-  const [showOreyIdModal,  setShowOreyIdModal]  = useState(false);
+  const [uiVisible, setUiVisible] = useState(true);
+  const [copiedOreyId, setCopiedOreyId] = useState(false);
+  const [showOreyIdModal, setShowOreyIdModal] = useState(false);
+  const [remoteVideoReady, setRemoteVideoReady] = useState(false);
+  
+  const hideTimerRef = useRef(null);
 
-  const hideTimerRef       = useRef(null);
-  const localStreamRef     = useRef(localStream);
-  const partnerStreamRef   = useRef(partnerStream);
+  const isRemoteConnected = !!partner;
+  const isPartnerVideoOff = partner && !partnerMedia?.video;
+  const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  const isRemoteConnected  = !!partner;
-  const isPartnerVideoOff  = partner && !partnerMedia?.video;
-  const isPartnerMuted     = partner && !partnerMedia?.audio;
+  // Attach remote stream
+  const attachRemoteStream = (stream) => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+    video.srcObject = null;
+    video.load();
+    video.srcObject = stream;
+    const handleCanPlay = () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.play().then(() => setRemoteVideoReady(true)).catch(() => {});
+    };
+    video.addEventListener('canplay', handleCanPlay);
+    if (video.readyState >= 3) handleCanPlay();
+  };
 
-  /* ── Attach local stream ── */
+  // Attach local stream
+  const attachLocalStream = (stream) => {
+    const video = localVideoRef.current;
+    if (!video) return;
+    video.srcObject = null;
+    video.load();
+    video.srcObject = stream;
+    video.play().catch(() => {});
+  };
+
   useEffect(() => {
-    localStreamRef.current = localStream;
-    if (localStream) attachStream(localVideoRef.current, localStream);
+    if (localStream) attachLocalStream(localStream);
   }, [localStream]);
 
-  /* ── Re-attach when video is toggled back on ── */
   useEffect(() => {
-    if (videoEnabled && localStream) {
-      attachStream(localVideoRef.current, localStream);
-    }
+    if (videoEnabled && localStream) attachLocalStream(localStream);
   }, [videoEnabled]);
 
-  /* ── Attach partner stream ── */
   useEffect(() => {
-    partnerStreamRef.current = partnerStream;
     if (partnerStream) {
-      attachStream(remoteVideoRef.current, partnerStream);
+      setRemoteVideoReady(false);
+      attachRemoteStream(partnerStream);
+    } else {
+      setRemoteVideoReady(false);
     }
   }, [partnerStream]);
 
-  /* ── Cleanup ── */
   useEffect(() => {
     return () => {
-      clearTimeout(hideTimerRef.current);
-      if (localVideoRef.current)  localVideoRef.current.srcObject  = null;
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+      clearTimeout(hideTimerRef.current);
     };
   }, []);
 
-  /* ── Auto-hide UI ── */
+  // Auto-hide controls after 4 seconds
   useEffect(() => {
-    const reset = () => {
+    const resetTimer = () => {
       setUiVisible(true);
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = setTimeout(() => setUiVisible(false), 4000);
     };
-    const events = ['mousemove', 'touchstart', 'click'];
-    events.forEach(e => window.addEventListener(e, reset));
-    reset();
+    window.addEventListener('touchstart', resetTimer);
+    window.addEventListener('click', resetTimer);
+    resetTimer();
     return () => {
-      events.forEach(e => window.removeEventListener(e, reset));
+      window.removeEventListener('touchstart', resetTimer);
+      window.removeEventListener('click', resetTimer);
       clearTimeout(hideTimerRef.current);
     };
   }, []);
 
-  /* ── Keyboard shortcuts ── */
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.target.matches('input,textarea,[contenteditable]')) return;
-      if (e.key === 'm') { e.preventDefault(); onToggleAudio(); }
-      if (e.key === 'v') { e.preventDefault(); onToggleVideo(); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onToggleAudio, onToggleVideo]);
-
-  /* ── Swipe-to-skip (remote video) ── */
-  const dragX      = useMotionValue(0);
-  const cardRot    = useTransform(dragX, [-280, 0, 280], [-12, 0, 12]);
-  const cardOpac   = useTransform(dragX, [-280, -100, 0, 100, 280], [0.5, 0.95, 1, 0.95, 0.5]);
-  const skipW      = typeof window !== 'undefined' ? window.innerWidth * 0.28 : 120;
-
-  const handleDragEnd = useCallback((_, info) => {
-    if (Math.abs(info.offset.x) > skipW) {
-      dragX.set(info.offset.x > 0 ? 900 : -900);
-      setTimeout(() => { onSkip(); dragX.set(0); }, 180);
-    } else {
-      dragX.set(0);
+  const copyOreyIdToClipboard = () => {
+    if (userOreyId) {
+      navigator.clipboard.writeText(userOreyId);
+      setCopiedOreyId(true);
+      setTimeout(() => setCopiedOreyId(false), 2000);
     }
-  }, [onSkip, skipW]);
-
-  /* ── Orey ID copy ── */
-  const copyOreyId = () => {
-    if (!userOreyId) return;
-    navigator.clipboard.writeText(userOreyId);
-    setCopiedOreyId(true);
-    setTimeout(() => setCopiedOreyId(false), 2000);
   };
-
-  /* ── Poster (no remote) ── */
-  const Poster = () => (
-    <div className={styles.posterContainer}>
-      <span className={styles.oreyMark}>Orey!</span>
-    </div>
-  );
 
   return (
     <div className={styles.container}>
-
-      {/* ══════════════ REMOTE VIEW (top 60%) ══════════════ */}
+      
+      {/* TOP: REMOTE VIEW (60%) */}
       <div className={styles.remoteView}>
+        
+        {/* Orey ID Badge */}
+        {userOreyId && (
+          <button onClick={() => setShowOreyIdModal(true)} className={styles.idBadge}>
+            <Heart size={12} />
+            <span>{userOreyId}</span>
+          </button>
+        )}
 
-        {/* Top bar */}
-        <AnimatePresence>
-          {uiVisible && (
-            <motion.div
-              className={styles.topBar}
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0,   opacity: 1 }}
-              exit={{   y: -50, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <button
-                className={styles.brandPill}
-                onClick={() => userOreyId && setShowOreyIdModal(true)}
-                style={{ cursor: userOreyId ? 'pointer' : 'default' }}
-              >
-                <span className={styles.brandDot} />
-                <span className={styles.brandName}>Orey!</span>
-              </button>
-
-              {isRemoteConnected && (
-                <div className={styles.livePill}>
-                  <span className={styles.liveDot} />
-                  Live
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Content ── */}
         {searching || autoSearchCountdown !== null ? (
-
-          /* Searching / countdown */
           <div className={styles.searchingOverlay}>
             {autoSearchCountdown !== null ? (
               <div className={styles.countdownContent}>
-                <motion.div
-                  key={autoSearchCountdown}
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1,   opacity: 1 }}
-                  className={styles.countdownNumber}
-                >
-                  {autoSearchCountdown}
-                </motion.div>
-                <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>
-                  Cancel
-                </button>
+                <span className={styles.countdownNumber}>{autoSearchCountdown}</span>
+                <p className={styles.countdownLabel}>Connecting...</p>
+                <button onClick={onCancelAutoSearch} className={styles.cancelBtn}>Cancel</button>
               </div>
             ) : (
-              <div className={styles.searchingAnimation}>
-                <div className={styles.wave} />
-                <div className={styles.wave} />
-                <div className={styles.wave} />
-                <Users className={styles.searchingIcon} size={26} />
+              <div className={styles.searchingContent}>
+                <div className={styles.searchingRing} />
+                <p className={styles.searchingTitle}>Finding your match</p>
+                <p className={styles.searchingSubtitle}>Connecting you with someone amazing</p>
               </div>
             )}
           </div>
-
-        ) : isRemoteConnected && !isPartnerVideoOff ? (
-
-          /* Partner video with swipe-to-skip */
-          <motion.div
-            className={styles.dragContainer}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.85}
-            style={{ x: dragX, rotate: cardRot, opacity: cardOpac }}
-            onDragEnd={handleDragEnd}
-          >
+        ) : (
+          <>
             <video
               ref={remoteVideoRef}
               className={styles.video}
               autoPlay
               playsInline
-              poster={transparentGif}
+              poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              style={{ 
+                visibility: isRemoteConnected && !isPartnerVideoOff ? 'visible' : 'hidden',
+                position: 'absolute',
+                inset: 0
+              }}
               disablePictureInPicture
               controlsList="nodownload nofullscreen noremoteplayback"
             />
 
-            {/* Partner muted hint */}
-            {isPartnerMuted && (
-              <div className={styles.partnerStatus}>
-                <MicOff size={11} />
+            {(!isRemoteConnected || isPartnerVideoOff) && (
+              <div className={styles.brandOverlay}>
+                <span className={styles.brandText}>Orey!</span>
+              </div>
+            )}
+
+            {isRemoteConnected && isPartnerMuted && (
+              <div className={styles.statusBadge}>
+                <MicOff size={12} />
                 <span>Muted</span>
               </div>
             )}
-          </motion.div>
-
-        ) : (
-          /* No partner / camera off poster */
-          <Poster />
-        )}
-
-        {/* Partner camera off notice */}
-        {isRemoteConnected && isPartnerVideoOff && (
-          <div className={styles.partnerStatus}>
-            <VideoOff size={11} />
-            <span>Camera off</span>
-          </div>
+          </>
         )}
       </div>
 
-      {/* ══════════════ LOCAL VIEW (bottom 40%) ══════════════ */}
+      {/* BOTTOM: LOCAL VIEW + CONTROLS (40%) */}
       <div className={styles.localView}>
-
-        {/* Local video */}
         <video
           ref={localVideoRef}
           className={styles.localVideo}
           autoPlay
           muted
           playsInline
-          poster={transparentGif}
+          poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+          style={{ 
+            visibility: videoEnabled ? 'visible' : 'hidden',
+            position: 'absolute',
+            inset: 0
+          }}
           disablePictureInPicture
           controlsList="nodownload nofullscreen noremoteplayback"
-          style={{
-            visibility: videoEnabled && localStream ? 'visible' : 'hidden',
-          }}
         />
 
-        {/* Poster when camera off */}
-        {(!videoEnabled || !localStream) && <Poster />}
+        {!videoEnabled && (
+          <div className={styles.brandOverlay}>
+            <span className={styles.brandText}>Orey!</span>
+          </div>
+        )}
 
-        {/* ──────────────────────────────────────────
-            iOS STYLE CONTROL BAR
-        ────────────────────────────────────────── */}
+        {/* iOS Style Control Bar */}
         <AnimatePresence>
           {uiVisible && (
             <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={styles.controlBarWrapper}
-              initial={{ y: 90, opacity: 0 }}
-              animate={{ y: 0,  opacity: 1 }}
-              exit={{   y: 90, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             >
               <div className={styles.controlBar}>
-
-                {/* Mic */}
-                <ControlBtn
-                  onClick={onToggleAudio}
-                  active={audioEnabled}
-                  label={audioEnabled ? 'Mute' : 'Unmute'}
-                >
-                  {audioEnabled ? <Mic size={21} /> : <MicOff size={21} />}
-                </ControlBtn>
-
-                {/* Camera */}
-                <ControlBtn
-                  onClick={onToggleVideo}
-                  active={videoEnabled}
-                  label={videoEnabled ? 'Camera off' : 'Camera on'}
-                >
-                  {videoEnabled ? <Video size={21} /> : <VideoOff size={21} />}
-                </ControlBtn>
-
-                {/* Skip */}
+                
+                {/* Mic Button */}
                 <button
-                  onClick={onSkip}
-                  className={`${styles.controlBtn} ${styles.controlBtnSkip}`}
-                  aria-label="Skip"
+                  onClick={onToggleAudio}
+                  className={`${styles.controlBtn} ${!audioEnabled ? styles.controlBtnOff : ''}`}
+                  aria-label={audioEnabled ? 'Mute' : 'Unmute'}
                 >
-                  <SkipForward size={21} />
+                  {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
                 </button>
 
-                {/* Divider */}
-                <div className={styles.controlDivider} />
+                {/* Video Button */}
+                <button
+                  onClick={onToggleVideo}
+                  className={`${styles.controlBtn} ${!videoEnabled ? styles.controlBtnOff : ''}`}
+                  aria-label={videoEnabled ? 'Camera off' : 'Camera on'}
+                >
+                  {videoEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+                </button>
 
-                {/* End call */}
+                {/* Skip Button */}
+                <button
+                  onClick={onSkip}
+                  className={styles.skipBtn}
+                  aria-label="Skip"
+                >
+                  <SkipForward size={20} />
+                </button>
+
+                {/* End Call Button */}
                 <button
                   onClick={onLeave}
                   className={styles.endBtn}
                   aria-label="End call"
                 >
-                  <PhoneOff size={22} />
+                  <PhoneOff size={24} />
                 </button>
 
               </div>
@@ -344,44 +248,30 @@ const CallScreen = ({
         </AnimatePresence>
       </div>
 
-      {/* ══════════════ OREY ID MODAL ══════════════ */}
+      {/* Orey ID Modal */}
       <AnimatePresence>
         {showOreyIdModal && (
-          <motion.div
-            className={styles.modalBackdrop}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className={styles.modalOverlay}
             onClick={() => setShowOreyIdModal(false)}
           >
-            <motion.div
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className={styles.modal}
-              initial={{ scale: 0.88, y: 24, opacity: 0 }}
-              animate={{ scale: 1,    y: 0,  opacity: 1 }}
-              exit={{   scale: 0.88, y: 24, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
               onClick={e => e.stopPropagation()}
             >
-              <div className={styles.modalIcon}>
-                <Heart size={22} />
-              </div>
+              <Heart size={28} className={styles.modalHeart} />
               <h3>Your Orey ID</h3>
-              <p>Share this with friends to connect instantly</p>
-
-              <div className={styles.oreyIdBox}>
-                <code>{userOreyId || 'Not registered'}</code>
-                {userOreyId && (
-                  <button onClick={copyOreyId} className={styles.copyBtn}>
-                    {copiedOreyId ? <Check size={14} /> : <Copy size={14} />}
-                    {copiedOreyId ? 'Copied' : 'Copy'}
-                  </button>
-                )}
+              <p>Share this ID to connect instantly</p>
+              <div className={styles.idDisplay}>
+                <code>{userOreyId}</code>
+                <button onClick={copyOreyIdToClipboard} className={styles.copyBtn}>
+                  {copiedOreyId ? <Check size={16} /> : <Copy size={16} />}
+                  {copiedOreyId ? 'Copied' : 'Copy'}
+                </button>
               </div>
-
-              <button
-                onClick={() => setShowOreyIdModal(false)}
-                className={styles.closeModalBtn}
-              >
+              <button onClick={() => setShowOreyIdModal(false)} className={styles.closeModalBtn}>
                 Done
               </button>
             </motion.div>
@@ -391,16 +281,5 @@ const CallScreen = ({
     </div>
   );
 };
-
-/* ── Small helper: standard control button ── */
-const ControlBtn = ({ onClick, active, label, children }) => (
-  <button
-    onClick={onClick}
-    className={`${styles.controlBtn} ${active ? styles.controlBtnOn : styles.controlBtnOff}`}
-    aria-label={label}
-  >
-    {children}
-  </button>
-);
 
 export default CallScreen;
