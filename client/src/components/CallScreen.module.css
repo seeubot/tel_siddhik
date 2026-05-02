@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════
-   CALL SCREEN - Modern Design
+   CALL SCREEN - Modern Design with Chat
    ════════════════════════════════════════════ */
 
 .container {
@@ -11,7 +11,6 @@
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
 }
 
 @media (min-width: 1024px) {
@@ -29,7 +28,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(10, 10, 15, 0.6);
+  background: rgba(10, 10, 15, 0.8);
   backdrop-filter: blur(12px);
   padding: 0.5rem 1rem;
   border-radius: 2rem;
@@ -60,13 +59,24 @@
   background-clip: text;
 }
 
-.brandBadge {
-  font-size: 0.65rem;
-  padding: 0.2rem 0.5rem;
+.oreyIdButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
   background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 1rem;
-  color: #818cf8;
+  font-size: 0.7rem;
   font-weight: 600;
+  color: #a5b4fc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oreyIdButton:hover {
+  background: rgba(99, 102, 241, 0.3);
+  transform: scale(1.05);
 }
 
 /* Quality Indicator */
@@ -83,7 +93,7 @@
   padding: 0.4rem 0.8rem;
   border-radius: 2rem;
   border: 1px solid rgba(34, 197, 94, 0.3);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: #4ade80;
 }
@@ -116,7 +126,7 @@
   background: #0a0a0f;
 }
 
-/* Poster Container */
+/* Attractive Orey! Poster */
 .posterContainer {
   position: absolute;
   inset: 0;
@@ -127,65 +137,77 @@
   z-index: 15;
 }
 
-.waitingPoster,
-.posterContainer > div {
+.oreyPoster {
   text-align: center;
-  animation: fadeInUp 0.6s ease-out;
+  padding: 2rem;
 }
 
-.posterGlow {
-  display: inline-flex;
-  align-items: center;
+.oreyLogo {
+  display: flex;
   justify-content: center;
-  width: 100px;
-  height: 100px;
-  background: rgba(99, 102, 241, 0.1);
-  border-radius: 50%;
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
-  border: 2px solid rgba(99, 102, 241, 0.2);
-  position: relative;
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: -0.05em;
 }
 
-.posterGlow::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  opacity: 0.1;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.posterIcon {
-  color: #818cf8;
-  opacity: 0.7;
-}
-
-.posterContainer h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem;
-  background: linear-gradient(135deg, #fff, #a78bfa);
+.oreyLetter {
+  background: linear-gradient(135deg, #fff 0%, #818cf8 50%, #a78bfa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: float 3s ease-in-out infinite;
+  display: inline-block;
 }
 
-.posterContainer p {
-  font-size: 0.875rem;
+.oreyLetter:nth-child(1) { animation-delay: 0s; }
+.oreyLetter:nth-child(2) { animation-delay: 0.1s; }
+.oreyLetter:nth-child(3) { animation-delay: 0.2s; }
+.oreyLetter:nth-child(4) { animation-delay: 0.3s; }
+.oreyExclamation {
+  background: linear-gradient(135deg, #a78bfa, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: bounce 2s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+.oreySubtext {
+  font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.4);
-  margin: 0;
+  letter-spacing: 0.3em;
+  margin-bottom: 1.5rem;
 }
 
-.audioOnlyBadge {
+.showIdButton {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 2rem;
-  margin-top: 1rem;
-  font-size: 0.75rem;
-  color: #818cf8;
+  color: #a5b4fc;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.showIdButton:hover {
+  background: rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
 }
 
 .gradientOverlay {
@@ -222,7 +244,6 @@
   border-radius: 2rem;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
@@ -237,6 +258,12 @@
   background: rgba(99, 102, 241, 0.15);
   border-color: rgba(99, 102, 241, 0.3);
   color: #a5b4fc;
+}
+
+.statusPill.green {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
 }
 
 /* ── STATUS CHIPS ── */
@@ -371,10 +398,6 @@
   color: #818cf8;
 }
 
-.shieldIcon {
-  color: #818cf8;
-}
-
 .cancelBtn {
   padding: 0.6rem 1.5rem;
   background: rgba(255, 255, 255, 0.05);
@@ -426,10 +449,6 @@
   opacity: 0;
 }
 
-.localVideoBlurred {
-  filter: blur(80px) brightness(0.4);
-}
-
 .selfViewLabel {
   position: absolute;
   bottom: 1rem;
@@ -443,30 +462,6 @@
   color: rgba(255, 255, 255, 0.6);
   z-index: 10;
   letter-spacing: 0.05em;
-}
-
-.blurOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 102, 241, 0.05);
-  backdrop-filter: blur(4px);
-  gap: 0.5rem;
-}
-
-.blurIcon {
-  color: rgba(129, 140, 248, 0.4);
-}
-
-.blurText {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: rgba(129, 140, 248, 0.5);
 }
 
 .statusChipRight {
@@ -485,6 +480,189 @@
   color: #fb7185;
   border: 1px solid rgba(244, 63, 94, 0.3);
   z-index: 10;
+}
+
+/* ── CHAT PANEL ── */
+.chatPanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 360px;
+  height: 100%;
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(99, 102, 241, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .chatPanel {
+    max-width: 380px;
+  }
+}
+
+.chatHeader {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.chatHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #a5b4fc;
+}
+
+.closeChat {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.closeChat:hover {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+}
+
+.chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emptyChat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+.emptyChat p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.emptyChat span {
+  font-size: 0.75rem;
+}
+
+.chatMessage {
+  display: flex;
+  width: 100%;
+}
+
+.ownMessage {
+  justify-content: flex-end;
+}
+
+.otherMessage {
+  justify-content: flex-start;
+}
+
+.messageBubble {
+  max-width: 80%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 1rem;
+  position: relative;
+}
+
+.ownMessage .messageBubble {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.otherMessage .messageBubble {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.messageBubble p {
+  margin: 0;
+  font-size: 0.85rem;
+  word-wrap: break-word;
+}
+
+.messageTime {
+  display: block;
+  font-size: 0.6rem;
+  opacity: 0.6;
+  margin-top: 0.25rem;
+}
+
+.chatInput {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.chatTextarea {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  resize: none;
+  font-family: inherit;
+  max-height: 100px;
+}
+
+.chatTextarea:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.sendButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sendButton:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ── CONTROL BAR ── */
@@ -661,12 +839,12 @@
 
 .modal {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
   background: rgba(20, 20, 25, 0.95);
   backdrop-filter: blur(40px);
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 2rem;
-  padding: 1.5rem;
+  padding: 2rem;
   text-align: center;
 }
 
@@ -679,15 +857,17 @@
   border-radius: 50%;
   background: rgba(99, 102, 241, 0.1);
   border: 2px solid rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  color: #f43f5e;
   margin-bottom: 1rem;
 }
 
 .modalTitle {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 0.5rem;
-  color: #fff;
+  background: linear-gradient(135deg, #fff, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .modalText {
@@ -697,27 +877,49 @@
   line-height: 1.5;
 }
 
-.modalActions {
+.oreyIdDisplay {
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
-.modalCancelBtn {
+.oreyIdCode {
   flex: 1;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
+  font-family: monospace;
+  font-size: 1rem;
   font-weight: 600;
+  color: #a5b4fc;
+  background: none;
+  border: none;
+  text-align: center;
+}
+
+.copyIdButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 0.5rem;
+  color: #a5b4fc;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.modalCancelBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.copyIdButton:hover {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .modalConfirmBtn {
@@ -727,7 +929,7 @@
   border: none;
   border-radius: 1rem;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -748,17 +950,6 @@
   50% { opacity: 0.5; }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   .controlBar {
@@ -773,6 +964,10 @@
   
   .nextButton {
     height: 44px;
+  }
+
+  .chatPanel {
+    max-width: 100%;
   }
 }
 
@@ -801,6 +996,11 @@
   }
   
   .wave {
+    animation: none !important;
+  }
+  
+  .oreyLetter,
+  .oreyExclamation {
     animation: none !important;
   }
 }
