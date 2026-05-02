@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield, Users, Venus, Mars, User } from 'lucide-react';
 import styles from './Lobby.module.css';
 
-/**
- * Lobby Component - Fully Responsive Dating App Style
- */
 export default function Lobby({
   oreyId, oreyIdExpiry,
   searching,
   onDiscover, onCancelSearch, onConnectById,
+  gender = null,
+  onSetGender = () => {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
+  const [showGenderModal, setShowGenderModal] = useState(false);
 
   const copyId = () => {
     navigator.clipboard.writeText(oreyId).then(() => {
@@ -32,113 +33,144 @@ export default function Lobby({
   const handleConnect = () => {
     const trimmed = targetId.trim().toUpperCase();
     const formattedId = trimmed.startsWith('OREY-') ? trimmed : `OREY-${trimmed}`;
-    if (formattedId.length === 10) onConnectById(formattedId); // OREY-XXXXX = 10 chars
+    if (formattedId.length === 10) onConnectById(formattedId);
   };
 
   const expiryStr = oreyIdExpiry
     ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
 
-  const taglines = [
-    "Your next favorite person is one click away",
-    "Swipe right on serendipity",
-    "Where chemistry meets connection",
-    "Real vibes. Real people. Real moments.",
-    "Less swiping, more sparking ✨",
-    "Your vibe attracts your tribe",
-    "Manifesting your meet-cute 💕"
-  ];
-  
-  const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
+  const genderLabel = gender === 'male' ? 'Male' : gender === 'female' ? 'Female' : 'Anyone';
 
   return (
     <div className={styles.root}>
-      {/* Animated background */}
-      <div className={styles.gradientOrb1} />
-      <div className={styles.gradientOrb2} />
-      <div className={styles.gridOverlay} />
+      {/* Background */}
+      <div className={styles.bgGlow} />
       
-      {/* Floating elements */}
-      <div className={styles.floatingElements}>
-        <Heart className={styles.floatingIcon1} size={16} />
-        <Heart className={styles.floatingIcon2} size={12} />
-        <Sparkles className={styles.floatingIcon3} size={14} />
-        <Sparkles className={styles.floatingIcon4} size={18} />
-      </div>
-
       <div className={styles.container}>
-        {/* Logo & Hero */}
-        <div className={styles.hero}>
-          <div className={styles.logoWrapper}>
-            <div className={styles.logoGlow} />
-            <h1 className={styles.logo}>
-              Orey<span className={styles.logoAccent}>!</span>
-            </h1>
-          </div>
-          
-          <p className={styles.tagline}>{randomTagline}</p>
-          
-          <div className={styles.brandMotto}>
-            <span className={styles.divider}>✦</span>
-            <span>Mana People • Mana Vibes</span>
-            <span className={styles.divider}>✦</span>
-          </div>
-        </div>
+        {/* Header */}
+        <header className={styles.header}>
+          <h1 className={styles.logo}>Orey<span>!</span></h1>
+          <p className={styles.subtitle}>Connect • Chat • Share</p>
+        </header>
 
-        {/* Your ID Card */}
+        {/* Gender Selection Card */}
         <div className={styles.card}>
-          <div className={styles.idSection}>
-            <div className={styles.idHeader}>
-              <div className={styles.badge}>
-                <Sparkles size={12} />
-                <span>Your Connection Code</span>
-              </div>
-              {expiryStr && (
-                <span className={styles.expiryBadge}>
-                  ⏳ {expiryStr}
-                </span>
-              )}
+          <div className={styles.genderRow}>
+            <div className={styles.genderInfo}>
+              <Users size={16} className={styles.genderIcon} />
+              <span className={styles.genderLabel}>Matching Preference</span>
             </div>
-            
-            <div className={styles.idDisplay}>
-              <code className={styles.idText}>
-                {oreyId || 'OREY-·····'}
-              </code>
-              <button 
-                className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} 
-                onClick={copyId}
-                title="Copy ID"
-              >
-                {copied ? <Check size={18} /> : <Copy size={18} />}
-              </button>
-            </div>
-            
-            <p className={styles.idHint}>Share this code with someone special ✨</p>
+            <button 
+              className={styles.genderSelect} 
+              onClick={() => setShowGenderModal(true)}
+            >
+              {gender === 'male' && <Mars size={14} />}
+              {gender === 'female' && <Venus size={14} />}
+              {!gender && <User size={14} />}
+              <span>{genderLabel}</span>
+              <span className={styles.chevron}>▾</span>
+            </button>
           </div>
         </div>
 
-        {/* Main Action */}
+        {/* Gender Modal */}
+        <AnimatePresence>
+          {showGenderModal && (
+            <motion.div 
+              className={styles.modalOverlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowGenderModal(false)}
+            >
+              <motion.div 
+                className={styles.modal}
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                onClick={e => e.stopPropagation()}
+              >
+                <h3>Who would you like to meet?</h3>
+                <p>We'll try to match you with your preference first</p>
+                
+                <div className={styles.genderOptions}>
+                  <button 
+                    className={`${styles.genderOption} ${gender === 'male' ? styles.genderOptionActive : ''}`}
+                    onClick={() => { onSetGender('male'); setShowGenderModal(false); }}
+                  >
+                    <div className={styles.genderCircle}>
+                      <Mars size={24} />
+                    </div>
+                    <span>Male</span>
+                  </button>
+                  
+                  <button 
+                    className={`${styles.genderOption} ${gender === 'female' ? styles.genderOptionActive : ''}`}
+                    onClick={() => { onSetGender('female'); setShowGenderModal(false); }}
+                  >
+                    <div className={styles.genderCircle}>
+                      <Venus size={24} />
+                    </div>
+                    <span>Female</span>
+                  </button>
+                  
+                  <button 
+                    className={`${styles.genderOption} ${!gender ? styles.genderOptionActive : ''}`}
+                    onClick={() => { onSetGender(null); setShowGenderModal(false); }}
+                  >
+                    <div className={styles.genderCircle}>
+                      <Users size={24} />
+                    </div>
+                    <span>Anyone</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Orey ID Card */}
+        <div className={styles.card}>
+          <div className={styles.idHeader}>
+            <span className={styles.idLabel}>Your Orey ID</span>
+            {expiryStr && (
+              <span className={styles.expiryBadge}>Expires {expiryStr}</span>
+            )}
+          </div>
+          
+          <div className={styles.idDisplay}>
+            <code className={styles.idText}>{oreyId || 'OREY-·····'}</code>
+            <button 
+              className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} 
+              onClick={copyId}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+          </div>
+          
+          <p className={styles.idHint}>Share this code to connect instantly</p>
+        </div>
+
+        {/* Action Button */}
         <div className={styles.actions}>
           {!searching ? (
             <button className={styles.discoverBtn} onClick={onDiscover}>
-              <Heart size={20} fill="currentColor" className={styles.heartBeat} />
+              <Heart size={20} fill="currentColor" />
               <span>Find Your Match</span>
               <Sparkles size={16} />
             </button>
           ) : (
-            <div className={styles.searchingContainer}>
-              <div className={styles.searchingBox}>
-                <div className={styles.searchingAnimation}>
-                  <Loader2 size={20} className={styles.spinner} />
-                  <div className={styles.dots}>
-                    <span>.</span><span>.</span><span>.</span>
-                  </div>
-                </div>
-                <p className={styles.searchingTitle}>Finding your vibe match</p>
-                <p className={styles.searchingSub}>Someone amazing is nearby...</p>
+            <div className={styles.searchingBox}>
+              <div className={styles.searchingContent}>
+                <Loader2 size={20} className={styles.spinner} />
+                <p className={styles.searchingTitle}>Finding your match</p>
+                <p className={styles.searchingSub}>
+                  {gender ? `Looking for ${gender === 'male' ? 'males' : 'females'}...` : 'Searching for anyone...'}
+                </p>
               </div>
               <button className={styles.cancelBtn} onClick={onCancelSearch}>
-                Cancel Search
+                Cancel
               </button>
             </div>
           )}
@@ -146,49 +178,38 @@ export default function Lobby({
 
         {/* Direct Connect */}
         <div className={styles.card}>
-          <div className={styles.connectSection}>
-            <div className={styles.connectHeader}>
-              <Hash size={14} className={styles.accentIcon} />
-              <span>Have a code?</span>
+          <div className={styles.connectHeader}>
+            <Hash size={14} />
+            <span>Connect with code</span>
+          </div>
+          
+          <div className={styles.connectInputGroup}>
+            <div className={styles.inputWrapper}>
+              <span className={styles.inputPrefix}>OREY-</span>
+              <input
+                className={styles.codeInput}
+                type="text"
+                placeholder="XXXXX"
+                maxLength={5}
+                value={targetId.replace('OREY-', '')}
+                onChange={(e) => setTargetId(e.target.value.toUpperCase().replace('OREY-', ''))}
+                onKeyDown={(e) => e.key === 'Enter' && targetId.length === 5 && handleConnect()}
+              />
             </div>
-            
-            <div className={styles.connectInputGroup}>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputPrefix}>OREY-</span>
-                <input
-                  className={styles.codeInput}
-                  type="text"
-                  placeholder="XXXXX"
-                  maxLength={5}
-                  value={targetId.replace('OREY-', '')}
-                  onChange={(e) => setTargetId(e.target.value.toUpperCase().replace('OREY-', ''))}
-                />
-              </div>
-              <button
-                className={`${styles.connectBtn} ${targetId.length === 5 ? styles.connectBtnActive : ''}`}
-                onClick={handleConnect}
-                disabled={targetId.length !== 5}
-              >
-                Connect
-                <Heart size={14} />
-              </button>
-            </div>
-            
-            <p className={styles.connectHint}>
-              Connect directly with someone you already vibe with
-            </p>
+            <button
+              className={`${styles.connectBtn} ${targetId.length === 5 ? styles.connectBtnActive : ''}`}
+              onClick={handleConnect}
+              disabled={targetId.length !== 5}
+            >
+              Go
+            </button>
           </div>
         </div>
 
         {/* Footer */}
         <footer className={styles.footer}>
-          <div className={styles.footerRow}>
-            <Shield size={12} />
-            <span>Encrypted • Private • Real Connections</span>
-          </div>
-          <p className={styles.footerMotto}>
-            No screenshots. No recordings. Just vibes.
-          </p>
+          <Shield size={10} />
+          <span>Encrypted • Private • Secure</span>
         </footer>
       </div>
     </div>
