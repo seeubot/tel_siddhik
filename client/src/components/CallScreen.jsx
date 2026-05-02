@@ -128,7 +128,6 @@ const CallScreen = ({
     
     if (Math.abs(info.offset.x) > skipThreshold) {
       const direction = info.offset.x > 0 ? 'right' : 'left';
-      const velocity = info.velocity.x;
       
       // Fly off animation
       const flyX = direction === 'right' ? 800 : -800;
@@ -326,35 +325,6 @@ const CallScreen = ({
             </>
           )}
         </div>
-
-        {/* Local PiP */}
-        <AnimatePresence>
-          {!searching && isRemoteConnected && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              className={styles.pipContainer}
-            >
-              <video
-                ref={localVideoRef}
-                className={styles.pipVideo}
-                autoPlay
-                muted
-                playsInline
-              />
-              {!videoEnabled && (
-                <div className={styles.pipCameraOff}>
-                  <VideoOff size={16} />
-                </div>
-              )}
-              <div className={styles.pipLabel}>
-                <span>You</span>
-                {!audioEnabled && <MicOff size={9} />}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ── 40% BOTTOM SECTION ── */}
@@ -382,7 +352,7 @@ const CallScreen = ({
         )}
         <div className={styles.localLabel}>You</div>
 
-        {/* ── Redesigned Control Bar ── */}
+        {/* ── Control Bar ── */}
         <AnimatePresence>
           {uiVisible && (
             <motion.div
