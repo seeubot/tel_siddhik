@@ -32,6 +32,8 @@ const CallScreen = ({
   
   const hideTimerRef = useRef(null);
   const localStreamRef = useRef(localStream);
+  const remoteVideoReadyRef = useRef(false);
+  const localVideoReadyRef = useRef(false);
 
   // Swipe gesture values
   const dragX = useMotionValue(0);
@@ -47,8 +49,6 @@ const CallScreen = ({
   const isRemoteConnected = !!partner;
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
-  const showRemotePoster = !isRemoteConnected || isPartnerVideoOff;
-  const showLocalPoster = !localStream || !videoEnabled;
 
   // Transparent 1x1 GIF as base64 to prevent grey play button
   const transparentPoster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -56,18 +56,50 @@ const CallScreen = ({
   // Update local stream ref
   useEffect(() => {
     localStreamRef.current = localStream;
+    if (localStream) {
+      localVideoReadyRef.current = false;
+    }
   }, [localStream]);
 
-  // Handle video stream sources
+  // Handle remote video stream
   useEffect(() => {
     if (remoteVideoRef.current && partner?.stream) {
-      remoteVideoRef.current.srcObject = partner.stream;
+      const video = remoteVideoRef.current;
+      
+      // Set srcObject only if it's different
+      if (video.srcObject !== partner.stream) {
+        video.srcObject = partner.stream;
+        
+        // Play the video once metadata is loaded
+        video.onloadedmetadata = () => {
+          video.play().catch(err => console.log('Remote video play error:', err));
+          remoteVideoReadyRef.current = true;
+        };
+        
+        // Also try to play immediately
+        video.play().catch(err => console.log('Remote video initial play error:', err));
+      }
     }
   }, [partner?.stream, remoteVideoRef]);
 
+  // Handle local video stream
   useEffect(() => {
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+      const video = localVideoRef.current;
+      
+      // Set srcObject only if it's different
+      if (video.srcObject !== localStream) {
+        video.srcObject = localStream;
+        
+        // Play the video once metadata is loaded
+        video.onloadedmetadata = () => {
+          video.play().catch(err => console.log('Local video play error:', err));
+          localVideoReadyRef.current = true;
+        };
+        
+        // Also try to play immediately
+        video.play().catch(err => console.log('Local video initial play error:', err));
+      }
     }
   }, [localStream, localVideoRef]);
 
@@ -160,34 +192,11 @@ const CallScreen = ({
     }
   };
 
-  // Poster Component (reusable for both screens)
-  const PosterDisplay = ({ variant = 'remote' }) => (
-    <div className={`${styles.posterOverlay} ${variant === 'local' ? styles.posterLocal : ''}`}>
-      <div className={styles.posterContent}>
-        {/* Logo Image */}
-        <div className={styles.posterLogoContainer}>
-          <img 
-            src="https://i.ibb.co/tPBR3kw2/a-clean-modern-app-logo-featuring-the-te-x-YWv-IIez-Rp-Sy-T3-W8-BKNw-GQ-7fw-fmxk-Qn-KAB9t-Nm-OM47-A-sd.jpg"
-            alt="Orey Logo"
-            className={styles.posterLogo}
-          />
-        </div>
-        
-        {/* Animated Brand Text */}
-        <div className={styles.posterBrandText}>
-          <span className={styles.posterBrandName}>Orey!</span>
-        </div>
-        
-        <p className={styles.posterTagline}>
-          {variant === 'remote' ? 'Swipe to discover new connections' : 'Your camera will appear here'}
-        </p>
-        
-        {/* Decorative elements */}
-        <div className={styles.posterDecorations}>
-          <span>Mana</span>
-          <span>⚡</span>
-          <span>App</span>
-        </div>
+  // Simple brand overlay - just the logo text
+  const BrandOverlay = () => (
+    <div className={styles.brandOverlay}>
+      <div className={styles.brandTextContainer}>
+        <span className={styles.brandTextLarge}>Orey!</span>
       </div>
     </div>
   );
@@ -231,7 +240,7 @@ const CallScreen = ({
           )}
         </AnimatePresence>
 
-        {/* Video / Poster / Searching */}
+        {/* Video / Brand Overlay / Searching */}
         <div className={styles.videoContainer}>
           {searching || autoSearchCountdown !== null ? (
             <div className={styles.searchingOverlay}>
@@ -266,63 +275,69 @@ const CallScreen = ({
                 </div>
               )}
             </div>
-          ) : isRemoteConnected && !isPartnerVideoOff ? (
-            <motion.div
-              className={styles.swipeCard}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.9}
-              style={{
-                x: dragX,
-                rotate: cardRotation,
-                opacity: cardOpacity,
-              }}
-              onDrag={handleDrag}
-              onDragEnd={handleDragEnd}
-              whileTap={{ cursor: 'grabbing' }}
-            >
-              <video
-                ref={remoteVideoRef}
-                className={styles.video}
-                autoPlay
-                playsInline
-                poster={transparentPoster}
-                disablePictureInPicture
-                controlsList="nodownload nofullscreen noremoteplayback"
-                x-webkit-airplay="deny"
-              />
-              
-              {/* Swipe direction indicator */}
-              <AnimatePresence>
-                {isDragging && swipeDirection && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className={`${styles.swipeIndicator} ${
-                      swipeDirection === 'left' ? styles.swipeLeft : styles.swipeRight
-                    }`}
-                  >
-                    <SkipForward size={24} />
-                    <span>Skip</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* Next hint overlay */}
-              <motion.div
-                className={styles.nextHint}
-                style={{
-                  opacity: nextHintOpacity,
-                  scale: nextHintScale,
-                }}
-              >
-                <SkipForward size={16} />
-                <span>Next</span>
-              </motion.div>
-            </motion.div>
           ) : (
-            <PosterDisplay variant="remote" />
+            // Always show the video area
+            <div className={styles.remoteVideoWrapper}>
+              {isRemoteConnected && !isPartnerVideoOff ? (
+                <motion.div
+                  className={styles.swipeCard}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.9}
+                  style={{
+                    x: dragX,
+                    rotate: cardRotation,
+                    opacity: cardOpacity,
+                  }}
+                  onDrag={handleDrag}
+                  onDragEnd={handleDragEnd}
+                  whileTap={{ cursor: 'grabbing' }}
+                >
+                  <video
+                    ref={remoteVideoRef}
+                    className={styles.video}
+                    autoPlay
+                    playsInline
+                    poster={transparentPoster}
+                    disablePictureInPicture
+                    controlsList="nodownload nofullscreen noremoteplayback"
+                    x-webkit-airplay="deny"
+                  />
+                  
+                  {/* Swipe direction indicator */}
+                  <AnimatePresence>
+                    {isDragging && swipeDirection && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={`${styles.swipeIndicator} ${
+                          swipeDirection === 'left' ? styles.swipeLeft : styles.swipeRight
+                        }`}
+                      >
+                        <SkipForward size={24} />
+                        <span>Skip</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Next hint overlay */}
+                  <motion.div
+                    className={styles.nextHint}
+                    style={{
+                      opacity: nextHintOpacity,
+                      scale: nextHintScale,
+                    }}
+                  >
+                    <SkipForward size={16} />
+                    <span>Next</span>
+                  </motion.div>
+                </motion.div>
+              ) : (
+                // Show brand overlay when disconnected or video off
+                <BrandOverlay />
+              )}
+            </div>
           )}
 
           {isRemoteConnected && isPartnerMuted && (
@@ -331,26 +346,36 @@ const CallScreen = ({
               <span>Partner muted</span>
             </div>
           )}
+          
+          {isRemoteConnected && isPartnerVideoOff && (
+            <div className={styles.peerStatusBadge}>
+              <VideoOff size={12} />
+              <span>Partner camera off</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── 40% BOTTOM SECTION ── */}
       <div className={styles.bottomSection}>
-        {videoEnabled && localStream ? (
-          <video
-            ref={localVideoRef}
-            className={styles.localVideo}
-            autoPlay
-            muted
-            playsInline
-            poster={transparentPoster}
-            disablePictureInPicture
-            controlsList="nodownload nofullscreen noremoteplayback"
-            x-webkit-airplay="deny"
-          />
-        ) : (
-          <PosterDisplay variant="local" />
-        )}
+        <div className={styles.localVideoWrapper}>
+          {videoEnabled && localStream ? (
+            <video
+              ref={localVideoRef}
+              className={styles.localVideo}
+              autoPlay
+              muted
+              playsInline
+              poster={transparentPoster}
+              disablePictureInPicture
+              controlsList="nodownload nofullscreen noremoteplayback"
+              x-webkit-airplay="deny"
+            />
+          ) : (
+            // Show brand overlay when camera is off
+            <BrandOverlay />
+          )}
+        </div>
         
         {videoEnabled && localStream && !audioEnabled && (
           <div className={styles.localMicOff}>
