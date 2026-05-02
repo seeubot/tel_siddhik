@@ -1,7 +1,33 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield, Users, Venus, Mars, User } from 'lucide-react';
+import { Copy, Check, Zap, Hash, Loader2, Heart, Sparkles, Shield, Users } from 'lucide-react';
 import styles from './Lobby.module.css';
+
+// Custom SVG icons to replace Mars, Venus, User
+const MaleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="10" cy="14" r="5"/>
+    <line x1="20" y1="4" x2="13.5" y2="10.5"/>
+    <line x1="20" y1="4" x2="16" y2="4"/>
+    <line x1="20" y1="4" x2="20" y2="8"/>
+  </svg>
+);
+
+const FemaleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="5"/>
+    <line x1="12" y1="13" x2="12" y2="22"/>
+    <line x1="9" y1="18" x2="15" y2="18"/>
+    <line x1="7" y1="2" x2="17" y2="2"/>
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
 
 export default function Lobby({
   oreyId, oreyIdExpiry,
@@ -65,9 +91,9 @@ export default function Lobby({
               className={styles.genderSelect} 
               onClick={() => setShowGenderModal(true)}
             >
-              {gender === 'male' && <Mars size={14} />}
-              {gender === 'female' && <Venus size={14} />}
-              {!gender && <User size={14} />}
+              {gender === 'male' && <MaleIcon />}
+              {gender === 'female' && <FemaleIcon />}
+              {!gender && <UserIcon />}
               <span>{genderLabel}</span>
               <span className={styles.chevron}>▾</span>
             </button>
@@ -100,7 +126,12 @@ export default function Lobby({
                     onClick={() => { onSetGender('male'); setShowGenderModal(false); }}
                   >
                     <div className={styles.genderCircle}>
-                      <Mars size={24} />
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="10" cy="14" r="5"/>
+                        <line x1="20" y1="4" x2="13.5" y2="10.5"/>
+                        <line x1="20" y1="4" x2="16" y2="4"/>
+                        <line x1="20" y1="4" x2="20" y2="8"/>
+                      </svg>
                     </div>
                     <span>Male</span>
                   </button>
@@ -110,7 +141,11 @@ export default function Lobby({
                     onClick={() => { onSetGender('female'); setShowGenderModal(false); }}
                   >
                     <div className={styles.genderCircle}>
-                      <Venus size={24} />
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="8" r="5"/>
+                        <line x1="12" y1="13" x2="12" y2="22"/>
+                        <line x1="9" y1="18" x2="15" y2="18"/>
+                      </svg>
                     </div>
                     <span>Female</span>
                   </button>
