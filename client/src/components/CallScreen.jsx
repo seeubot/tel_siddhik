@@ -53,11 +53,65 @@ const CallScreen = ({
 
   const transparentPoster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
-  // Update local stream ref
+  // ─── FIX 1: Properly handle local stream attachment ───
+  const attachLocalStream = (stream) => {
+    const video = localVideoRef.current;
+    if (!video) return;
+
+    // Always clear first
+    video.srcObject = null;
+    video.load(); // Reset the element
+
+    video.srcObject = stream;
+
+    const handleCanPlay = () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.play()
+        .then(() => setLocalVideoReady(true))
+        .catch(err => {
+          console.log('Local play error:', err);
+          setTimeout(() => video.play().catch(() => {}), 500);
+        });
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+
+    // Also try playing immediately in case canplay already fired
+    if (video.readyState >= 3) {
+      handleCanPlay();
+    }
+  };
+
+  // ─── FIX 2: Properly handle remote stream attachment ───
+  const attachRemoteStream = (stream) => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+
+    video.srcObject = null;
+    video.load();
+
+    video.srcObject = stream;
+
+    const handleCanPlay = () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.play()
+        .then(() => setRemoteVideoReady(true))
+        .catch(err => {
+          console.log('Remote play error:', err);
+          setTimeout(() => video.play().catch(() => {}), 500);
+        });
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+
+    if (video.readyState >= 3) {
+      handleCanPlay();
+    }
+  };
+
+  // ─── FIX 3: Update local stream effect ───
   useEffect(() => {
     localStreamRef.current = localStream;
-    
-    // Reset video ready state when stream changes
     if (localStream) {
       setLocalVideoReady(false);
       attachLocalStream(localStream);
@@ -66,99 +120,36 @@ const CallScreen = ({
     }
   }, [localStream]);
 
-  // Handle remote video stream
+  // ─── FIX 4: Handle videoEnabled toggling ───
   useEffect(() => {
-    if (partner?.stream && remoteVideoRef.current) {
-      // Only update if stream changed
+    if (videoEnabled && localStream && localVideoRef.current) {
+      setLocalVideoReady(false);
+      attachLocalStream(localStream);
+    }
+  }, [videoEnabled]);
+
+  // ─── FIX 5: Handle remote partner stream ───
+  useEffect(() => {
+    if (partner?.stream) {
       if (remoteStreamRef.current !== partner.stream) {
         remoteStreamRef.current = partner.stream;
+        setRemoteVideoReady(false); // Reset spinner
         attachRemoteStream(partner.stream);
       }
-    } else if (!partner?.stream) {
+    } else {
       remoteStreamRef.current = null;
       setRemoteVideoReady(false);
     }
-  }, [partner?.stream, remoteVideoRef]);
-
-  const attachLocalStream = (stream) => {
-    if (!localVideoRef.current) return;
-    
-    const video = localVideoRef.current;
-    
-    // Remove old stream
-    if (video.srcObject) {
-      video.srcObject = null;
-    }
-    
-    // Set new stream
-    video.srcObject = stream;
-    
-    // Handle video ready
-    const handleCanPlay = () => {
-      video.play()
-        .then(() => {
-          setLocalVideoReady(true);
-        })
-        .catch(err => {
-          console.log('Local video play error:', err);
-          // Retry once
-          setTimeout(() => {
-            video.play().catch(e => console.log('Retry failed:', e));
-          }, 1000);
-        });
-    };
-    
-    video.oncanplay = handleCanPlay;
-    
-    // Also try immediately
-    video.play().catch(() => {
-      // Silent fail, will retry on canplay
-    });
-  };
-
-  const attachRemoteStream = (stream) => {
-    if (!remoteVideoRef.current) return;
-    
-    const video = remoteVideoRef.current;
-    
-    // Remove old stream
-    if (video.srcObject) {
-      video.srcObject = null;
-    }
-    
-    // Set new stream
-    video.srcObject = stream;
-    
-    // Handle video ready
-    const handleCanPlay = () => {
-      video.play()
-        .then(() => {
-          setRemoteVideoReady(true);
-        })
-        .catch(err => {
-          console.log('Remote video play error:', err);
-          setTimeout(() => {
-            video.play().catch(e => console.log('Retry failed:', e));
-          }, 1000);
-        });
-    };
-    
-    video.oncanplay = handleCanPlay;
-    
-    // Try immediately
-    video.play().catch(() => {
-      // Silent fail
-    });
-  };
+  }, [partner?.stream]);
 
   // Cleanup
   useEffect(() => {
     return () => {
       if (localVideoRef.current) {
-        localVideoRef.current.oncanplay = null;
+        localVideoRef.current.srcObject = null;
       }
       if (remoteVideoRef.current) {
-        remoteVideoRef.current.oncanplay = null;
+        remoteVideoRef.current.srcObject = null;
       }
       clearTimeout(hideTimerRef.current);
     };
@@ -351,6 +342,7 @@ const CallScreen = ({
                     x-webkit-airplay="deny"
                   />
                   
+                  {/* Loading spinner for remote video */}
                   {!remoteVideoReady && (
                     <div className={styles.videoLoadingOverlay}>
                       <div className={styles.videoLoadingSpinner} />
@@ -411,6 +403,7 @@ const CallScreen = ({
       {/* ── 40% BOTTOM SECTION ── */}
       <div className={styles.bottomSection}>
         <div className={styles.localVideoWrapper}>
+          {/* FIX: Use visibility instead of display to keep stream alive */}
           <video
             ref={localVideoRef}
             className={styles.localVideo}
@@ -421,13 +414,18 @@ const CallScreen = ({
             disablePictureInPicture
             controlsList="nodownload nofullscreen noremoteplayback"
             x-webkit-airplay="deny"
-            style={{ display: videoEnabled && localStream ? 'block' : 'none' }}
+            style={{ 
+              visibility: videoEnabled && localStream ? 'visible' : 'hidden',
+              position: 'absolute',
+              inset: 0
+            }}
           />
           
           {(!videoEnabled || !localStream) && (
             <BrandOverlay />
           )}
           
+          {/* Loading spinner for local video */}
           {videoEnabled && localStream && !localVideoReady && (
             <div className={styles.videoLoadingOverlay}>
               <div className={styles.videoLoadingSpinner} />
