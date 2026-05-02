@@ -208,222 +208,6 @@ async function initDB() {
   console.log(`📦 Loaded ${notificationsCache.length} notifications`);
 }
 
-// ─── HTML Helper Functions ────────────────────────────────────────────────────
-function getServicePageHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${SERVICE_NAME}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #0a0a0f; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .container { text-align: center; padding: 2rem; max-width: 500px; }
-    .logo { font-size: 5rem; font-weight: 900; background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
-    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
-    .status { display: inline-block; background: rgba(52, 199, 89, 0.1); color: #4ade80; padding: 0.5rem 1.5rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600; border: 1px solid rgba(52, 199, 89, 0.2); }
-    .cards { display: flex; gap: 1rem; margin: 2rem 0; justify-content: center; flex-wrap: wrap; }
-    .card { background: rgba(255,255,255,0.03); border: 0.5px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1rem 1.5rem; min-width: 120px; }
-    .card-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .card-title { font-size: 0.75rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.1em; }
-    .footer { color: rgba(255,255,255,0.2); font-size: 0.7rem; margin-top: 2rem; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">Orey!</div>
-    <p class="subtitle">Video Calling Platform</p>
-    <span class="status">🟢 Service Running</span>
-    <div class="cards">
-      <div class="card"><div class="card-icon">📱</div><div class="card-title">Mobile App</div></div>
-      <div class="card"><div class="card-icon">🎥</div><div class="card-title">HD Video</div></div>
-      <div class="card"><div class="card-icon">🔒</div><div class="card-title">Secure</div></div>
-    </div>
-    <p class="footer">Use the Orey! mobile app to start connecting</p>
-  </div>
-</body>
-</html>`;
-}
-
-function getAccessDeniedHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orey!</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800;900&display=swap');
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --bg: #07070d;
-      --surface: #0f0f1a;
-      --border: rgba(255,255,255,0.06);
-      --accent: #7c6aff;
-      --accent2: #c084fc;
-      --text: #e2e8f0;
-      --muted: #475569;
-    }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Space Mono', monospace;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .noise {
-      position: fixed; inset: 0; z-index: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-    }
-    .glow {
-      position: fixed;
-      width: 600px; height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(124,106,255,0.08) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      animation: pulse 4s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
-    }
-    .container {
-      position: relative; z-index: 1;
-      text-align: center;
-      padding: 2rem;
-      max-width: 480px;
-      width: 100%;
-      animation: fadeUp 0.6s ease both;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 900;
-      font-size: 3.5rem;
-      background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.02em;
-      margin-bottom: 2.5rem;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.5rem 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(124,106,255,0.5), transparent);
-    }
-    .icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      display: block;
-      filter: grayscale(0.2);
-    }
-    .title {
-      font-family: 'Syne', sans-serif;
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 0.75rem;
-      letter-spacing: -0.01em;
-    }
-    .desc {
-      color: var(--muted);
-      font-size: 0.78rem;
-      line-height: 1.7;
-      letter-spacing: 0.02em;
-    }
-    .divider {
-      width: 40px; height: 1px;
-      background: var(--border);
-      margin: 1.5rem auto;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: rgba(124,106,255,0.1);
-      border: 1px solid rgba(124,106,255,0.2);
-      color: #a5b4fc;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.35rem 0.9rem;
-      border-radius: 100px;
-    }
-    .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #4ade80;
-      animation: blink 1.5s ease-in-out infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    .footer {
-      margin-top: 2rem;
-      color: rgba(255,255,255,0.15);
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-  </style>
-</head>
-<body>
-  <div class="noise"></div>
-  <div class="glow"></div>
-  <div class="container">
-    <div class="logo">Orey!</div>
-    <div class="card">
-      <span class="icon">📱</span>
-      <div class="title">Mobile App Only</div>
-      <p class="desc">
-        Orey is a mobile video calling platform.<br>
-        This endpoint is not accessible via browser.
-      </p>
-      <div class="divider"></div>
-      <span class="badge"><span class="dot"></span> Service Online</span>
-    </div>
-    <p class="footer">© ${new Date().getFullYear()} Orey — Use the mobile app to connect</p>
-  </div>
-</body>
-</html>`;
-}
-
-// ─── Block ALL browser requests from seeing any data ──────────────────────────
-app.use((req, res, next) => {
-  const accept = req.headers.accept || '';
-  const userAgent = req.headers['user-agent'] || '';
-  const isAppRequest = req.headers['x-api-key'] || userAgent.includes('OreyApp') || userAgent.includes('okhttp') || userAgent.includes('Dart');
-  const isBrowser = accept.includes('text/html') && !isAppRequest;
-
-  if (isBrowser) {
-    return res.status(200).send(getAccessDeniedHTML());
-  }
-  next();
-});
-
 // ─── Security: Endpoint Key Protection Middleware ─────────────────────────────
 function requireEndpointKey(req, res, next) {
   const key = req.query.key || req.headers['x-endpoint-key'];
@@ -877,7 +661,7 @@ app.post('/admin/logout', requireEndpointKey, (req, res) => {
 app.get('/admin', requireEndpointKey, (req, res) => {
   const adminPath = path.join(publicPath, 'admin.html');
   if (fs.existsSync(adminPath)) return res.sendFile(adminPath);
-  res.send(getServicePageHTML());
+  res.send(`<!DOCTYPE html><html><head><title>Orey! Admin</title></head><body style="background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><div style="text-align:center"><h1>🔷 Orey! Admin</h1><p>Admin panel not found. Add admin.html to public/</p></div></body></html>`);
 });
 
 // ─── Admin API Endpoints (Key + Session) ──────────────────────────────────────
@@ -956,9 +740,8 @@ app.delete('/admin/ban-device/:deviceId', requireEndpointKey, verifySession, asy
 // ─── Static Files ─────────────────────────────────────────────────────────────
 app.use(express.static(publicPath, { index: false }));
 
-// ─── Catch-All Route ─────────────────────────────────────────────────────────
+// ─── Catch-All Route (Serves Frontend) ───────────────────────────────────────
 app.get('*', (req, res) => {
-  // Skip API and admin routes
   if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
     return res.status(404).json({ error: 'Not found' });
   }
@@ -976,8 +759,8 @@ app.get('*', (req, res) => {
     return res.sendFile(publicIndex);
   }
   
-  // Show service page (no ban checks for browser requests)
-  res.status(200).send(getServicePageHTML());
+  // Fallback
+  res.send(`<!DOCTYPE html><html><head><title>Orey!</title><style>body{font-family:sans-serif;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}.logo{font-size:4rem;font-weight:900;background:linear-gradient(135deg,#818cf8,#c084fc,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}.status{display:inline-block;background:rgba(52,199,89,.1);color:#4ade80;padding:.5rem 1.5rem;border-radius:20px;font-size:.9rem;border:1px solid rgba(52,199,89,.2)}</style></head><body><div><div class="logo">Orey!</div><span class="status">🟢 Service Running</span><p style="color:#64748b;margin-top:1rem">Use the Orey! web app to connect</p></div></body></html>`);
 });
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
@@ -1213,7 +996,7 @@ async function start() {
       console.log(`🖥️  Admin: /admin?key=${ENDPOINT_KEY}`);
       console.log(`🔑 Endpoint Key: ${ENDPOINT_KEY}`);
       console.log(`⚧  Gender Matching: ACTIVE`);
-      console.log(`🛡️  Browser Protection: ENABLED`);
+      console.log(`🌐  Web Access: ALLOWED`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
   } catch (err) {
