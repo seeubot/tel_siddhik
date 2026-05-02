@@ -62,7 +62,7 @@ const CallScreen = ({
   const isPartnerVideoOff = partner && !partnerMedia?.video;
   const isPartnerMuted = partner && !partnerMedia?.audio;
 
-  // ─── FIX: Properly attach local stream ───
+  // ─── NEW BACKEND LOGIC: Properly attach local stream ───
   const attachLocalStream = (stream) => {
     const video = localVideoRef.current;
     if (!video) return;
@@ -92,7 +92,7 @@ const CallScreen = ({
     }
   };
 
-  // ─── FIX: Properly attach remote stream ───
+  // ─── NEW BACKEND LOGIC: Properly attach remote stream ───
   const attachRemoteStream = (stream) => {
     const video = remoteVideoRef.current;
     if (!video) return;
@@ -383,7 +383,7 @@ const CallScreen = ({
               </div>
             ) : (
               <>
-                {/* Remote Video Stream - FIX: Use visibility instead of display */}
+                {/* Remote Video Stream - Uses visibility instead of display */}
                 <video
                   ref={remoteVideoRef}
                   className={styles.video}
@@ -481,7 +481,7 @@ const CallScreen = ({
       {/* BOTTOM: LOCAL VIEWPORT */}
       <div className={styles.localView}>
         <div className={styles.localVideoContainer}>
-          {/* Local Video Stream - FIX: Use visibility instead of display */}
+          {/* Local Video Stream - Uses visibility instead of display */}
           <video
             ref={localVideoRef}
             className={styles.localVideo}
@@ -520,7 +520,7 @@ const CallScreen = ({
           </div>
         </div>
 
-        {/* CHAT PANEL - unchanged */}
+        {/* CHAT PANEL */}
         <AnimatePresence>
           {showChat && (
             <motion.div
@@ -654,7 +654,7 @@ const CallScreen = ({
         </AnimatePresence>
       </div>
 
-      {/* OREY ID MODAL - unchanged */}
+      {/* OREY ID MODAL */}
       <AnimatePresence>
         {showOreyIdModal && (
           <motion.div 
