@@ -3,7 +3,7 @@ import { getSocket } from './lib/socket';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useDeviceIdentity } from './hooks/useDeviceIdentity';
 import { useReport } from './hooks/useReport';
-import DeviceIdentity from './lib/DeviceIdentity'; // ADD THIS IMPORT
+import DeviceIdentity from './lib/DeviceIdentity';
 import Lobby from './components/Lobby';
 import CallScreen from './components/CallScreen';
 import BanScreen from './components/BanScreen';
@@ -15,7 +15,7 @@ export default function App() {
   const socketRef = useRef(null);
 
   // ── App State ──────────────────────────────────────────────────────────────
-  const [screen, setScreen] = useState('loading'); // START AS LOADING
+  const [screen, setScreen] = useState('loading');
   const [userName, setUserName] = useState('');
   const [oreyId, setOreyId] = useState('');
   const [oreyIdExpiry, setOreyIdExpiry] = useState(null);
@@ -30,6 +30,12 @@ export default function App() {
   const [reportModal, setReportModal] = useState(false);
 
   const [toast, setToast] = useState(null);
+
+  // ── Chat State ─────────────────────────────────────────────────────────────
+  const [messages, setMessages] = useState([]);
+  const [peerTyping, setPeerTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
+  const socketIdRef = useRef(null);
 
   const webrtc = useWebRTC(socketRef);
 
@@ -49,21 +55,22 @@ export default function App() {
     setToast({ message, type, id: Date.now() });
   }, []);
 
-  // ── FIXED: Set screen based on device state ───────────────────────────────
+  // ── Clear chat messages on partner change ──────────────────────────────────
   useEffect(() => {
-    console.log('🔄 Screen effect running:', { deviceLoading, isBanned, currentScreen: screen });
-    
+    setMessages([]);
+    setPeerTyping(false);
+  }, [partner?.socketId]);
+
+  // ── Set screen based on device state ───────────────────────────────────────
+  useEffect(() => {
     if (deviceLoading) {
-      console.log('⏳ Device still loading...');
       setScreen('loading');
     } else if (isBanned) {
-      console.log('🚫 Device is BANNED - showing ban screen');
       setScreen('banned');
     } else {
-      console.log('✅ Device OK - showing lobby');
       setScreen('lobby');
     }
-  }, [deviceLoading, isBanned]); // Remove 'screen' from dependency to avoid loops
+  }, [deviceLoading, isBanned]);
 
   // ── Fetch Orey-ID when not banned ─────────────────────────────────────────
   useEffect(() => {
@@ -78,12 +85,51 @@ export default function App() {
       .catch(() => showToast('Could not generate Orey-ID', 'error'));
   }, [showToast, isBanned, deviceLoading]);
 
+  // ── Chat: Send Message ────────────────────────────────────────────────────
+  const handleSendMessage = useCallback((text) => {
+    const socket = socketRef.current;
+    if (!socket?.connected || !roomId) return;
+
+    const messageData = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+      senderId: socket.id,
+      senderName: userName || 'Anonymous',
+      text,
+      timestamp: new Date().toISOString(),
+      roomId,
+      isOwn: true
+    };
+
+    // Add to local messages immediately
+    setMessages(prev => [...prev, messageData]);
+
+    // Send to server
+    socket.emit('chat-message', { roomId, message: text, type: 'text' });
+  }, [roomId, userName]);
+
+  // ── Chat: Handle Typing Indicator ─────────────────────────────────────────
+  const handleTyping = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket?.connected || !roomId) return;
+
+    socket.emit('chat-typing', { roomId, isTyping: true });
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('chat-typing', { roomId, isTyping: false });
+    }, 2000);
+  }, [roomId]);
+
   // ── Socket setup ───────────────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      socketIdRef.current = socket.id;
       if (deviceId) {
         socket.emit('register-device', { deviceId });
       }
@@ -92,10 +138,8 @@ export default function App() {
       }
     });
 
-    // FIXED: Ban event - also update local ban storage
     socket.on('device-banned', (serverBanInfo) => {
-      console.log('🚫 Received ban from server:', serverBanInfo);
-      DeviceIdentity.storeBan(serverBanInfo); // Store ban locally
+      DeviceIdentity.storeBan(serverBanInfo);
       showToast('Your device has been banned', 'error');
       setScreen('banned');
     });
@@ -124,7 +168,36 @@ export default function App() {
       showToast(error, 'error');
     });
 
-    // ── Existing socket events (unchanged) ──
+    // ── Chat Socket Events ───────────────────────────────────────────────────
+    socket.on('chat-message', (msg) => {
+      setMessages(prev => {
+        // Prevent duplicate messages
+        if (prev.some(m => m.id === msg.id)) return prev;
+        
+        return [...prev, {
+          ...msg,
+          isOwn: msg.senderId === socket.id,
+          text: msg.message // Map 'message' to 'text' for UI consistency
+        }];
+      });
+    });
+
+    socket.on('peer-typing', ({ socketId, userName: typingUser, isTyping }) => {
+      if (socketId !== socket.id) {
+        setPeerTyping(isTyping);
+        
+        // Auto-clear typing after 3 seconds
+        if (isTyping) {
+          setTimeout(() => setPeerTyping(false), 3000);
+        }
+      }
+    });
+
+    socket.on('chat-error', ({ error }) => {
+      showToast(error, 'error');
+    });
+
+    // ── Existing socket events ──
     socket.on('orey-id-registered', ({ oreyId: id, expiresAt }) => {
       setOreyId(id);
       setOreyIdExpiry(expiresAt);
@@ -136,6 +209,7 @@ export default function App() {
     socket.on('room-joined', ({ roomId: rid, peers }) => {
       setRoomId(rid);
       setSearching(false);
+      setMessages([]); // Clear chat on new room
       if (peers && peers.length > 0) {
         setPartner({
           ...peers[0],
@@ -177,6 +251,8 @@ export default function App() {
       showToast(`${pName || 'Partner'} ${reason === 'skip' ? 'skipped' : 'left'}`, 'warning');
       webrtc.closePeer();
       setPartner(null);
+      setMessages([]); // Clear chat on partner leave
+      setPeerTyping(false);
     });
 
     socket.on('auto-search-scheduled', ({ delay }) => {
@@ -194,6 +270,8 @@ export default function App() {
       setPartner(null);
       setRoomId('');
       setReportModal(false);
+      setMessages([]); // Clear chat on leave
+      setPeerTyping(false);
       webrtc.stopLocal();
       webrtc.closePeer();
     });
@@ -202,6 +280,8 @@ export default function App() {
       webrtc.closePeer();
       setPartner(null);
       setReportModal(false);
+      setMessages([]); // Clear chat on skip
+      setPeerTyping(false);
       setSearching(true);
     });
 
@@ -225,6 +305,7 @@ export default function App() {
 
     return () => {
       socket.removeAllListeners();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [oreyId, userName, deviceId, webrtc, showToast]);
 
@@ -279,12 +360,12 @@ export default function App() {
     return () => socket.off('room-joined', handleRoomJoined);
   }, [webrtc]);
 
-  // ── Actions (unchanged) ───────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────────
   const handleDiscover = () => socketRef.current?.emit('join-random');
   const handleCancelSearch = () => { socketRef.current?.emit('cancel-random'); setSearching(false); };
   const handleConnectById = (targetOreyId) => socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
-  const handleSkip = () => socketRef.current?.emit('skip', { roomId });
-  const handleLeave = () => { socketRef.current?.emit('leave-chat', { roomId }); setAutoSearchCountdown(null); cancelAutoSearch(); };
+  const handleSkip = () => { socketRef.current?.emit('skip', { roomId }); setMessages([]); setPeerTyping(false); };
+  const handleLeave = () => { socketRef.current?.emit('leave-chat', { roomId }); setAutoSearchCountdown(null); cancelAutoSearch(); setMessages([]); setPeerTyping(false); };
   const cancelAutoSearch = () => { socketRef.current?.emit('cancel-auto-search'); setAutoSearchCountdown(null); setAutoSearchDelay(null); };
   const handleShareId = () => { socketRef.current?.emit('share-id-request', { roomId }); showToast('ID share request sent', 'info'); };
   const handleAcceptShare = () => { socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest.fromId }); setShareRequest(null); };
@@ -316,24 +397,22 @@ export default function App() {
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // RENDER - FIXED: Uses isBanned directly
+  // RENDER
   // ═══════════════════════════════════════════════════════════════
-
-  console.log('🎨 Render:', { screen, isBanned, deviceLoading, banInfo }); // DEBUG
 
   // Loading screen
   if (deviceLoading || screen === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#FF2D55', fontSize: '1.5rem', fontWeight: 'bold' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#6366f1', fontSize: '1.5rem', fontWeight: 'bold' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-          Initializing...
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔷</div>
+          Orey! - Mana App
         </div>
       </div>
     );
   }
 
-  // FIXED: Check BOTH screen AND isBanned
+  // Ban screen
   if (screen === 'banned' || isBanned) {
     return (
       <BanScreen
@@ -348,15 +427,74 @@ export default function App() {
   return (
     <>
       {screen === 'lobby' && (
-        <Lobby userName={userName} setUserName={setUserName} oreyId={oreyId} oreyIdExpiry={oreyIdExpiry} searching={searching} onDiscover={handleDiscover} onCancelSearch={handleCancelSearch} onConnectById={handleConnectById} />
+        <Lobby 
+          userName={userName} 
+          setUserName={setUserName} 
+          oreyId={oreyId} 
+          oreyIdExpiry={oreyIdExpiry} 
+          searching={searching} 
+          onDiscover={handleDiscover} 
+          onCancelSearch={handleCancelSearch} 
+          onConnectById={handleConnectById} 
+        />
       )}
       {screen === 'call' && (
-        <CallScreen partner={partner} roomId={roomId} oreyId={oreyId} localVideoRef={webrtc.localVideoRef} remoteVideoRef={webrtc.remoteVideoRef} audioEnabled={webrtc.audioEnabled} videoEnabled={webrtc.videoEnabled} partnerMedia={webrtc.partnerMedia} searching={searching} autoSearchCountdown={autoSearchCountdown} onToggleAudio={() => webrtc.toggleAudio(roomId)} onToggleVideo={() => webrtc.toggleVideo(roomId)} onSkip={handleSkip} onLeave={handleLeave} onShareId={handleShareId} onCancelAutoSearch={cancelAutoSearch} onReport={handleOpenReport} />
+        <CallScreen 
+          partner={partner} 
+          roomId={roomId} 
+          oreyId={oreyId} 
+          localVideoRef={webrtc.localVideoRef} 
+          remoteVideoRef={webrtc.remoteVideoRef} 
+          audioEnabled={webrtc.audioEnabled} 
+          videoEnabled={webrtc.videoEnabled} 
+          partnerMedia={webrtc.partnerMedia} 
+          searching={searching} 
+          autoSearchCountdown={autoSearchCountdown} 
+          onToggleAudio={() => webrtc.toggleAudio(roomId)} 
+          onToggleVideo={() => webrtc.toggleVideo(roomId)} 
+          onSkip={handleSkip} 
+          onLeave={handleLeave} 
+          onShareId={handleShareId} 
+          onCancelAutoSearch={cancelAutoSearch} 
+          onReport={handleOpenReport}
+          // Chat props
+          onSendMessage={handleSendMessage}
+          messages={messages}
+          peerTyping={peerTyping}
+          onTyping={handleTyping}
+          currentUserName={userName}
+          userOreyId={oreyId}
+        />
       )}
-      <ReportModal isOpen={reportModal} onClose={handleCloseReport} onSubmit={handleSubmitReport} reportedUserName={partner?.userName || 'Unknown User'} isReporting={isReporting} />
-      {shareRequest && <ShareRequestModal fromName={shareRequest.fromName} onAccept={handleAcceptShare} onDecline={handleDeclineShare} />}
-      {revealData && <RevealModal oreyId={revealData.oreyId} userName={revealData.userName} onClose={() => setRevealData(null)} />}
-      {toast && <Toast key={toast.id} message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+      <ReportModal 
+        isOpen={reportModal} 
+        onClose={handleCloseReport} 
+        onSubmit={handleSubmitReport} 
+        reportedUserName={partner?.userName || 'Unknown User'} 
+        isReporting={isReporting} 
+      />
+      {shareRequest && (
+        <ShareRequestModal 
+          fromName={shareRequest.fromName} 
+          onAccept={handleAcceptShare} 
+          onDecline={handleDeclineShare} 
+        />
+      )}
+      {revealData && (
+        <RevealModal 
+          oreyId={revealData.oreyId} 
+          userName={revealData.userName} 
+          onClose={() => setRevealData(null)} 
+        />
+      )}
+      {toast && (
+        <Toast 
+          key={toast.id} 
+          message={toast.message} 
+          type={toast.type} 
+          onDone={() => setToast(null)} 
+        />
+      )}
     </>
   );
 }
