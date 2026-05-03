@@ -109,7 +109,7 @@ gap: 3.5rem;
 ​.sliderContainer {
 display: flex;
 flex-direction: column;
-items-center;
+align-items: center; /* FIXED: Was "items-center" */
 gap: 1.5rem;
 }
 ​.sliderTrack {
