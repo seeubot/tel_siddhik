@@ -1,32 +1,26 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Copy, Check, Heart, Sparkles, Shield, Users, X, 
+  Copy, Check, Heart, Sparkles, Shield, X, 
   ArrowRight, Clock, Bell, ChevronRight, User, Zap, Globe
 } from 'lucide-react';
 import styles from './Lobby.module.css';
 
 const MaleIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="14" r="5"/>
-    <line x1="20" y1="4" x2="13.5" y2="10.5"/>
-    <line x1="20" y1="4" x2="16" y2="4"/>
-    <line x1="20" y1="4" x2="20" y2="8"/>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="10" cy="14" r="5"/><line x1="20" y1="4" x2="13.5" y2="10.5"/><line x1="20" y1="4" x2="16" y2="4"/><line x1="20" y1="4" x2="20" y2="8"/>
   </svg>
 );
 
 const FemaleIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="5"/>
-    <line x1="12" y1="13" x2="12" y2="22"/>
-    <line x1="9" y1="18" x2="15" y2="18"/>
-    <line x1="7" y1="2" x2="17" y2="2"/>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="22"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="7" y1="2" x2="17" y2="2"/>
   </svg>
 );
 
 export default function Lobby({
-  oreyId, 
-  oreyIdExpiry,
+  oreyId = 'OREY-·····', 
+  oreyIdExpiry = null,
   searching = false,
   matchStage = null,
   matchTimer = 3,
@@ -41,342 +35,259 @@ export default function Lobby({
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
-  const [showGenderModal, setShowGenderModal] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showGenderSheet, setShowGenderSheet] = useState(false);
+  const [showNotifSheet, setShowNotifSheet] = useState(false);
 
-  const copyId = () => {
-    if (!oreyId) return;
+  const copyId = useCallback(() => {
+    if (!oreyId || oreyId === 'OREY-·····') return;
     navigator.clipboard.writeText(oreyId).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      const el = document.createElement('textarea');
-      el.value = oreyId;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+      setCopied(true); setTimeout(() => setCopied(false), 1800);
+    }).catch(() => {});
+  }, [oreyId]);
 
-  const handleConnect = () => {
-    const trimmed = targetId.trim().toUpperCase();
-    const formattedId = trimmed.startsWith('OREY-') ? trimmed : `OREY-${trimmed}`;
-    if (formattedId.length === 10) onConnectById(formattedId);
-  };
+  const handleConnect = useCallback(() => {
+    const trimmed = targetId.trim().toUpperCase().replace('OREY-', '');
+    if (trimmed.length === 5) {
+      onConnectById('OREY-' + trimmed);
+      setTargetId('');
+    }
+  }, [targetId, onConnectById]);
 
-  const expiryStr = oreyIdExpiry
-    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const handleGenderSelect = useCallback((value) => {
+    onSetGender(value);
+    setShowGenderSheet(false);
+  }, [onSetGender]);
+
+  const handleNotifOpen = useCallback(() => {
+    setShowNotifSheet(true);
+    onViewNotifications();
+  }, [onViewNotifications]);
+
+  const expiryStr = oreyIdExpiry 
+    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) 
     : null;
 
-  const genderEmoji = gender === 'male' ? '♂️' : gender === 'female' ? '♀️' : '🌐';
-  const genderLabel = gender === 'male' ? 'Male' : gender === 'female' ? 'Female' : 'Anyone';
-
-  if (!oreyId && !searching) {
-    return (
-      <div className={styles.root}>
-        <div style={{ textAlign: 'center', color: '#6366f1' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔷</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Loading Orey!</div>
-        </div>
-      </div>
-    );
-  }
+  const genderIcon = gender === 'male' ? '♂️' : gender === 'female' ? '♀️' : null;
 
   return (
     <div className={styles.root}>
-      {/* Background */}
-      <div className={styles.bgOrb} />
-      <div className={styles.bgOrb2} />
+      <div className={styles.bgGradient} />
       
       <div className={styles.container}>
-        {/* Logo */}
-        <header className={styles.header}>
-          <motion.h1 
-            className={styles.logo}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+        {/* ── Top Bar: Logo + Notification ── */}
+        <div className={styles.topBar}>
+          {/* Logo */}
+          <div className={styles.logoBlock}>
             <span className={styles.logoIcon}>🔷</span>
-            Orey<span className={styles.logoAccent}>!</span>
-          </motion.h1>
-          <p className={styles.tagline}>Connect • Chat • Share</p>
-        </header>
+            <h1 className={styles.logo}>
+              Orey<span className={styles.logoAccent}>!</span>
+            </h1>
+          </div>
 
-        {/* Quick Chips Row */}
-        <div className={styles.chipRow}>
-          <motion.button 
-            className={`${styles.chip} ${gender ? styles.chipActive : ''}`}
-            onClick={() => setShowGenderModal(true)}
-            whileTap={{ scale: 0.96 }}
+          {/* Notification Bell (always visible) */}
+          <button 
+            className={`${styles.bellBtn} ${unreadCount > 0 ? styles.bellActive : ''}`}
+            onClick={handleNotifOpen}
           >
-            <span className={styles.chipEmoji}>{genderEmoji}</span>
-            <span className={styles.chipLabel}>{gender ? genderLabel : 'Set Preference'}</span>
-            <ChevronRight size={14} className={styles.chipArrow} />
-          </motion.button>
-          
-          {unreadCount > 0 && (
-            <motion.button 
-              className={styles.chip}
-              onClick={() => {
-                setShowNotifications(true);
-                onViewNotifications();
-              }}
-              whileTap={{ scale: 0.96 }}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-            >
-              <Bell size={14} />
-              <span className={styles.chipLabel}>{unreadCount} new</span>
-            </motion.button>
-          )}
+            <Bell size={18} />
+            {unreadCount > 0 && <span className={styles.bellBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          </button>
         </div>
 
-        {/* Gender Selection Sheet */}
-        <AnimatePresence>
-          {showGenderModal && (
-            <motion.div 
-              className={styles.sheetOverlay}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowGenderModal(false)}
-            >
-              <motion.div 
-                className={styles.sheet}
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div className={styles.sheetHandle} />
-                <h3 className={styles.sheetTitle}>Match Preference</h3>
-                <p className={styles.sheetSubtitle}>We'll try your preference for 3 seconds</p>
-                
-                <div className={styles.genderList}>
-                  {[
-                    { value: 'male', icon: <MaleIcon />, label: 'Male', desc: 'Match with females', color: '#3b82f6' },
-                    { value: 'female', icon: <FemaleIcon />, label: 'Female', desc: 'Match with males', color: '#ec4899' },
-                    { value: null, icon: <Globe size={16} />, label: 'Anyone', desc: 'Fastest matching', color: '#8b5cf6' },
-                  ].map(({ value, icon, label, desc, color }) => (
-                    <motion.button 
-                      key={value ?? 'anyone'}
-                      className={`${styles.genderRow} ${gender === value ? styles.genderRowActive : ''}`}
-                      onClick={() => { onSetGender(value); setShowGenderModal(false); }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className={styles.genderRowIcon} style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
-                        {icon}
-                      </div>
-                      <div className={styles.genderRowInfo}>
-                        <span className={styles.genderRowLabel}>{label}</span>
-                        <span className={styles.genderRowDesc}>{desc}</span>
-                      </div>
-                      {gender === value && <Check size={20} className={styles.checkIcon} />}
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <p className={styles.tagline}>Connect • Chat • Share</p>
 
-        {/* Main Action */}
-        <div className={styles.mainCard}>
+        {/* ── Match Card ── */}
+        <div className={styles.matchCard}>
           {!searching ? (
-            <motion.button 
-              className={styles.matchBtn}
-              onClick={onDiscover}
-              whileTap={{ scale: 0.97 }}
-              whileHover={{ scale: 1.02 }}
-            >
-              <div className={styles.matchBtnShimmer} />
-              <div className={styles.matchBtnContent}>
-                <motion.div 
-                  className={styles.matchBtnIconWrap}
-                  animate={{ scale: [1, 1.05, 1] }}
+            <>
+              {/* Gender chip */}
+              <button 
+                className={`${styles.genderChip} ${gender ? styles.genderChipSet : ''}`}
+                onClick={() => setShowGenderSheet(true)}
+              >
+                {genderIcon ? (
+                  <span className={styles.genderEmoji}>{genderIcon}</span>
+                ) : (
+                  <Globe size={13} />
+                )}
+                <span>{gender ? (gender === 'male' ? 'Female' : 'Male') : 'Anyone'}</span>
+                <ChevronRight size={11} />
+              </button>
+
+              {/* Match Button */}
+              <motion.button 
+                className={styles.matchBtn}
+                onClick={onDiscover}
+                whileTap={{ scale: 0.96 }}
+              >
+                <motion.span 
+                  className={styles.matchBtnLabel}
+                  animate={{ scale: [1, 1.04, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Heart size={30} fill="currentColor" className={styles.heartIcon} />
-                </motion.div>
-                <span className={styles.matchBtnLabel}>Find Match</span>
-                {gender && (
-                  <span className={styles.matchBtnPref}>
-                    {gender === 'male' ? '♀️ Prefer Female' : '♂️ Prefer Male'}
-                  </span>
-                )}
-              </div>
-            </motion.button>
+                  <Heart size={20} fill="currentColor" className={styles.matchHeart} />
+                  Find Match
+                </motion.span>
+              </motion.button>
+            </>
           ) : (
-            <div className={styles.searchingCard}>
-              {/* Stage indicator */}
-              <div className={styles.stageBadge}>
+            <div className={styles.searchingBlock}>
+              {/* Stage badge */}
+              <span className={`${styles.stageBadge} ${matchStage === 'gender' ? styles.stageGender : styles.stageOpen}`}>
                 {matchStage === 'gender' ? (
-                  <span className={styles.stageGender}>
-                    <Zap size={12} /> Gender Match • {matchTimer}s
-                  </span>
+                  <><Zap size={10} /> Gender • {matchTimer}s</>
                 ) : (
-                  <span className={styles.stageAnyone}>
-                    <Globe size={12} /> Open Match
-                  </span>
+                  <><Globe size={10} /> Open</>
                 )}
-              </div>
-              
-              {/* Animated rings */}
-              <div className={styles.searchingPulse}>
-                <motion.div 
-                  className={styles.pulseRing}
-                  animate={{ scale: [1, 1.5], opacity: [1, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+              </span>
+
+              {/* Pulse animation */}
+              <div className={styles.pulseWrap}>
+                <motion.span 
+                  className={styles.pulseDot}
+                  animate={{ scale: [1, 2], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
                 />
-                <motion.div 
-                  className={styles.pulseRing}
-                  animate={{ scale: [1, 1.5], opacity: [1, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut', delay: 0.75 }}
+                <motion.span 
+                  className={styles.pulseDot}
+                  animate={{ scale: [1, 2], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: 0.6 }}
                 />
-                <div className={styles.pulseCenter}>
+                <div className={styles.pulseInner}>
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Sparkles size={28} />
+                    <Sparkles size={20} />
                   </motion.div>
                 </div>
               </div>
-              
-              <p className={styles.searchingText}>Finding your match...</p>
-              <p className={styles.searchingSub}>
-                {matchStage === 'gender' 
-                  ? `Prioritizing ${gender === 'male' ? 'females' : 'males'}`
-                  : 'Connecting with anyone available'}
-              </p>
+
+              <p className={styles.searchingLabel}>Finding match...</p>
               
               <button className={styles.cancelBtn} onClick={onCancelSearch}>
-                <X size={16} /> Cancel
+                <X size={14} /> Cancel
               </button>
             </div>
           )}
         </div>
 
-        {/* Orey ID Card */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>Your Orey ID</span>
+        {/* ── Orey ID Card ── */}
+        <div className={styles.idCard}>
+          <div className={styles.idTop}>
+            <span className={styles.idLabel}>YOUR ID</span>
             {expiryStr && (
-              <span className={styles.expiry}>
-                <Clock size={10} /> Expires {expiryStr}
-              </span>
+              <span className={styles.idExpiry}><Clock size={9} />{expiryStr}</span>
             )}
           </div>
-          <div className={styles.idBox}>
-            <code className={styles.idCode} onClick={copyId}>
-              {oreyId || 'OREY-·····'}
-            </code>
-            <motion.button 
-              className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
-              onClick={copyId}
-              whileTap={{ scale: 0.9 }}
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-            </motion.button>
+          <div className={styles.idRow}>
+            <code className={styles.idCode} onClick={copyId}>{oreyId}</code>
+            <button className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} onClick={copyId}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
           </div>
-          <p className={styles.hint}>Tap to copy • Share to connect</p>
         </div>
 
-        {/* Direct Connect Card */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>Connect with Code</span>
-          </div>
+        {/* ── Connect Card ── */}
+        <div className={styles.connectCard}>
           <div className={styles.connectRow}>
-            <div className={styles.inputBox}>
-              <span className={styles.inputPrefix}>OREY-</span>
-              <input
-                className={styles.codeInput}
-                type="text"
-                placeholder="XXXXX"
-                maxLength={5}
-                value={targetId.replace('OREY-', '')}
-                onChange={(e) => setTargetId(e.target.value.toUpperCase().replace('OREY-', ''))}
-                onKeyDown={(e) => e.key === 'Enter' && targetId.length === 5 && handleConnect()}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </div>
-            <motion.button
-              className={`${styles.goBtn} ${targetId.length === 5 ? styles.goBtnActive : ''}`}
+            <span className={styles.connectPrefix}>OREY-</span>
+            <input
+              className={styles.connectInput}
+              type="text"
+              placeholder="XXXXX"
+              maxLength={5}
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
+              onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+            />
+            <button 
+              className={`${styles.goBtn} ${targetId.length === 5 ? styles.goActive : ''}`}
               onClick={handleConnect}
               disabled={targetId.length !== 5}
-              whileTap={{ scale: 0.93 }}
             >
-              <ArrowRight size={18} />
-            </motion.button>
+              <ArrowRight size={16} />
+            </button>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <footer className={styles.footer}>
-          <Shield size={10} />
-          <span>Encrypted • Private • Secure</span>
+          <Shield size={9} />
+          <span>Encrypted • Secure</span>
         </footer>
       </div>
 
-      {/* Notifications Sheet */}
+      {/* ═══ Gender Sheet ═══ */}
       <AnimatePresence>
-        {showNotifications && (
-          <motion.div 
-            className={styles.sheetOverlay}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowNotifications(false)}
-          >
+        {showGenderSheet && (
+          <motion.div className={styles.sheetOverlay} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={() => setShowGenderSheet(false)}>
             <motion.div 
-              className={styles.sheet}
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={styles.sheet} 
+              initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
+              transition={{ type:'spring', damping:28, stiffness:280 }}
               onClick={e => e.stopPropagation()}
             >
               <div className={styles.sheetHandle} />
-              <div className={styles.sheetHeader}>
+              <h3 className={styles.sheetTitle}>Show me</h3>
+              {[
+                { v:'male', i:<MaleIcon/>, l:'Males', c:'#3b82f6' },
+                { v:'female', i:<FemaleIcon/>, l:'Females', c:'#ec4899' },
+                { v:null, i:<Globe size={14}/>, l:'Anyone', c:'#8b5cf6' },
+              ].map(({v,i,l,c}) => (
+                <motion.button
+                  key={v??'any'}
+                  className={`${styles.sheetOption} ${gender===v ? styles.sheetOptionActive : ''}`}
+                  onClick={()=>handleGenderSelect(v)}
+                  whileTap={{scale:0.97}}
+                >
+                  <span className={styles.sheetOptIcon} style={{background:`${c}20`,color:c}}>{i}</span>
+                  <span className={styles.sheetOptLabel}>{l}</span>
+                  {gender===v && <Check size={16} color="#6366f1" />}
+                </motion.button>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Notifications Sheet ═══ */}
+      <AnimatePresence>
+        {showNotifSheet && (
+          <motion.div className={styles.sheetOverlay} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={() => setShowNotifSheet(false)}>
+            <motion.div 
+              className={styles.sheet} 
+              initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
+              transition={{ type:'spring', damping:28, stiffness:280 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className={styles.sheetHandle} />
+              <div className={styles.sheetTop}>
                 <h3 className={styles.sheetTitle}>Notifications</h3>
-                <button onClick={() => setShowNotifications(false)} className={styles.sheetClose}>
-                  <X size={20} />
-                </button>
+                <button onClick={() => setShowNotifSheet(false)} className={styles.sheetClose}><X size={18} /></button>
               </div>
-              
-              <div className={styles.notifList}>
+              <div className={styles.notifScroll}>
                 {notifications.length === 0 ? (
-                  <div className={styles.emptyState}>
-                    <Bell size={40} className={styles.emptyIcon} />
-                    <p className={styles.emptyTitle}>All Clear</p>
-                    <p className={styles.emptySub}>No new notifications</p>
+                  <div className={styles.notifEmpty}>
+                    <Bell size={36} />
+                    <p>All clear!</p>
+                    <span>No new notifications</span>
                   </div>
                 ) : (
-                  notifications.slice(0, 10).map((n) => (
-                    <motion.div 
-                      key={n.id} 
-                      className={`${styles.notifRow} ${!n.isRead ? styles.notifUnread : ''}`}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                    >
-                      <span className={styles.notifIcon}>{n.icon || '📢'}</span>
-                      <div className={styles.notifContent}>
+                  notifications.slice(0,15).map(n => (
+                    <div key={n.id} className={`${styles.notifItem} ${!n.isRead ? styles.notifNew : ''}`}>
+                      <span className={styles.notifIcon}>{n.icon||'📢'}</span>
+                      <div className={styles.notifBody}>
                         <p className={styles.notifTitle}>{n.title}</p>
-                        <p className={styles.notifBody}>{n.message}</p>
-                        <span className={styles.notifDate}>
-                          {new Date(n.timestamp).toLocaleDateString()}
-                        </span>
+                        <p className={styles.notifMsg}>{n.message}</p>
+                        <span className={styles.notifTime}>{new Date(n.timestamp).toLocaleDateString()}</span>
                       </div>
-                      {!n.isRead && <div className={styles.unreadDot} />}
-                    </motion.div>
+                      {!n.isRead && <span className={styles.notifDot} />}
+                    </div>
                   ))
                 )}
               </div>
