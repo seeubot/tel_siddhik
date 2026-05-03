@@ -571,24 +571,18 @@ export default function App() {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#06080d',
-        flexDirection: 'column',
-        gap: '16px'
       }}>
         <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          style={{ fontSize: '3.5rem' }}
-        >
-          🔷
-        </motion.div>
-        <div style={{
-          fontSize: '1.8rem',
-          fontWeight: '900',
-          color: '#6366f1',
-          letterSpacing: '-0.5px'
-        }}>
-          Orey<span style={{ color: '#a855f7' }}>!</span>
-        </div>
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            border: '3px solid rgba(99, 102, 241, 0.2)',
+            borderTopColor: '#6366f1',
+          }}
+        />
       </div>
     );
   }
