@@ -1,9 +1,9 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   Copy, Check, X, ArrowRight, Bell, 
-  Globe, ShieldCheck, ArrowRightCircle, SlidersHorizontal 
+  Globe, ShieldCheck, ArrowRightCircle, SlidersHorizontal,
+  Settings, Users
 } from 'lucide-react';
 import styles from './Lobby.module.css';
 
@@ -29,6 +29,8 @@ const PICKUP_LINES = [
  * @param {string|null} gender - Current target filter ('male', 'female', null)
  * @param {function} onSetGender - Updates the target filter
  * @param {number} unreadCount - Notification count
+ * @param {function} onSettings - Open settings panel
+ * @param {function} onContacts - Open contacts/friends list
  */
 export default function Lobby({
   oreyId = 'OREY-·····', 
@@ -40,6 +42,8 @@ export default function Lobby({
   gender = null,
   onSetGender = () => {},
   unreadCount = 0,
+  onSettings = () => {},
+  onContacts = () => {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
@@ -68,7 +72,19 @@ export default function Lobby({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {
-      // Fallback for document.execCommand if needed in restricted envs
+      // Fallback for environments without clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = oreyId;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+      document.body.removeChild(textArea);
     });
   }, [oreyId]);
 
@@ -88,6 +104,12 @@ export default function Lobby({
     x.set(0); // Snap back to start
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && targetId.length >= 5) {
+      handleConnect();
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.backgroundAura}>
@@ -96,11 +118,39 @@ export default function Lobby({
       </div>
 
       <div className={styles.wrapper}>
+        {/* Improved Navigation */}
         <nav className={styles.nav}>
-          <button className={styles.bellButton}>
-            <Bell size={22} strokeWidth={1.5} />
-            {unreadCount > 0 && <span className={styles.notificationBadge} />}
-          </button>
+          <div className={styles.navLeft}>
+            <span className={styles.miniLogo}>
+              Orey<span className={styles.miniLogoAccent}>!</span>
+            </span>
+          </div>
+          
+          <div className={styles.navRight}>
+            <button 
+              onClick={onContacts}
+              className={styles.navButton}
+              aria-label="Contacts"
+            >
+              <Users size={20} strokeWidth={1.5} />
+            </button>
+            
+            <button 
+              className={styles.bellButton}
+              aria-label="Notifications"
+            >
+              <Bell size={20} strokeWidth={1.5} />
+              {unreadCount > 0 && <span className={styles.notificationBadge} />}
+            </button>
+            
+            <button 
+              onClick={onSettings}
+              className={styles.navButton}
+              aria-label="Settings"
+            >
+              <Settings size={20} strokeWidth={1.5} />
+            </button>
+          </div>
         </nav>
 
         <header className={styles.header}>
@@ -114,6 +164,7 @@ export default function Lobby({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
                 className={styles.pickupLine}
               >
                 {PICKUP_LINES[lineIndex]}
@@ -137,8 +188,10 @@ export default function Lobby({
                   onDragEnd={handleDragEnd}
                   style={{ x }}
                   className={styles.sliderThumb}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <ArrowRightCircle size={24} className="text-slate-900" />
+                  <ArrowRightCircle size={24} color="#0f172a" />
                 </motion.div>
               </div>
 
@@ -157,7 +210,15 @@ export default function Lobby({
           ) : (
             <div className={styles.searchingContainer}>
               <div className={styles.timerWrapper}>
-                <div className={styles.timerText}>{matchTimer}s</div>
+                <motion.div 
+                  className={styles.timerText}
+                  key={matchTimer}
+                  initial={{ scale: 1.2, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {matchTimer}s
+                </motion.div>
                 <div className={styles.statusRow}>
                   <span className={styles.pingDot} />
                   <span className={styles.statusText}>Searching...</span>
@@ -177,12 +238,22 @@ export default function Lobby({
               <span className={styles.idLabel}>Your ID</span>
               <div className={styles.idValueContainer}>
                 <span className={styles.idValue}>{oreyId}</span>
-                {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={14} className="text-slate-800" />}
+                <motion.div
+                  initial={false}
+                  animate={{ scale: copied ? [1, 1.2, 1] : 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {copied ? (
+                    <Check size={16} color="#10b981" />
+                  ) : (
+                    <Copy size={14} color="#475569" />
+                  )}
+                </motion.div>
               </div>
             </div>
             
             <div className={styles.privateBadge}>
-              <ShieldCheck size={16} className="text-slate-500" />
+              <ShieldCheck size={16} color="#64748b" />
               <span className={styles.privateLabel}>Private</span>
             </div>
           </div>
@@ -194,6 +265,7 @@ export default function Lobby({
               maxLength={10}
               value={targetId}
               onChange={(e) => setTargetId(e.target.value.toUpperCase())}
+              onKeyDown={handleKeyDown}
               className={styles.directInput}
             />
             <button 
@@ -206,6 +278,7 @@ export default function Lobby({
           </div>
         </section>
 
+        {/* Gender Selection Sheet */}
         <AnimatePresence>
           {showGenderSheet && (
             <>
@@ -230,14 +303,16 @@ export default function Lobby({
                     { id: 'male', label: 'Connect with Males', icon: '♂' },
                     { id: 'female', label: 'Connect with Females', icon: '♀' }
                   ].map((opt) => (
-                    <button
+                    <motion.button
                       key={opt.id}
                       onClick={() => { onSetGender(opt.id); setShowGenderSheet(false); }}
                       className={`${styles.optionButton} ${gender === opt.id ? styles.optionActive : ''}`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <span className={styles.optionIcon}>{opt.icon}</span>
                       <span className={styles.optionLabel}>{opt.label}</span>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
                 <button 
@@ -254,4 +329,3 @@ export default function Lobby({
     </div>
   );
 }
-
