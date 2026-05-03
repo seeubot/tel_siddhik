@@ -1,404 +1,530 @@
 .container {
-position: fixed;
-inset: 0;
-background-color: #060708;
-color: #e2e8f0;
-overflow: hidden;
-font-family: sans-serif;
-user-select: none;
-display: flex;
-flex-direction: column;
+  position: fixed;
+  inset: 0;
+  background-color: #060708;
+  color: #e2e8f0;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
 }
-​.backgroundAura {
-position: absolute;
-inset: 0;
-pointer-events: none;
+
+.backgroundAura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
-​.auraTop {
-position: absolute;
-top: -10%;
-right: -5%;
-width: 70%;
-height: 40%;
-background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-filter: blur(120px);
-border-radius: 9999px;
+
+.auraTop {
+  position: absolute;
+  top: -10%;
+  right: -5%;
+  width: 70%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  filter: blur(120px);
+  border-radius: 9999px;
 }
-​.auraBottom {
-position: absolute;
-bottom: -10%;
-left: -5%;
-width: 60%;
-height: 40%;
-background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-filter: blur(100px);
-border-radius: 9999px;
+
+.auraBottom {
+  position: absolute;
+  bottom: -10%;
+  left: -5%;
+  width: 60%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  filter: blur(100px);
+  border-radius: 9999px;
 }
-​.wrapper {
-position: relative;
-z-index: 10;
-display: flex;
-flex-direction: column;
-height: 100%;
-width: 100%;
-max-width: 28rem;
-margin: 0 auto;
-padding: 3.5rem 2rem 2.5rem 2rem;
+
+.wrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 2rem 1.5rem;
 }
-​.nav {
-display: flex;
-justify-content: flex-end;
-margin-bottom: 2rem;
+
+/* Updated Navigation */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
 }
-​.bellButton {
-position: relative;
-padding: 0.5rem;
-color: #64748b;
-transition: color 0.2s;
-background: transparent;
-border: none;
-cursor: pointer;
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
-​.bellButton:hover {
-color: #ffffff;
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
-​.notificationBadge {
-position: absolute;
-top: 0.5rem;
-right: 0.5rem;
-width: 0.5rem;
-height: 0.5rem;
-background-color: #3b82f6;
-border-radius: 9999px;
-border: 2px solid #060708;
+
+.miniLogo {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.03em;
 }
-​.header {
-margin-bottom: 3rem;
+
+.miniLogoAccent {
+  color: #3b82f6;
+  font-style: italic;
 }
-​.logo {
-font-size: 5rem;
-font-weight: 900;
-letter-spacing: -0.05em;
-color: #ffffff;
-line-height: 0.85;
-margin: 0;
+
+.navButton {
+  padding: 0.5rem;
+  color: #64748b;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-​.logoAccent {
-color: #3b82f6;
-font-style: italic;
+
+.navButton:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.05);
 }
-​.pickupLineContainer {
-margin-top: 1.5rem;
-height: 1.5rem;
-overflow: hidden;
+
+.notificationBadge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #3b82f6;
+  border-radius: 9999px;
+  border: 2px solid #060708;
 }
-​.pickupLine {
-font-size: 0.875rem;
-font-weight: 600;
-color: #64748b;
-font-style: italic;
-margin: 0;
+
+.bellButton {
+  position: relative;
+  composes: navButton;
 }
-​.main {
-flex: 1;
-display: flex;
-flex-direction: column;
-justify-content: center;
-gap: 3.5rem;
+
+.header {
+  margin-bottom: 2rem;
 }
-​.sliderContainer {
-display: flex;
-flex-direction: column;
-align-items: center; /* FIXED: Was "items-center" */
-gap: 1.5rem;
+
+.logo {
+  font-size: 4.5rem;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+  line-height: 0.85;
+  margin: 0;
 }
-​.sliderTrack {
-position: relative;
-width: 100%;
-max-width: 300px;
-height: 4rem;
-background-color: rgba(255, 255, 255, 0.03);
-border: 1px solid rgba(255, 255, 255, 0.05);
-border-radius: 1rem;
-padding: 0.25rem;
-display: flex;
-align-items: center;
-overflow: hidden;
-margin: 0 auto;
+
+.logoAccent {
+  color: #3b82f6;
+  font-style: italic;
 }
-​.sliderLabel {
-position: absolute;
-inset: 0;
-display: flex;
-align-items: center;
-justify-content: center;
-pointer-events: none;
-font-size: 0.625rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.3em;
-color: #64748b;
+
+.pickupLineContainer {
+  margin-top: 1rem;
+  height: 1.5rem;
+  overflow: hidden;
 }
-​.sliderThumb {
-z-index: 10;
-width: 3.5rem;
-height: 3.5rem;
-background-color: #ffffff;
-border-radius: 0.75rem;
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: grab;
-box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+
+.pickupLine {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  font-style: italic;
+  margin: 0;
 }
-​.sliderThumb:active {
-cursor: grabbing;
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3rem;
 }
-​.preferenceButton {
-display: flex;
-align-items: center;
-gap: 0.75rem;
-color: #64748b;
-background: transparent;
-border: none;
-cursor: pointer;
-transition: color 0.2s;
-margin: 0 auto;
+
+.sliderContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
 }
-​.preferenceButton:hover {
-color: #ffffff;
+
+.sliderTrack {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 4rem;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  margin: 0 auto;
 }
-​.preferenceLabel {
-font-size: 0.625rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.1em;
+
+.sliderLabel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: #64748b;
 }
-​.preferenceValue {
-color: #3b82f6;
+
+.sliderThumb {
+  z-index: 10;
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.2s;
 }
-​.searchingContainer {
-display: flex;
-flex-direction: column;
-align-items: center;
-width: 100%;
+
+.sliderThumb:hover {
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
 }
-​.timerWrapper {
-position: relative;
-padding: 2.5rem 0;
-display: flex;
-flex-direction: column;
-align-items: center;
+
+.sliderThumb:active {
+  cursor: grabbing;
 }
-​.timerText {
-font-size: 3.75rem;
-font-weight: 900;
-color: #ffffff;
-font-variant-numeric: tabular-nums;
-letter-spacing: -0.05em;
-margin-bottom: 0.5rem;
+
+.preferenceButton {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
 }
-​.statusRow {
-display: flex;
-align-items: center;
-gap: 0.75rem;
+
+.preferenceButton:hover {
+  color: #ffffff;
 }
-​.pingDot {
-width: 0.375rem;
-height: 0.375rem;
-border-radius: 9999px;
-background-color: #3b82f6;
-animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+
+.preferenceLabel {
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
-​@keyframes ping {
-75%, 100% {
-transform: scale(2);
-opacity: 0;
+
+.preferenceValue {
+  color: #3b82f6;
 }
+
+.searchingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
-​.statusText {
-font-size: 0.625rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.4em;
-color: #3b82f6;
+
+.timerWrapper {
+  position: relative;
+  padding: 2.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-​.abortButton {
-margin-top: 2rem;
-padding: 0.5rem 1.5rem;
-border-radius: 9999px;
-border: 1px solid rgba(255, 255, 255, 0.1);
-background: transparent;
-font-size: 0.5625rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.1em;
-color: #475569;
-cursor: pointer;
-transition: all 0.2s;
+
+.timerText {
+  font-size: 3.75rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  margin-bottom: 0.5rem;
 }
-​.abortButton:hover {
-color: #f43f5e;
-border-color: rgba(244, 63, 94, 0.3);
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
-​.identitySection {
-margin-top: auto;
-display: flex;
-flex-direction: column;
-gap: 1.5rem;
+
+.pingDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: #3b82f6;
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
-​.idRow {
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding: 0 0.5rem;
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
-​.idDisplay {
-display: flex;
-flex-direction: column;
-cursor: pointer;
+
+.statusText {
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  color: #3b82f6;
 }
-​.idLabel {
-font-size: 0.5625rem;
-font-weight: 700;
-color: #475569;
-text-transform: uppercase;
-letter-spacing: 0.1em;
-margin-bottom: 0.25rem;
+
+.abortButton {
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-​.idValueContainer {
-display: flex;
-align-items: center;
-gap: 0.5rem;
+
+.abortButton:hover {
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.3);
+  background-color: rgba(244, 63, 94, 0.05);
 }
-​.idValue {
-font-size: 1.5rem;
-font-weight: 900;
-letter-spacing: 0.1em;
-color: #ffffff;
+
+.identitySection {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
-​.privateBadge {
-display: flex;
-flex-direction: column;
-align-items: flex-end;
-opacity: 0.4;
+
+.idRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.5rem;
 }
-​.privateLabel {
-font-size: 0.5rem;
-font-weight: 700;
-text-transform: uppercase;
+
+.idDisplay {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
-​.directInputBar {
-display: flex;
-align-items: center;
-background-color: rgba(255, 255, 255, 0.02);
-border: 1px solid rgba(255, 255, 255, 0.05);
-border-radius: 1rem;
-padding: 0.375rem;
-transition: border-color 0.2s;
+
+.idDisplay:hover {
+  opacity: 0.8;
 }
-​.directInputBar:focus-within {
-border-color: rgba(59, 130, 246, 0.3);
+
+.idLabel {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
 }
-​.directInput {
-background: transparent;
-flex: 1;
-padding: 0 1rem;
-font-size: 0.75rem;
-font-weight: 900;
-letter-spacing: 0.2em;
-outline: none;
-border: none;
-color: #ffffff;
+
+.idValueContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-​.directInput::placeholder {
-color: #1e293b;
+
+.idValue {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #ffffff;
 }
-​.directSubmit {
-width: 2.75rem;
-height: 2.75rem;
-border-radius: 0.75rem;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: all 0.2s;
-border: none;
-cursor: pointer;
+
+.privateBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  opacity: 0.4;
 }
-​.submitActive {
-background-color: #3b82f6;
-color: #ffffff;
+
+.privateLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
-​.submitInactive {
-background-color: rgba(255, 255, 255, 0.05);
-color: #1e293b;
-cursor: not-allowed;
+
+.directInputBar {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 0.375rem;
+  transition: border-color 0.2s;
 }
-​.sheetOverlay {
-position: fixed;
-inset: 0;
-z-index: 100;
-background-color: rgba(0, 0, 0, 0.5);
-backdrop-filter: blur(4px);
+
+.directInputBar:focus-within {
+  border-color: rgba(59, 130, 246, 0.3);
 }
-​.sheet {
-position: absolute;
-inset-x: 0;
-bottom: 0;
-background-color: #0c0d0e;
-border-top: 1px solid rgba(255, 255, 255, 0.1);
-border-radius: 3rem 3rem 0 0;
-padding: 2.5rem;
-display: flex;
-flex-direction: column;
+
+.directInput {
+  background: transparent;
+  flex: 1;
+  padding: 0 1rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  outline: none;
+  border: none;
+  color: #ffffff;
 }
-​.sheetHandle {
-width: 3rem;
-height: 0.375rem;
-background-color: rgba(255, 255, 255, 0.1);
-border-radius: 9999px;
-margin: 0 auto 2.5rem auto;
+
+.directInput::placeholder {
+  color: #1e293b;
 }
-​.sheetOptions {
-display: flex;
-flex-direction: column;
-gap: 0.75rem;
+
+.directSubmit {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
 }
-​.optionButton {
-display: flex;
-align-items: center;
-gap: 1.5rem;
-padding: 1.5rem;
-border-radius: 1rem;
-border: 1px solid rgba(255, 255, 255, 0.05);
-background-color: rgba(255, 255, 255, 0.02);
-color: #64748b;
-transition: all 0.2s;
-cursor: pointer;
+
+.submitActive {
+  background-color: #3b82f6;
+  color: #ffffff;
 }
-​.optionActive {
-background-color: #3b82f6;
-border-color: #3b82f6;
-color: #ffffff;
+
+.submitActive:hover {
+  background-color: #2563eb;
 }
-​.optionIcon {
-font-size: 1.25rem;
+
+.submitInactive {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #1e293b;
+  cursor: not-allowed;
 }
-​.optionLabel {
-font-size: 0.75rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.1em;
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
 }
-​.sheetClose {
-margin-top: 1.5rem;
-padding: 1rem;
-background: transparent;
-border: none;
-font-size: 0.625rem;
-font-weight: 900;
-text-transform: uppercase;
-letter-spacing: 0.3em;
-color: #334155;
-cursor: pointer;
+
+.sheet {
+  position: absolute;
+  inset-x: 0;
+  bottom: 0;
+  background-color: #0c0d0e;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3rem 3rem 0 0;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetHandle {
+  width: 3rem;
+  height: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  margin: 0 auto 2.5rem auto;
+}
+
+.sheetOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.optionButton {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.02);
+  color: #64748b;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.optionButton:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.optionActive {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.optionActive:hover {
+  background-color: #2563eb;
+}
+
+.optionIcon {
+  font-size: 1.25rem;
+}
+
+.optionLabel {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sheetClose {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 0.625rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: #334155;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sheetClose:hover {
+  color: #64748b;
 }
