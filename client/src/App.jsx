@@ -24,6 +24,10 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [autoSearchCountdown, setAutoSearchCountdown] = useState(null);
   const [autoSearchDelay, setAutoSearchDelay] = useState(null);
+  const [gender, setGender] = useState(null); // 🆕 Gender state
+  const [genderStats, setGenderStats] = useState(null); // 🆕 Gender queue stats
+  const [notifications, setNotifications] = useState([]); // 🆕 Notifications state
+  const [unreadNotifications, setUnreadNotifications] = useState(0); // 🆕 Unread count
 
   const [shareRequest, setShareRequest] = useState(null);
   const [revealData, setRevealData] = useState(null);
@@ -55,6 +59,15 @@ export default function App() {
     setToast({ message, type, id: Date.now() });
   }, []);
 
+  // ── 🆕 Handle Gender Change ───────────────────────────────────────────────
+  const handleSetGender = useCallback((newGender) => {
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      socket.emit('set-gender', { gender: newGender });
+    }
+    setGender(newGender);
+  }, []);
+
   // ── Clear chat messages on partner change ──────────────────────────────────
   useEffect(() => {
     setMessages([]);
@@ -78,12 +91,34 @@ export default function App() {
     
     fetch('/generate-orey-id')
       .then((r) => r.json())
-      .then(({ oreyId, expiresAt }) => {
-        setOreyId(oreyId);
+      .then(({ oreyId, expiresAt, hashId }) => {
+        setOreyId(oreyId); // Display format: OREY-XXXXX
+        // hashId is stored internally by the server
         setOreyIdExpiry(expiresAt);
       })
       .catch(() => showToast('Could not generate Orey-ID', 'error'));
   }, [showToast, isBanned, deviceLoading]);
+
+  // ── 🆕 Fetch Notifications ────────────────────────────────────────────────
+  useEffect(() => {
+    if (isBanned || deviceLoading || !deviceId) return;
+    
+    const fetchNotifications = () => {
+      fetch(`/api/notifications?device_id=${deviceId}&platform=web`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.notifications) {
+            setNotifications(data.notifications);
+            setUnreadNotifications(data.unread || 0);
+          }
+        })
+        .catch(() => {});
+    };
+    
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [deviceId, isBanned, deviceLoading]);
 
   // ── Chat: Send Message ────────────────────────────────────────────────────
   const handleSendMessage = useCallback((text) => {
@@ -100,10 +135,7 @@ export default function App() {
       isOwn: true
     };
 
-    // Add to local messages immediately
     setMessages(prev => [...prev, messageData]);
-
-    // Send to server
     socket.emit('chat-message', { roomId, message: text, type: 'text' });
   }, [roomId, userName]);
 
@@ -114,10 +146,8 @@ export default function App() {
 
     socket.emit('chat-typing', { roomId, isTyping: true });
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-    // Set timeout to stop typing indicator
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit('chat-typing', { roomId, isTyping: false });
     }, 2000);
@@ -168,16 +198,32 @@ export default function App() {
       showToast(error, 'error');
     });
 
+    // ── 🆕 Gender Events ────────────────────────────────────────────────────
+    socket.on('gender-set', ({ gender: serverGender, accepted, message }) => {
+      setGender(serverGender);
+      if (message) showToast(message, accepted ? 'info' : 'warning');
+    });
+
+    socket.on('waiting-for-match', ({ gender: matchGender, genderStats: stats }) => {
+      setSearching(true);
+      if (stats) setGenderStats(stats);
+    });
+
+    // ── 🆕 Notification Events ──────────────────────────────────────────────
+    socket.on('new-notification', (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+      setUnreadNotifications(prev => prev + 1);
+      showToast(notification.title, 'info');
+    });
+
     // ── Chat Socket Events ───────────────────────────────────────────────────
     socket.on('chat-message', (msg) => {
       setMessages(prev => {
-        // Prevent duplicate messages
         if (prev.some(m => m.id === msg.id)) return prev;
-        
         return [...prev, {
           ...msg,
           isOwn: msg.senderId === socket.id,
-          text: msg.message // Map 'message' to 'text' for UI consistency
+          text: msg.message
         }];
       });
     });
@@ -185,8 +231,6 @@ export default function App() {
     socket.on('peer-typing', ({ socketId, userName: typingUser, isTyping }) => {
       if (socketId !== socket.id) {
         setPeerTyping(isTyping);
-        
-        // Auto-clear typing after 3 seconds
         if (isTyping) {
           setTimeout(() => setPeerTyping(false), 3000);
         }
@@ -203,13 +247,12 @@ export default function App() {
       setOreyIdExpiry(expiresAt);
     });
 
-    socket.on('waiting-for-match', () => setSearching(true));
     socket.on('random-cancelled', () => setSearching(false));
 
     socket.on('room-joined', ({ roomId: rid, peers }) => {
       setRoomId(rid);
       setSearching(false);
-      setMessages([]); // Clear chat on new room
+      setMessages([]);
       if (peers && peers.length > 0) {
         setPartner({
           ...peers[0],
@@ -220,8 +263,17 @@ export default function App() {
       webrtc.startLocal();
     });
 
-    socket.on('incoming-call', ({ fromName, fromOreyId, autoMatched }) => {
-      setPartner((prev) => prev ? { ...prev, userName: fromName, oreyId: fromOreyId } : { userName: fromName, oreyId: fromOreyId });
+    socket.on('incoming-call', ({ fromName, fromOreyId, partnerGender, autoMatched }) => {
+      setPartner((prev) => prev ? { 
+        ...prev, 
+        userName: fromName, 
+        oreyId: fromOreyId,
+        gender: partnerGender 
+      } : { 
+        userName: fromName, 
+        oreyId: fromOreyId,
+        gender: partnerGender 
+      });
       if (!autoMatched) {
         showToast(`${fromName} is calling…`, 'info');
       }
@@ -251,7 +303,7 @@ export default function App() {
       showToast(`${pName || 'Partner'} ${reason === 'skip' ? 'skipped' : 'left'}`, 'warning');
       webrtc.closePeer();
       setPartner(null);
-      setMessages([]); // Clear chat on partner leave
+      setMessages([]);
       setPeerTyping(false);
     });
 
@@ -270,7 +322,7 @@ export default function App() {
       setPartner(null);
       setRoomId('');
       setReportModal(false);
-      setMessages([]); // Clear chat on leave
+      setMessages([]);
       setPeerTyping(false);
       webrtc.stopLocal();
       webrtc.closePeer();
@@ -280,7 +332,7 @@ export default function App() {
       webrtc.closePeer();
       setPartner(null);
       setReportModal(false);
-      setMessages([]); // Clear chat on skip
+      setMessages([]);
       setPeerTyping(false);
       setSearching(true);
     });
@@ -400,7 +452,6 @@ export default function App() {
   // RENDER
   // ═══════════════════════════════════════════════════════════════
 
-  // Loading screen
   if (deviceLoading || screen === 'loading') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#6366f1', fontSize: '1.5rem', fontWeight: 'bold' }}>
@@ -412,7 +463,6 @@ export default function App() {
     );
   }
 
-  // Ban screen
   if (screen === 'banned' || isBanned) {
     return (
       <BanScreen
@@ -423,7 +473,6 @@ export default function App() {
     );
   }
 
-  // Normal app
   return (
     <>
       {screen === 'lobby' && (
@@ -435,7 +484,9 @@ export default function App() {
           searching={searching} 
           onDiscover={handleDiscover} 
           onCancelSearch={handleCancelSearch} 
-          onConnectById={handleConnectById} 
+          onConnectById={handleConnectById}
+          gender={gender}
+          onSetGender={handleSetGender}
         />
       )}
       {screen === 'call' && (
@@ -457,7 +508,6 @@ export default function App() {
           onShareId={handleShareId} 
           onCancelAutoSearch={cancelAutoSearch} 
           onReport={handleOpenReport}
-          // Chat props
           onSendMessage={handleSendMessage}
           messages={messages}
           peerTyping={peerTyping}
