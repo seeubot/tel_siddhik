@@ -2,993 +2,779 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>Orey Admin Panel - Secure</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orey! Admin Panel</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    :root {
+      --bg: #0b0f17;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #3b82f6;
+      --accent2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 12px;
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      background: #0b0f17;
-      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+      line-height: 1.5;
     }
-    
-    /* Login Screen */
-    .login-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+
+    /* ── Login Screen ── */
+    .login-screen {
+      display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
     }
     .login-box {
-      background: #1e293b;
-      padding: 2.5rem;
-      border-radius: 24px;
-      border: 1px solid #334155;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 40px 32px;
+      width: 100%; max-width: 400px; text-align: center;
     }
-    .login-box h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-      color: #3b82f6;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .login-box p {
-      color: #94a3b8;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
-    }
-    .login-box button {
-      width: 100%;
-      margin-top: 0.5rem;
-      padding: 0.8rem;
-      font-size: 1rem;
-    }
-    
-    /* Dashboard */
-    .dashboard {
-      display: none;
-    }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 1.5rem;
-      width: 100%;
-    }
-    header {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border-bottom: 1px solid #334155;
-      padding: 1.2rem 2rem;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-weight: 700;
-      font-size: 1.6rem;
-      letter-spacing: -0.5px;
-      color: white;
-    }
-    .logo span {
-      background: #3b82f6;
-      padding: 0.2rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      color: white;
-    }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .session-timer {
-      background: #0f172a;
-      padding: 0.4rem 1rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-      border: 1px solid #334155;
-    }
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.25rem;
-      margin: 1.75rem 0;
-    }
-    .stat-card {
-      background: #1e293b;
-      border-radius: 20px;
-      padding: 1.4rem;
-      border: 1px solid #334155;
-      transition: all 0.2s;
-    }
-    .stat-card:hover {
-      border-color: #3b82f6;
-      transform: translateY(-2px);
-    }
-    .stat-label {
-      font-size: 0.85rem;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-    }
-    .stat-value {
-      font-size: 2.2rem;
-      font-weight: 700;
-      margin: 0.4rem 0 0.2rem;
-      color: #f1f5f9;
-    }
-    .stat-desc {
-      font-size: 0.8rem;
-      color: #64748b;
-    }
-    .panel {
-      background: #1e293b;
-      border-radius: 24px;
-      padding: 1.6rem;
-      margin-bottom: 1.8rem;
-      border: 1px solid #334155;
-    }
-    h2 {
-      font-size: 1.4rem;
-      margin-bottom: 1.3rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #f1f5f9;
-    }
-    h3 {
-      font-size: 1.1rem;
-      margin-bottom: 0.8rem;
-      color: #cbd5e1;
-    }
-    .flex-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-    }
-    button {
-      background: #3b82f6;
-      border: none;
-      padding: 0.6rem 1.4rem;
-      border-radius: 30px;
-      font-weight: 600;
-      color: white;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: all 0.2s;
-      font-size: 0.9rem;
-      border: 1px solid #2563eb;
-    }
-    button:hover {
-      background: #2563eb;
-      transform: translateY(-1px);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    button.secondary {
-      background: #334155;
-      border-color: #475569;
-    }
-    button.secondary:hover {
-      background: #475569;
-    }
-    button.danger {
-      background: #dc2626;
-      border-color: #b91c1c;
-    }
-    button.danger:hover {
-      background: #b91c1c;
-    }
-    button.logout-btn {
-      background: #475569;
-      border-color: #64748b;
-    }
-    button.logout-btn:hover {
-      background: #64748b;
-    }
-    input, select, textarea {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 0.7rem 1rem;
-      color: #e2e8f0;
-      font-size: 0.9rem;
-      outline: none;
-      width: 100%;
-      margin-bottom: 0.8rem;
+    .login-box h1 { font-size: 2rem; margin-bottom: 4px; color: var(--accent); }
+    .login-box .sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 24px; }
+    .login-box input {
+      width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 1rem; outline: none; margin-bottom: 16px;
       transition: border-color 0.2s;
     }
-    input:focus, select:focus, textarea:focus {
-      border-color: #3b82f6;
+    .login-box input:focus { border-color: var(--accent); }
+    .login-box button {
+      width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: var(--radius);
+      color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
     }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      color: #94a3b8;
-      margin-bottom: 0.3rem;
-      font-weight: 500;
+    .login-box button:hover { background: #2563eb; }
+    .login-box .error { color: var(--red); font-size: 0.85rem; margin-top: 8px; }
+
+    /* ── Dashboard ── */
+    .dashboard { display: none; min-height: 100vh; }
+    .dashboard.active { display: block; }
+    .login-screen.hidden { display: none; }
+
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+      position: sticky; top: 0; z-index: 10;
     }
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 16px;
+    .topbar h1 { font-size: 1.3rem; color: var(--accent); }
+    .topbar .badge { font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 10px; border-radius: 20px; }
+    .topbar button { padding: 8px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+    .topbar button:hover { border-color: var(--red); color: var(--red); }
+
+    .tabs {
+      display: flex; gap: 4px; padding: 12px 24px; background: rgba(30, 41, 59, 0.5);
+      border-bottom: 1px solid var(--border); overflow-x: auto; flex-wrap: wrap;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
+    .tabs button {
+      padding: 8px 18px; border: 1px solid transparent; background: transparent; color: var(--text-dim);
+      border-radius: 20px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s;
     }
-    th {
-      text-align: left;
-      padding: 0.9rem 0.8rem;
-      background: #0f172a;
-      color: #94a3b8;
-      font-weight: 600;
-      white-space: nowrap;
+    .tabs button:hover { color: var(--text); }
+    .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Cards ── */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
     }
-    td {
-      padding: 0.8rem;
-      border-bottom: 1px solid #334155;
+    .stat-card .label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; margin-top: 4px; }
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.red { color: var(--red); }
+    .stat-card .value.accent { color: var(--accent); }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+    th { text-align: left; padding: 12px 16px; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+    td { padding: 12px 16px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); font-size: 0.85rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(59, 130, 246, 0.03); }
+    .mono { font-family: 'SF Mono', 'Menlo', 'Fira Code', monospace; font-size: 0.8rem; }
+    .badge-hp { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+    .badge-done { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit;
     }
-    .badge {
-      background: #334155;
-      padding: 0.2rem 0.7rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      white-space: nowrap;
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .form-row .form-group { flex: 1; min-width: 200px; }
+
+    .btn {
+      padding: 10px 20px; border: none; border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
     }
-    .badge.active { background: #16a34a; color: white; }
-    .badge.pending { background: #ea580c; color: white; }
-    .badge.banned { background: #dc2626; color: white; }
-    .badge.high { background: #7e22ce; color: white; }
-    .badge.dismissed { background: #64748b; color: white; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: #2563eb; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-red:hover { background: #dc2626; }
+    .btn-yellow { background: var(--yellow); color: #000; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center; z-index: 100; padding: 20px;
+    }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px;
+      width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;
+    }
+    .modal h3 { margin-bottom: 16px; color: var(--accent); }
+
+    /* ── Toast ── */
     .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #1e293b;
-      border: 2px solid #3b82f6;
-      padding: 1rem 1.5rem;
-      border-radius: 20px;
-      color: white;
-      z-index: 9999;
-      display: none;
-      animation: slideIn 0.3s ease;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      font-weight: 500;
+      position: fixed; bottom: 24px; right: 24px; z-index: 200; padding: 14px 20px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.85rem; animation: slideIn 0.3s ease; max-width: 400px;
     }
-    .toast.error {
-      border-color: #dc2626;
-    }
-    @keyframes slideIn {
-      from { transform: translateX(100px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    .error-message {
-      background: rgba(220, 38, 38, 0.2);
-      border: 1px solid #dc2626;
-      color: #fca5a5;
-      padding: 0.8rem;
-      border-radius: 12px;
-      margin-top: 1rem;
-      display: none;
-    }
-    hr {
-      border-color: #334155;
-      margin: 1.2rem 0;
-    }
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--red); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .loading { text-align: center; padding: 40px; color: var(--text-dim); }
+    .empty { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.9rem; }
+
+    /* ── Responsive ── */
     @media (max-width: 768px) {
-      header {
-        padding: 1rem;
-      }
-      .logo {
-        font-size: 1.3rem;
-      }
-      .container {
-        padding: 1rem;
-      }
+      .topbar { padding: 12px 16px; }
+      .tabs { padding: 8px 12px; }
+      .content { padding: 16px; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 0.75rem; }
+      th, td { padding: 8px 10px; }
     }
   </style>
 </head>
 <body>
-  <!-- Login Screen -->
-  <div class="login-container" id="loginScreen">
-    <div class="login-box">
-      <h1>🔷 OREY Admin</h1>
-      <p>Enter your admin key to access the control panel</p>
-      <input type="password" id="adminKeyInput" placeholder="Enter admin key" autocomplete="off" />
-      <button onclick="login()">🔐 Login to Dashboard</button>
-      <div class="error-message" id="loginError"></div>
-      <p style="margin-top:1.2rem; font-size:0.8rem; color:#64748b; text-align:center;">
-        Session expires after 2 hours of inactivity
-      </p>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>🔷 Orey! Admin</h1>
+    <p class="sub">Enter your admin key to continue</p>
+    <input type="password" id="adminKeyInput" placeholder="Admin Key" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">Sign In</button>
+    <p id="loginError" class="error"></p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <h1>🔷 Orey! Admin</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="badge" id="connBadge">🟢 Connected</span>
+      <button onclick="logout()">Logout</button>
     </div>
   </div>
 
-  <!-- Dashboard -->
-  <div class="dashboard" id="dashboard">
-    <header>
-      <div class="logo">🔷 OREY <span>ADMIN</span></div>
-      <div class="header-right">
-        <span class="session-timer" id="sessionTimer">Session: --:--</span>
-        <span style="color:#16a34a; font-size:0.9rem;">● Connected</span>
-        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-      </div>
-    </header>
-    <div class="container">
-      <!-- Stats Grid -->
-      <div class="dashboard-grid">
-        <div class="stat-card">
-          <div class="stat-label">📡 Active Connections</div>
-          <div class="stat-value" id="activeConn">-</div>
-          <div class="stat-desc">Live users online</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🎥 Active Rooms</div>
-          <div class="stat-value" id="activeRooms">-</div>
-          <div class="stat-desc">Ongoing video calls</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🚫 Banned Devices</div>
-          <div class="stat-value" id="bannedCount">-</div>
-          <div class="stat-desc">Total banned</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🚨 Pending Reports</div>
-          <div class="stat-value" id="pendingReports">-</div>
-          <div class="stat-desc">Needs review</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">📢 Notifications</div>
-          <div class="stat-value" id="notifCount">-</div>
-          <div class="stat-desc">Active notifications</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🔐 Active Sessions</div>
-          <div class="stat-value" id="adminSessions">-</div>
-          <div class="stat-desc">Admin sessions</div>
-        </div>
-      </div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="active" data-tab="tab-dashboard">📊 Dashboard</button>
+    <button data-tab="tab-bans">🚫 Bans</button>
+    <button data-tab="tab-reports">🚨 Reports</button>
+    <button data-tab="tab-notifications">🔔 Notifications</button>
+    <button data-tab="tab-gender">⚧ Gender Stats</button>
+    <button data-tab="tab-config">⚙️ Config</button>
+  </div>
 
-      <!-- Reports Section -->
-      <div class="panel">
-        <h2>🚨 Reports Management</h2>
-        <div class="flex-row" style="margin-bottom:1rem;">
-          <button onclick="loadReports()">🔄 Refresh</button>
-          <select id="reportFilter" onchange="loadReports()" style="width:auto; margin:0;">
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="auto_banned">Auto Banned</option>
-            <option value="banned">Banned</option>
-            <option value="dismissed">Dismissed</option>
-            <option value="warned">Warned</option>
-          </select>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Report ID</th>
-                <th>Reported Device</th>
-                <th>Reason</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="reportsTable">
-              <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading reports...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="content">
+    <!-- Dashboard Panel -->
+    <div id="tab-dashboard" class="panel active">
+      <div class="stat-grid" id="dashboardStats"></div>
+      <div id="dashboardLoading" class="loading">Loading stats...</div>
+    </div>
 
-      <!-- Banned Devices -->
-      <div class="panel">
-        <h2>🛑 Ban Management</h2>
-        <div class="flex-row" style="margin-bottom:1rem;">
-          <input type="text" id="banDeviceId" placeholder="Device ID to ban" style="width:250px; margin:0;" />
-          <input type="text" id="banReason" placeholder="Reason for ban" style="width:200px; margin:0;" />
-          <input type="number" id="banDuration" placeholder="Hours (0=permanent)" style="width:130px; margin:0;" value="720" />
-          <button class="danger" onclick="banDevice()">⛔ Ban Device</button>
-          <button onclick="loadBannedDevices()">🔄 Refresh</button>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Device ID</th>
-                <th>Reason</th>
-                <th>Expires</th>
-                <th>Source</th>
-                <th>Unban</th>
-              </tr>
-            </thead>
-            <tbody id="bannedTable">
-              <tr><td colspan="5" style="text-align:center; color:#64748b;">Loading banned devices...</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- Bans Panel -->
+    <div id="tab-bans" class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+        <h3 style="color:var(--text);">Banned Devices</h3>
+        <button class="btn btn-red" onclick="showBanModal()">+ Ban Device</button>
       </div>
+      <div id="bansLoading" class="loading">Loading bans...</div>
+      <div id="bansTable" style="overflow-x:auto;"></div>
+    </div>
 
-      <!-- Notification System -->
-      <div class="panel">
-        <h2>📢 Push Notifications</h2>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
-          <div>
-            <label>Title *</label>
-            <input type="text" id="notifTitle" placeholder="Notification title" />
-          </div>
-          <div>
-            <label>Message *</label>
-            <input type="text" id="notifMessage" placeholder="Notification message" />
-          </div>
-          <div>
-            <label>Type</label>
-            <select id="notifType">
-              <option value="info">ℹ️ Info</option>
-              <option value="warning">⚠️ Warning</option>
-              <option value="alert">🚨 Alert</option>
-              <option value="success">✅ Success</option>
-            </select>
-          </div>
-          <div>
-            <label>Priority</label>
-            <select id="notifPriority">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div>
-            <label>Image URL (optional)</label>
-            <input type="text" id="notifImageUrl" placeholder="https://example.com/image.jpg" />
-          </div>
-          <div>
-            <label>Action URL</label>
-            <input type="text" id="notifActionUrl" value="/" placeholder="/welcome" />
-          </div>
-          <div>
-            <label>Expires In (days)</label>
-            <input type="number" id="notifExpiresIn" value="30" min="1" max="365" />
-          </div>
-          <div>
-            <label>Target Platform</label>
-            <select id="notifPlatform">
-              <option value="all">All Platforms</option>
-              <option value="android">Android</option>
-              <option value="ios">iOS</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex-row" style="margin-top:1rem;">
-          <button onclick="sendNotification()">📤 Send Broadcast</button>
-          <button class="secondary" onclick="loadNotifications()">📋 View All Notifications</button>
-        </div>
-        <div class="table-wrapper" style="margin-top:1rem; display:none;" id="notificationsTableWrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Delete</th>
-              </tr>
-            </thead>
-            <tbody id="notificationsTable"></tbody>
-          </table>
-        </div>
+    <!-- Reports Panel -->
+    <div id="tab-reports" class="panel">
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="reportFilter" onchange="loadReports()" class="btn btn-outline">
+          <option value="">All Reports</option>
+          <option value="pending">Pending</option>
+          <option value="banned">Banned</option>
+          <option value="dismissed">Dismissed</option>
+          <option value="warned">Warned</option>
+          <option value="auto_banned">Auto Banned</option>
+        </select>
       </div>
+      <div id="reportsLoading" class="loading">Loading reports...</div>
+      <div id="reportsTable" style="overflow-x:auto;"></div>
+    </div>
 
-      <!-- Server Configuration -->
-      <div class="panel">
-        <h2>⚙️ Server Configuration</h2>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem;">
-          <div>
-            <h3>🔧 Maintenance</h3>
-            <label>Mode</label>
-            <select id="maintEnabled" onchange="updateMaintenance()">
-              <option value="false">Disabled</option>
-              <option value="true">Enabled</option>
-            </select>
-            <label>Message</label>
-            <input type="text" id="maintMessage" placeholder="Maintenance message" onchange="updateMaintenance()" />
-          </div>
-          <div>
-            <h3>📹 Video Quality</h3>
-            <label>Default Quality</label>
-            <select id="videoQualityDefault" onchange="updateVideoQuality()">
-              <option value="low">Low (150 kbps)</option>
-              <option value="medium" selected>Medium (500 kbps)</option>
-              <option value="high">High (1.5 Mbps)</option>
-              <option value="hd">HD (4 Mbps)</option>
-            </select>
-            <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem;">
-              <input type="checkbox" id="autoAdjust" checked onchange="updateVideoQuality()" style="width:auto; margin:0;" />
-              Auto-adjust quality
-            </label>
-          </div>
-          <div>
-            <h3>🛡️ Safety Settings</h3>
-            <label>Auto-ban threshold (reports)</label>
-            <input type="number" id="autoBanThreshold" value="3" min="1" max="100" onchange="updateSafety()" />
-            <label>High-priority threshold</label>
-            <input type="number" id="highPriorityThreshold" value="2" min="1" max="100" onchange="updateSafety()" />
-          </div>
-        </div>
+    <!-- Notifications Panel -->
+    <div id="tab-notifications" class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+        <h3 style="color:var(--text);">Push Notifications</h3>
+        <button class="btn btn-accent" onclick="showNotificationModal()">+ New Notification</button>
       </div>
+      <div id="notifStats" class="stat-grid" style="margin-bottom:16px;"></div>
+      <div id="notifsLoading" class="loading">Loading notifications...</div>
+      <div id="notifsTable" style="overflow-x:auto;"></div>
+    </div>
+
+    <!-- Gender Stats Panel -->
+    <div id="tab-gender" class="panel">
+      <h3 style="color:var(--text);margin-bottom:16px;">Gender Matchmaking Queue</h3>
+      <div class="stat-grid" id="genderStatsGrid"></div>
+      <div id="genderLoading" class="loading">Loading gender stats...</div>
+    </div>
+
+    <!-- Config Panel -->
+    <div id="tab-config" class="panel">
+      <h3 style="color:var(--text);margin-bottom:16px;">App Configuration</h3>
+      <div id="configForm"></div>
+      <div id="configLoading" class="loading">Loading config...</div>
     </div>
   </div>
+</div>
+
+<!-- Ban Modal -->
+<div id="banModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeBanModal()">
+  <div class="modal">
+    <h3>Ban Device</h3>
+    <div class="form-group"><label>Device ID</label><input type="text" id="banDeviceId" placeholder="Enter device ID..."></div>
+    <div class="form-group"><label>Reason</label><input type="text" id="banReason" placeholder="Reason for ban"></div>
+    <div class="form-group"><label>Duration (hours, 0 = permanent)</label><input type="number" id="banDuration" value="720" min="0"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeBanModal()">Cancel</button>
+      <button class="btn btn-red" onclick="banDevice()">Ban Device</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Modal -->
+<div id="notifModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeNotifModal()">
+  <div class="modal">
+    <h3>Send Notification</h3>
+    <div class="form-group"><label>Title</label><input type="text" id="notifTitle" placeholder="Notification title"></div>
+    <div class="form-group"><label>Message</label><textarea id="notifMessage" placeholder="Notification message"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label>
+        <select id="notifType"><option value="info">Info</option><option value="warning">Warning</option><option value="alert">Alert</option></select>
+      </div>
+      <div class="form-group"><label>Priority</label>
+        <select id="notifPriority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Icon</label><input type="text" id="notifIcon" placeholder="📢" value="📢"></div>
+    <div class="form-group"><label>Image URL (optional)</label><input type="text" id="notifImage" placeholder="https://..."></div>
+    <div class="form-group"><label>Expires In (days)</label><input type="number" id="notifExpiry" value="30" min="1"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeNotifModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="sendNotification()">Send to All</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let sessionToken = localStorage.getItem('sessionToken') || null;
+let statsInterval = null;
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+async function login() {
+  const key = document.getElementById('adminKeyInput').value.trim();
+  if (!key) return showLoginError('Please enter admin key');
   
-  <div id="toast" class="toast"></div>
-
-  <script>
-    const BASE = window.location.origin;
-    let sessionToken = localStorage.getItem('orey_admin_session');
-    let sessionExpiry = localStorage.getItem('orey_session_expiry');
-    let sessionTimerInterval = null;
-
-    // Check for existing session on load
-    function checkSession() {
-      if (sessionToken && sessionExpiry) {
-        const expiry = new Date(sessionExpiry).getTime();
-        if (Date.now() < expiry - 60000) { // 1 minute buffer
-          showDashboard();
-          updateSessionTimer();
-          return true;
-        } else {
-          clearSession();
-        }
-      }
-      return false;
+  try {
+    const res = await fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminKey: key })
+    });
+    const data = await res.json();
+    if (data.success) {
+      sessionToken = data.sessionToken;
+      localStorage.setItem('sessionToken', sessionToken);
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboard').classList.add('active');
+      initDashboard();
+    } else {
+      showLoginError(data.error || 'Login failed');
     }
+  } catch (e) {
+    showLoginError('Connection error');
+  }
+}
 
-    function clearSession() {
-      sessionToken = null;
-      sessionExpiry = null;
-      localStorage.removeItem('orey_admin_session');
-      localStorage.removeItem('orey_session_expiry');
-      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+function showLoginError(msg) {
+  document.getElementById('loginError').textContent = msg;
+}
+
+function logout() {
+  fetch('/admin/logout', {
+    method: 'POST',
+    headers: { ...headers(), 'Content-Type': 'application/json' }
+  }).catch(() => {});
+  localStorage.removeItem('sessionToken');
+  sessionToken = null;
+  if (statsInterval) clearInterval(statsInterval);
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('adminKeyInput').value = '';
+}
+
+function headers() {
+  return sessionToken ? { 'x-session-token': sessionToken } : {};
+}
+
+function authFetch(url, options = {}) {
+  return fetch(url, { ...options, headers: { ...options.headers, ...headers() } });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+function initDashboard() {
+  if (sessionToken) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('active');
+    loadAllStats();
+    statsInterval = setInterval(loadAllStats, 10000);
+  }
+}
+
+function loadAllStats() {
+  loadDashboard();
+  loadBans();
+  loadReports();
+  loadNotifications();
+  loadGenderStats();
+  loadConfig();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const res = await authFetch('/admin/stats');
+    const stats = await res.json();
+    document.getElementById('dashboardLoading').style.display = 'none';
+    
+    const genderQ = stats.genderStats || {};
+    
+    document.getElementById('dashboardStats').innerHTML = `
+      <div class="stat-card"><div class="label">Active Connections</div><div class="value accent">${stats.activeConnections || 0}</div></div>
+      <div class="stat-card"><div class="label">Active Rooms</div><div class="value accent">${stats.activeRooms || 0}</div></div>
+      <div class="stat-card"><div class="label">Banned Devices</div><div class="value red">${stats.bannedDevices || 0}</div></div>
+      <div class="stat-card"><div class="label">Pending Reports</div><div class="value red">${stats.pendingReports || 0}</div></div>
+      <div class="stat-card"><div class="label">Notifications</div><div class="value accent">${stats.totalNotifications || 0}</div></div>
+      <div class="stat-card"><div class="label">Admin Sessions</div><div class="value accent">${stats.activeAdminSessions || 0}</div></div>
+      <div class="stat-card"><div class="label">Uptime</div><div class="value">${formatUptime(stats.uptime || 0)}</div></div>
+      <div class="stat-card"><div class="label">Memory</div><div class="value">${(stats.memoryMB || 0).toFixed(1)} MB</div></div>
+      <div class="stat-card"><div class="label">DB Status</div><div class="value green">${stats.dbState || 'unknown'}</div></div>
+      <div class="stat-card"><div class="label">♂️ Males Waiting</div><div class="value">${genderQ.maleWaiting || 0}</div></div>
+      <div class="stat-card"><div class="label">♀️ Females Waiting</div><div class="value">${genderQ.femaleWaiting || 0}</div></div>
+      <div class="stat-card"><div class="label">Random Queue</div><div class="value">${genderQ.randomQueueLength || 0}</div></div>
+    `;
+  } catch (e) {
+    document.getElementById('dashboardLoading').textContent = 'Error loading stats';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BANS
+// ═══════════════════════════════════════════════════════════════
+async function loadBans() {
+  try {
+    const res = await authFetch('/admin/banned-devices');
+    const data = await res.json();
+    document.getElementById('bansLoading').style.display = 'none';
+    
+    if (!data.bannedDevices || data.bannedDevices.length === 0) {
+      document.getElementById('bansTable').innerHTML = '<div class="empty">No banned devices</div>';
+      return;
     }
+    
+    document.getElementById('bansTable').innerHTML = `
+      <table>
+        <thead><tr><th>Device ID</th><th>Reason</th><th>Source</th><th>Type</th><th>Expires</th><th>Actions</th></tr></thead>
+        <tbody>${data.bannedDevices.map(b => `
+          <tr>
+            <td class="mono">${b.deviceId.substring(0, 16)}...</td>
+            <td>${b.reason || '-'}</td>
+            <td>${b.source || 'manual'}</td>
+            <td>${b.permanent ? '<span class="badge-hp">Permanent</span>' : b.isHighPriority ? '<span class="badge-hp">High Priority</span>' : 'Temporary'}</td>
+            <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Never'}</td>
+            <td><button class="btn btn-green btn-sm" onclick="unbanDevice('${b.deviceId}')">Unban</button></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    document.getElementById('bansLoading').textContent = 'Error loading bans';
+  }
+}
 
-    function showToast(msg, isError = false) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = 'toast' + (isError ? ' error' : '');
-      t.style.display = 'block';
-      setTimeout(() => t.style.display = 'none', 4000);
+function showBanModal() { document.getElementById('banModal').style.display = 'flex'; }
+function closeBanModal() { document.getElementById('banModal').style.display = 'none'; }
+
+async function banDevice() {
+  const deviceId = document.getElementById('banDeviceId').value.trim();
+  const reason = document.getElementById('banReason').value.trim();
+  const durationHours = parseInt(document.getElementById('banDuration').value) || 0;
+  
+  if (!deviceId) return toast('Device ID required', 'error');
+  
+  try {
+    const res = await authFetch('/admin/ban-device', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, reason: reason || 'Violation of terms', durationHours })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('Device banned successfully', 'success');
+      closeBanModal();
+      loadBans();
+      document.getElementById('banDeviceId').value = '';
+      document.getElementById('banReason').value = '';
+    } else {
+      toast(data.error || 'Ban failed', 'error');
     }
+  } catch (e) {
+    toast('Connection error', 'error');
+  }
+}
 
-    async function apiCall(url, method = 'GET', body = null) {
-      const headers = { 
-        'x-session-token': sessionToken,
-        'Content-Type': 'application/json' 
-      };
-      const options = { method, headers };
-      if (body) options.body = JSON.stringify(body);
-      
-      const res = await fetch(url, options);
-      
-      if (res.status === 401) {
-        clearSession();
-        showLoginScreen();
-        throw new Error('Session expired. Please login again.');
-      }
-      
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(err.error || 'Error');
-      }
-      
-      return res.json();
+async function unbanDevice(deviceId) {
+  if (!confirm('Unban this device?')) return;
+  try {
+    const res = await authFetch(`/admin/ban-device/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      toast('Device unbanned', 'success');
+      loadBans();
+    } else {
+      toast(data.error || 'Unban failed', 'error');
     }
+  } catch (e) {
+    toast('Connection error', 'error');
+  }
+}
 
-    function showLoginScreen() {
-      document.getElementById('loginScreen').style.display = 'flex';
-      document.getElementById('dashboard').style.display = 'none';
-      document.getElementById('loginError').style.display = 'none';
-      document.getElementById('adminKeyInput').value = '';
-      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+// ═══════════════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════════════
+async function loadReports() {
+  try {
+    const status = document.getElementById('reportFilter')?.value || '';
+    const url = '/admin/reports' + (status ? `?status=${status}` : '');
+    const res = await authFetch(url);
+    const data = await res.json();
+    document.getElementById('reportsLoading').style.display = 'none';
+    
+    if (!data.reports || data.reports.length === 0) {
+      document.getElementById('reportsTable').innerHTML = '<div class="empty">No reports found</div>';
+      return;
     }
+    
+    document.getElementById('reportsTable').innerHTML = `
+      <table>
+        <thead><tr><th>ID</th><th>Reported</th><th>Reason</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>${data.reports.map(r => `
+          <tr>
+            <td class="mono">${r.id}</td>
+            <td class="mono">${(r.reportedDeviceId || '').substring(0, 12)}...</td>
+            <td>${r.isHighPriority ? '<span class="badge-hp">HP</span> ' : ''}${r.reason}</td>
+            <td><span class="badge-pending">${r.status}</span></td>
+            <td>${new Date(r.timestamp).toLocaleDateString()}</td>
+            <td>${r.status === 'pending' ? `
+              <button class="btn btn-red btn-sm" onclick="reviewReport('${r.id}','ban')">Ban</button>
+              <button class="btn btn-yellow btn-sm" onclick="reviewReport('${r.id}','warn')">Warn</button>
+              <button class="btn btn-outline btn-sm" onclick="reviewReport('${r.id}','dismiss')">Dismiss</button>
+            ` : '<span style="color:var(--text-dim);font-size:0.75rem;">Reviewed</span>'}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    document.getElementById('reportsLoading').textContent = 'Error loading reports';
+  }
+}
 
-    function showDashboard() {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      loadAllData();
+async function reviewReport(reportId, action) {
+  const notes = prompt('Review notes (optional):') || '';
+  try {
+    const res = await authFetch(`/admin/reports/${reportId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast(`Report ${action}ned`, 'success');
+      loadReports();
+      loadBans();
+    } else {
+      toast(data.error || 'Action failed', 'error');
     }
+  } catch (e) {
+    toast('Connection error', 'error');
+  }
+}
 
-    async function login() {
-      const adminKey = document.getElementById('adminKeyInput').value.trim();
-      const errorDiv = document.getElementById('loginError');
-      
-      if (!adminKey) {
-        errorDiv.textContent = 'Please enter admin key';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        const res = await fetch(`${BASE}/admin/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          errorDiv.textContent = data.error || 'Invalid admin key';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        sessionToken = data.sessionToken;
-        sessionExpiry = data.expiresAt;
-        
-        localStorage.setItem('orey_admin_session', sessionToken);
-        localStorage.setItem('orey_session_expiry', sessionExpiry);
-        
-        showDashboard();
-        updateSessionTimer();
-        showToast('✅ Login successful! Session valid for 2 hours');
-      } catch (err) {
-        errorDiv.textContent = 'Connection error. Check server status.';
-        errorDiv.style.display = 'block';
-      }
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+async function loadNotifications() {
+  try {
+    const [notifRes, statsRes] = await Promise.all([
+      authFetch('/admin/notifications'),
+      authFetch('/admin/notifications/stats')
+    ]);
+    const notifData = await notifRes.json();
+    const statsData = await statsRes.json();
+    
+    document.getElementById('notifsLoading').style.display = 'none';
+    
+    document.getElementById('notifStats').innerHTML = `
+      <div class="stat-card"><div class="label">Total</div><div class="value">${statsData.total}</div></div>
+      <div class="stat-card"><div class="label">Active</div><div class="value accent">${statsData.active}</div></div>
+      <div class="stat-card"><div class="label">Unread</div><div class="value red">${statsData.unread}</div></div>
+      <div class="stat-card"><div class="label">Subscriptions</div><div class="value">${statsData.subscriptions}</div></div>
+    `;
+    
+    const notifs = notifData.notifications || [];
+    if (notifs.length === 0) {
+      document.getElementById('notifsTable').innerHTML = '<div class="empty">No notifications</div>';
+      return;
     }
+    
+    document.getElementById('notifsTable').innerHTML = `
+      <table>
+        <thead><tr><th>ID</th><th>Icon</th><th>Title</th><th>Type</th><th>Priority</th><th>Read</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>${notifs.slice(0, 50).map(n => `
+          <tr>
+            <td>#${n.id}</td>
+            <td>${n.icon || '📢'}</td>
+            <td>${n.title}</td>
+            <td>${n.type}</td>
+            <td>${n.priority}</td>
+            <td>${n.isRead ? '✅' : '❌'}</td>
+            <td>${new Date(n.timestamp).toLocaleDateString()}</td>
+            <td><button class="btn btn-red btn-sm" onclick="deleteNotif(${n.id})">Delete</button></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    document.getElementById('notifsLoading').textContent = 'Error loading notifications';
+  }
+}
 
-    async function logout() {
-      try {
-        if (sessionToken) {
-          await fetch(`${BASE}/admin/logout`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-session-token': sessionToken 
-            }
-          });
-        }
-      } catch (e) {
-        // Ignore errors during logout
-      }
-      
-      clearSession();
-      showLoginScreen();
-      showToast('👋 Logged out successfully');
-    }
+function showNotificationModal() { document.getElementById('notifModal').style.display = 'flex'; }
+function closeNotifModal() { document.getElementById('notifModal').style.display = 'none'; }
 
-    function updateSessionTimer() {
-      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-      
-      sessionTimerInterval = setInterval(() => {
-        const expiry = new Date(sessionExpiry).getTime();
-        const remaining = expiry - Date.now();
-        
-        if (remaining <= 0) {
-          clearSession();
-          showLoginScreen();
-          showToast('⏰ Session expired. Please login again.', true);
-          return;
-        }
-        
-        const mins = Math.floor(remaining / 60000);
-        const secs = Math.floor((remaining % 60000) / 1000);
-        const timerEl = document.getElementById('sessionTimer');
-        if (timerEl) {
-          timerEl.textContent = `Session: ${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-      }, 1000);
-    }
-
-    // Dashboard Functions
-    async function loadAllData() {
-      await Promise.allSettled([
-        loadStats(),
-        loadReports(),
-        loadBannedDevices(),
-      ]);
-    }
-
-    async function loadStats() {
-      try {
-        const data = await apiCall(`${BASE}/admin/stats`);
-        document.getElementById('activeConn').textContent = data.activeConnections || 0;
-        document.getElementById('activeRooms').textContent = data.activeRooms || 0;
-        document.getElementById('bannedCount').textContent = data.bannedDevices || 0;
-        document.getElementById('pendingReports').textContent = data.pendingReports || 0;
-        document.getElementById('notifCount').textContent = data.totalNotifications || 0;
-        document.getElementById('adminSessions').textContent = data.activeAdminSessions || 0;
-      } catch (e) {
-        console.error('Stats error:', e);
-      }
-    }
-
-    async function loadReports() {
-      const status = document.getElementById('reportFilter')?.value || '';
-      let url = `${BASE}/admin/reports`;
-      if (status) url += `?status=${status}`;
-      
-      try {
-        const data = await apiCall(url);
-        const tbody = document.getElementById('reportsTable');
-        if (!tbody) return;
-        
-        if (data.reports.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No reports found</td></tr>';
-          return;
-        }
-        
-        tbody.innerHTML = '';
-        data.reports.slice(0, 50).forEach(r => {
-          const tr = document.createElement('tr');
-          const statusBadge = r.status === 'pending' ? 'pending' : 
-                            r.status === 'banned' || r.status === 'auto_banned' ? 'banned' : 
-                            'dismissed';
-          
-          tr.innerHTML = `
-            <td><small>${r.id?.substring(0, 8)}</small></td>
-            <td><small>${(r.reportedDeviceId || '').substring(0, 14)}...</small></td>
-            <td>${r.reason}</td>
-            <td><span class="badge ${r.isHighPriority ? 'high' : ''}">${r.isHighPriority ? 'HIGH' : 'normal'}</span></td>
-            <td><span class="badge ${statusBadge}">${r.status}</span></td>
-            <td>
-              ${r.status === 'pending' ? `
-                <button onclick="actOnReport('${r.id}', 'ban')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Ban</button>
-                <button class="secondary" onclick="actOnReport('${r.id}', 'dismiss')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Dismiss</button>
-                <button class="secondary" onclick="actOnReport('${r.id}', 'warn')" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Warn</button>
-              ` : 'Reviewed'}
-            </td>`;
-          tbody.appendChild(tr);
-        });
-      } catch (e) {
-        showToast('Failed to load reports', true);
-      }
-    }
-
-    async function actOnReport(reportId, action) {
-      if (!confirm(`Are you sure you want to ${action} this report?`)) return;
-      
-      try {
-        await apiCall(`${BASE}/admin/reports/${reportId}/action`, 'POST', { action });
-        showToast(`Report ${action}ned successfully`);
-        loadReports();
-        loadStats();
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function loadBannedDevices() {
-      try {
-        const data = await apiCall(`${BASE}/admin/banned-devices`);
-        const tbody = document.getElementById('bannedTable');
-        if (!tbody) return;
-        
-        if (data.bannedDevices.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">No banned devices</td></tr>';
-          return;
-        }
-        
-        tbody.innerHTML = '';
-        data.bannedDevices.forEach(b => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><small>${b.deviceId.substring(0, 16)}...</small></td>
-            <td>${b.reason}</td>
-            <td>${b.permanent ? '🔴 Permanent' : b.expiresAt ? new Date(b.expiresAt).toLocaleDateString() : 'N/A'}</td>
-            <td><span class="badge">${b.source}</span></td>
-            <td><button class="danger" onclick="unbanDevice('${encodeURIComponent(b.deviceId)}')" style="padding:0.3rem 0.7rem;">Unban</button></td>`;
-          tbody.appendChild(tr);
-        });
-      } catch (e) {
-        showToast('Failed to load banned devices', true);
-      }
-    }
-
-    async function banDevice() {
-      const deviceId = document.getElementById('banDeviceId').value.trim();
-      const reason = document.getElementById('banReason').value.trim() || 'Manual ban by admin';
-      const duration = parseInt(document.getElementById('banDuration').value) || 0;
-      
-      if (!deviceId) {
-        showToast('Device ID is required', true);
-        return;
-      }
-      
-      if (!confirm(`Ban device: ${deviceId.substring(0, 16)}...?`)) return;
-      
-      try {
-        await apiCall(`${BASE}/admin/ban-device`, 'POST', { 
-          deviceId, 
-          reason, 
-          durationHours: duration || 0 
-        });
-        showToast('✅ Device banned successfully');
-        loadBannedDevices();
-        loadStats();
-        document.getElementById('banDeviceId').value = '';
-        document.getElementById('banReason').value = '';
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function unbanDevice(encodedId) {
-      if (!confirm('Are you sure you want to unban this device?')) return;
-      
-      try {
-        await apiCall(`${BASE}/admin/ban-device/${encodedId}`, 'DELETE');
-        showToast('✅ Device unbanned successfully');
-        loadBannedDevices();
-        loadStats();
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function sendNotification() {
-      const title = document.getElementById('notifTitle').value.trim();
-      const message = document.getElementById('notifMessage').value.trim();
-      
-      if (!title || !message) {
-        showToast('Title and message are required', true);
-        return;
-      }
-      
-      const body = {
-        title,
-        message,
+async function sendNotification() {
+  const title = document.getElementById('notifTitle').value.trim();
+  const message = document.getElementById('notifMessage').value.trim();
+  if (!title || !message) return toast('Title and message required', 'error');
+  
+  try {
+    const res = await authFetch('/admin/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title, message,
         type: document.getElementById('notifType').value,
         priority: document.getElementById('notifPriority').value,
-        imageUrl: document.getElementById('notifImageUrl').value || null,
-        actionUrl: document.getElementById('notifActionUrl').value || '/',
-        expiresIn: parseInt(document.getElementById('notifExpiresIn').value) || 30,
-        targetPlatform: document.getElementById('notifPlatform').value,
-      };
-      
-      try {
-        const result = await apiCall(`${BASE}/admin/notifications`, 'POST', body);
-        showToast(`✅ Notification sent to ${result.activeClients} active clients`);
-        
-        // Clear form
-        document.getElementById('notifTitle').value = '';
-        document.getElementById('notifMessage').value = '';
-        loadStats();
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function loadNotifications() {
-      const wrapper = document.getElementById('notificationsTableWrapper');
-      const tbody = document.getElementById('notificationsTable');
-      
-      if (wrapper.style.display === 'none') {
-        try {
-          const data = await apiCall(`${BASE}/admin/notifications`);
-          
-          if (data.notifications.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No notifications</td></tr>';
-          } else {
-            tbody.innerHTML = '';
-            data.notifications.slice(0, 20).forEach(n => {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td>#${n.id}</td>
-                <td>${n.title}</td>
-                <td><span class="badge">${n.type}</span></td>
-                <td>${n.isRead ? '✅ Read' : '📬 Unread'}</td>
-                <td>${new Date(n.timestamp).toLocaleDateString()}</td>
-                <td><button class="danger" onclick="deleteNotification(${n.id})" style="padding:0.2rem 0.5rem;">🗑️</button></td>`;
-              tbody.appendChild(tr);
-            });
-          }
-          
-          wrapper.style.display = 'block';
-        } catch (e) {
-          showToast('Failed to load notifications', true);
-        }
-      } else {
-        wrapper.style.display = 'none';
-      }
-    }
-
-    async function deleteNotification(id) {
-      if (!confirm('Delete this notification?')) return;
-      
-      try {
-        await apiCall(`${BASE}/admin/notifications/${id}`, 'DELETE');
-        showToast('Notification deleted');
-        loadNotifications();
-        loadStats();
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    // Configuration Functions
-    async function updateMaintenance() {
-      const enabled = document.getElementById('maintEnabled').value === 'true';
-      const message = document.getElementById('maintMessage').value;
-      
-      try {
-        await apiCall(`${BASE}/admin/maintenance`, 'POST', { enabled, message });
-        showToast('Maintenance settings updated');
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function updateVideoQuality() {
-      const def = document.getElementById('videoQualityDefault').value;
-      const autoAdjust = document.getElementById('autoAdjust').checked;
-      
-      try {
-        await apiCall(`${BASE}/admin/video-quality`, 'PUT', { default: def, autoAdjust });
-        showToast('Video quality settings updated');
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    async function updateSafety() {
-      const autoBanThreshold = parseInt(document.getElementById('autoBanThreshold').value) || 3;
-      const highPriorityThreshold = parseInt(document.getElementById('highPriorityThreshold').value) || 2;
-      
-      try {
-        await apiCall(`${BASE}/admin/safety-settings`, 'PUT', { 
-          autoBanThreshold, 
-          highPriorityThreshold 
-        });
-        showToast('Safety settings updated');
-      } catch (e) {
-        showToast(e.message, true);
-      }
-    }
-
-    // Initialize
-    window.onload = () => {
-      if (!checkSession()) {
-        showLoginScreen();
-      }
-      
-      // Auto-refresh stats every 15 seconds
-      setInterval(() => {
-        if (sessionToken) loadStats();
-      }, 15000);
-    };
-
-    // Handle Enter key on login
-    document.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
-        login();
-      }
+        icon: document.getElementById('notifIcon').value,
+        imageUrl: document.getElementById('notifImage').value || null,
+        expiresIn: parseInt(document.getElementById('notifExpiry').value) || 30
+      })
     });
-  </script>
+    const data = await res.json();
+    if (data.success) {
+      toast(`Notification sent to ${data.activeClients} clients!`, 'success');
+      closeNotifModal();
+      loadNotifications();
+      document.getElementById('notifTitle').value = '';
+      document.getElementById('notifMessage').value = '';
+    } else {
+      toast(data.error || 'Failed', 'error');
+    }
+  } catch (e) {
+    toast('Connection error', 'error');
+  }
+}
+
+async function deleteNotif(id) {
+  if (!confirm('Delete this notification?')) return;
+  try {
+    const res = await authFetch(`/admin/notifications/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) { toast('Deleted', 'success'); loadNotifications(); }
+    else toast(data.error || 'Failed', 'error');
+  } catch (e) { toast('Connection error', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GENDER STATS
+// ═══════════════════════════════════════════════════════════════
+async function loadGenderStats() {
+  try {
+    const res = await authFetch('/admin/gender-stats');
+    const data = await res.json();
+    document.getElementById('genderLoading').style.display = 'none';
+    document.getElementById('genderStatsGrid').innerHTML = `
+      <div class="stat-card"><div class="label">♂️ Males Waiting</div><div class="value accent">${data.maleWaiting || 0}</div></div>
+      <div class="stat-card"><div class="label">♀️ Females Waiting</div><div class="value" style="color:#ec4899;">${data.femaleWaiting || 0}</div></div>
+      <div class="stat-card"><div class="label">Total Gender Queue</div><div class="value">${data.totalWaiting || 0}</div></div>
+      <div class="stat-card"><div class="label">Random Queue</div><div class="value">${data.randomQueueLength || 0}</div></div>
+    `;
+  } catch (e) {
+    document.getElementById('genderLoading').textContent = 'Error loading gender stats';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+async function loadConfig() {
+  try {
+    const res = await authFetch('/api/config');
+    const config = await res.json();
+    document.getElementById('configLoading').style.display = 'none';
+    
+    const safety = config.safety || {};
+    const maintenance = config.maintenance || {};
+    
+    document.getElementById('configForm').innerHTML = `
+      <h4 style="color:var(--text-dim);margin-bottom:8px;">Safety Settings</h4>
+      <div class="form-row">
+        <div class="form-group"><label>Auto Ban</label><select id="cfgAutoBan"><option value="true" ${safety.autoBanEnabled ? 'selected' : ''}>Enabled</option><option value="false" ${!safety.autoBanEnabled ? 'selected' : ''}>Disabled</option></select></div>
+        <div class="form-group"><label>Ban Threshold</label><input type="number" id="cfgBanThreshold" value="${safety.autoBanThreshold || 3}" min="1"></div>
+        <div class="form-group"><label>HP Threshold</label><input type="number" id="cfgHpThreshold" value="${safety.highPriorityThreshold || 2}" min="1"></div>
+      </div>
+      <h4 style="color:var(--text-dim);margin:16px 0 8px;">Maintenance</h4>
+      <div class="form-row">
+        <div class="form-group"><label>Maintenance Mode</label><select id="cfgMaintenance"><option value="true" ${maintenance.enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!maintenance.enabled ? 'selected' : ''}>Disabled</option></select></div>
+        <div class="form-group"><label>Message</label><input type="text" id="cfgMaintenanceMsg" value="${maintenance.message || ''}"></div>
+      </div>
+      <button class="btn btn-accent" style="margin-top:16px;" onclick="saveConfig()">💾 Save Config</button>
+    `;
+  } catch (e) {
+    document.getElementById('configLoading').textContent = 'Error loading config';
+  }
+}
+
+async function saveConfig() {
+  try {
+    const safetyRes = await authFetch('/admin/safety-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        autoBanEnabled: document.getElementById('cfgAutoBan').value === 'true',
+        autoBanThreshold: parseInt(document.getElementById('cfgBanThreshold').value) || 3,
+        highPriorityThreshold: parseInt(document.getElementById('cfgHpThreshold').value) || 2
+      })
+    });
+    
+    const maintRes = await authFetch('/admin/maintenance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: document.getElementById('cfgMaintenance').value === 'true',
+        message: document.getElementById('cfgMaintenanceMsg').value
+      })
+    });
+    
+    toast('Settings saved and broadcast to clients', 'success');
+  } catch (e) {
+    toast('Error saving config', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function formatUptime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+function toast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  document.body.appendChild(el);
+  
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STARTUP
+// ═══════════════════════════════════════════════════════════════
+if (sessionToken) {
+  // Verify session is still valid
+  authFetch('/admin/stats')
+    .then(res => {
+      if (res.ok) {
+        initDashboard();
+      } else {
+        localStorage.removeItem('sessionToken');
+        sessionToken = null;
+      }
+    })
+    .catch(() => {
+      localStorage.removeItem('sessionToken');
+      sessionToken = null;
+    });
+}
+
+// Focus admin key input on load
+document.getElementById('adminKeyInput')?.focus();
+</script>
+
 </body>
 </html>
