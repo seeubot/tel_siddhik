@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Copy, Check, Heart, Sparkles, Shield, Users, Search, X, 
-  ArrowRight, Clock, Bell, MessageCircle, ChevronRight, Person2,
+  ArrowRight, Clock, Bell, MessageCircle, ChevronRight, User,
   Wifi, Battery, Signal
 } from 'lucide-react';
 import styles from './Lobby.module.css';
@@ -117,7 +117,7 @@ export default function Lobby({
           <div className={styles.headerRow}>
             <div className={styles.avatarStack}>
               <div className={styles.avatar} onClick={() => { setTempName(userName); setNameEditMode(true); }}>
-                <Person2 size={22} />
+                <User size={22} />
               </div>
               <div className={`${styles.onlineDot} ${isOnline ? styles.dotOnline : styles.dotOffline}`} />
             </div>
@@ -163,7 +163,7 @@ export default function Lobby({
           </motion.button>
         </div>
 
-        {/* ── Name Edit Sheet (iOS-style bottom sheet) ── */}
+        {/* ── Name Edit Sheet ── */}
         <AnimatePresence>
           {nameEditMode && (
             <motion.div 
@@ -262,7 +262,7 @@ export default function Lobby({
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className={styles.genderRowIcon} style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}>
-                      <Users size={16} />
+                      <User size={16} />
                     </div>
                     <div className={styles.genderRowInfo}>
                       <span className={styles.genderRowLabel}>Anyone</span>
