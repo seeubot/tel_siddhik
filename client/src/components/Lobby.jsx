@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+// Lobby.jsx
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, Globe, ShieldCheck,
+  Power, Bell, Globe, ShieldCheck,
   SlidersHorizontal
 } from 'lucide-react';
 import './styles.css';
@@ -37,8 +38,6 @@ const LOVE_PICKUP_LINES = [
 
 export default function App({
   oreyId = 'OREY-X7R2P',
-  searching = false,
-  matchTimer = 3,
   onDiscover = () => console.log("Discover triggered"),
   onCancelSearch = () => console.log("Search cancelled"),
   onConnectById = (id) => console.log("Connecting to", id),
@@ -53,18 +52,19 @@ export default function App({
   const [showGenderSheet, setShowGenderSheet] = useState(false);
   const [showNotifSheet, setShowNotifSheet] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
-
-  const x = useMotionValue(0);
-  const trackWidth = 280;
-  const thumbSize = 56;
-  const maxDrag = trackWidth - thumbSize - 8;
-  const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
+  
+  // New states for connection button
+  const [connectionStatus, setConnectionStatus] = useState('idle'); // 'idle' | 'connecting' | 'connected'
+  const connectionTimerRef = useRef(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
     }, 4500);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (connectionTimerRef.current) clearTimeout(connectionTimerRef.current);
+    };
   }, []);
 
   const copyId = useCallback(() => {
@@ -75,20 +75,29 @@ export default function App({
     });
   }, [oreyId]);
 
-  const handleConnect = useCallback(() => {
-    const trimmed = targetId.trim().toUpperCase();
-    if (trimmed.length === 5) {
-      onConnectById('OREY-' + trimmed);
-      setTargetId('');
+  const handleConnectToggle = useCallback(() => {
+    if (connectionStatus === 'idle') {
+      const trimmed = targetId.trim().toUpperCase();
+      if (trimmed.length !== 5) return;
+      
+      setConnectionStatus('connecting');
+      connectionTimerRef.current = setTimeout(() => {
+        setConnectionStatus('connected');
+        onConnectById('OREY-' + trimmed);
+        setTargetId('');
+      }, 3000);
+    } else if (connectionStatus === 'connected') {
+      setConnectionStatus('idle');
     }
-  }, [targetId, onConnectById]);
+  }, [connectionStatus, targetId, onConnectById]);
 
-  const handleDragEnd = () => {
-    if (x.get() > maxDrag * 0.8) {
+  const handleSlideToDiscover = useCallback(() => {
+    setConnectionStatus('connecting');
+    connectionTimerRef.current = setTimeout(() => {
+      setConnectionStatus('connected');
       onDiscover();
-    }
-    x.set(0);
-  };
+    }, 3000);
+  }, [onDiscover]);
 
   return (
     <div className="root">
@@ -112,6 +121,7 @@ export default function App({
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.3 }}
                     className="styleValue"
                   >
                     "{LOVE_PICKUP_LINES[lineIndex]}"
@@ -124,6 +134,7 @@ export default function App({
           <button
             onClick={() => { setShowNotifSheet(true); onViewNotifications(); }}
             className="bellBtn"
+            aria-label="Notifications"
           >
             <Bell size={18} strokeWidth={2.5} />
             {unreadCount > 0 && <span className="bellBadge" />}
@@ -131,25 +142,24 @@ export default function App({
         </header>
 
         <main className="main">
-          {!searching ? (
+          {connectionStatus === 'idle' ? (
             <div className="flex flex-col items-center">
-              <div className="sliderTrack">
-                <motion.div style={{ opacity }} className="sliderHint">
-                  <span className="sliderHintText">Slide to Connect</span>
-                </motion.div>
-
-                <motion.div
-                  drag="x"
-                  dragConstraints={{ left: 0, right: maxDrag }}
-                  dragElastic={0.1}
-                  onDragEnd={handleDragEnd}
-                  style={{ x }}
-                  className="sliderThumb"
+              {/* Slide to Discover Button */}
+              <div className="relative mb-6">
+                <button
+                  onClick={handleSlideToDiscover}
+                  className="slideDiscoverBtn"
                 >
-                  <span className="thumbLogo">O</span>
-                </motion.div>
+                  <span className="slideDiscoverText">Slide to Discover</span>
+                  <div className="slideDiscoverArrow">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
               </div>
 
+              {/* Preferences Button */}
               <button onClick={() => setShowGenderSheet(true)} className="prefsBtn">
                 <SlidersHorizontal size={14} />
                 <span className="prefsLabel">
@@ -162,63 +172,83 @@ export default function App({
             </div>
           ) : (
             <div className="searchingContent">
-              <div className="pulseContainer">
-                <motion.div
-                  animate={{ scale: [1, 2.2], opacity: [0.3, 0] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                  className="pulseRing"
-                  style={{ width: 140, height: 140 }}
-                />
-                <motion.div
-                  animate={{ scale: [0.95, 1.05, 0.95] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  style={{
-                    backgroundColor: '#2563eb',
-                    width: '6rem',
-                    height: '6rem',
-                    borderRadius: '1.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 25px 50px -12px rgba(59,130,246,0.4)',
-                    zIndex: 10,
+              {/* New Connection Button */}
+              <div className="connectionBtnContainer">
+                <button
+                  onClick={handleConnectToggle}
+                  disabled={connectionStatus === 'connecting'}
+                  className={`connectionBtn ${
+                    connectionStatus === 'idle' ? 'connectionIdle' : ''
+                  } ${
+                    connectionStatus === 'connecting' ? 'connectionLoading' : ''
+                  } ${
+                    connectionStatus === 'connected' ? 'connectionSuccess' : ''
+                  }`}
+                >
+                  {/* Label Text Container */}
+                  <div className="connectionLabelContainer">
+                    <span className={`connectionLabelText ${
+                      connectionStatus === 'connecting' ? 'labelExit' : 'labelVisible'
+                    }`}>
+                      {connectionStatus === 'idle' ? 'Connect' : 'Connected'}
+                    </span>
+
+                    <span className={`connectionLabelText connectionLoadingText ${
+                      connectionStatus === 'connecting' ? 'labelVisible' : 'labelExit'
+                    }`}>
+                      Connecting...
+                    </span>
+                  </div>
+
+                  {/* Icon Container */}
+                  <div className="connectionIconContainer">
+                    {/* Power Icon (Idle) */}
+                    <div className={`connectionIcon transition-all duration-300 ${
+                      connectionStatus === 'idle' ? 'iconVisible' : 'iconHidden'
+                    }`}>
+                      <Power className="w-5 h-5" strokeWidth={2.5} />
+                    </div>
+
+                    {/* Spinner (Connecting) */}
+                    {connectionStatus === 'connecting' && (
+                      <div className="connectionSpinner animate-fadeIn">
+                        <div className="spinnerTrack" />
+                        <div className="spinnerActive" />
+                      </div>
+                    )}
+
+                    {/* Check Icon (Connected) */}
+                    <div className={`connectionIcon transition-all duration-300 ${
+                      connectionStatus === 'connected' ? 'iconVisible' : 'iconHidden'
+                    }`}>
+                      <Check className="w-6 h-6" strokeWidth={3} />
+                    </div>
+                  </div>
+                </button>
+
+                {connectionStatus === 'connected' && (
+                  <p className="disconnectHint">
+                    Tap to disconnect
+                  </p>
+                )}
+              </div>
+
+              {connectionStatus === 'connecting' && (
+                <button
+                  onClick={onCancelSearch}
+                  className="cancelBtn"
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#f43f5e';
+                    e.currentTarget.style.borderColor = 'rgba(244,63,94,0.3)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = '#64748b';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
                   }}
                 >
-                  <span style={{ fontSize: '2.25rem', fontWeight: 900, color: '#fff' }}>O</span>
-                </motion.div>
-                <div className="timer">Connecting...</div>
-                <div className="statusLabel">
-                  <span className="statusDot" />
-                  <span>Matching {matchTimer}s</span>
-                </div>
-              </div>
-              <button
-                onClick={onCancelSearch}
-                style={{
-                  marginTop: '1rem',
-                  padding: '0.625rem 1.5rem',
-                  borderRadius: '9999px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  color: '#64748b',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = '#f43f5e';
-                  e.currentTarget.style.borderColor = 'rgba(244,63,94,0.3)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = '#64748b';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                }}
-              >
-                Cancel Search
-              </button>
+                  Cancel Search
+                </button>
+              )}
             </div>
           )}
         </main>
@@ -252,27 +282,30 @@ export default function App({
               value={targetId}
               onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
               className="connectInput"
+              disabled={connectionStatus !== 'idle'}
             />
             <button
-              onClick={handleConnect}
-              disabled={targetId.length !== 5}
+              onClick={handleConnectToggle}
+              disabled={targetId.length !== 5 || connectionStatus !== 'idle'}
               className="connectBtn"
               style={{
-                backgroundColor: targetId.length === 5 ? '#2563eb' : 'rgba(255,255,255,0.05)',
-                color: targetId.length === 5 ? '#ffffff' : '#334155',
+                backgroundColor: targetId.length === 5 && connectionStatus === 'idle' ? '#2563eb' : 'rgba(255,255,255,0.05)',
+                color: targetId.length === 5 && connectionStatus === 'idle' ? '#ffffff' : '#334155',
               }}
             >
-              <ArrowRight size={20} />
+              <Power size={20} />
             </button>
           </div>
         </footer>
 
+        {/* Gender Selection Sheet */}
         <AnimatePresence>
           {showGenderSheet && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="overlay"
               onClick={() => setShowGenderSheet(false)}
             >
@@ -280,11 +313,12 @@ export default function App({
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 className="sheet"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="handle" />
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff', marginBottom: '1.5rem' }}>
+                <h3 className="sheetTitle">
                   Discover Settings
                 </h3>
                 <div className="space-y-3">
@@ -298,22 +332,10 @@ export default function App({
                       <button
                         key={opt.id ?? 'any'}
                         onClick={() => { onSetGender(opt.id); setShowGenderSheet(false); }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          padding: '1.25rem',
-                          borderRadius: '1rem',
-                          border: `1px solid ${active ? '#3b82f6' : 'rgba(255,255,255,0.05)'}`,
-                          backgroundColor: active ? '#2563eb' : 'rgba(255,255,255,0.05)',
-                          color: active ? '#ffffff' : '#94a3b8',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
+                        className={`genderOption ${active ? 'genderOptionActive' : ''}`}
                       >
                         <span style={{ color: active ? '#ffffff' : opt.color }}>{opt.icon}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        <span className="genderOptionLabel">
                           {opt.label}
                         </span>
                         {active && <Check size={18} style={{ marginLeft: 'auto' }} />}
@@ -325,11 +347,13 @@ export default function App({
             </motion.div>
           )}
 
+          {/* Notifications Sheet */}
           {showNotifSheet && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="overlay"
               onClick={() => setShowNotifSheet(false)}
             >
@@ -337,24 +361,26 @@ export default function App({
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 className="sheet"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="handle" />
                 <div className="flex justify-between items-center mb-6">
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff' }}>
+                  <h3 className="sheetTitle" style={{ marginBottom: 0 }}>
                     Notifications
                   </h3>
                   <button
                     onClick={() => setShowNotifSheet(false)}
-                    style={{ padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '9999px', color: '#64748b', border: 'none', cursor: 'pointer' }}
+                    className="closeBtn"
+                    aria-label="Close notifications"
                   >
                     <X size={18} />
                   </button>
                 </div>
-                <div className="overflow-y-auto space-y-2 pr-2">
+                <div className="overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                   {notifications.length === 0 ? (
-                    <div style={{ padding: '3rem 0', textAlign: 'center', opacity: 0.3 }}>
+                    <div className="emptyState">
                       <Bell size={40} style={{ margin: '0 auto 0.5rem' }} />
                       <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                         No activity yet
@@ -364,23 +390,19 @@ export default function App({
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        className="notifItem"
-                        style={{
-                          backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
-                          borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
-                        }}
+                        className={`notifItem ${n.isRead ? 'notifRead' : 'notifUnread'}`}
                       >
                         <div style={{ fontSize: '1.25rem', flexShrink: 0 }}>{n.icon || '✨'}</div>
                         <div className="flex-1 min-w-0">
-                          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p className="notifTitle">
                             {n.title}
                           </p>
-                          <p style={{ fontSize: '10px', color: '#64748b', marginTop: '0.25rem', lineHeight: 1.625 }}>
+                          <p className="notifMessage">
                             {n.message}
                           </p>
                         </div>
                         {!n.isRead && (
-                          <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '9999px', backgroundColor: '#3b82f6', marginTop: '0.25rem', flexShrink: 0 }} />
+                          <div className="notifDot" />
                         )}
                       </div>
                     ))
