@@ -2,21 +2,27 @@
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
- * gender.js — Orey! Gender-Aware Matchmaking Module
+ * gender.js — Orey! Gender-Aware Matchmaking Module (v2)
  *
  * Exports a factory function that returns a GenderMatcher instance.
  * The main server imports this and delegates all gender-queue logic here.
  *
  * Match priority:
  *   1. Opposite gender (male ↔ female)
- *   2. Any available peer if no opposite found
+ *   2. Same gender queue (any willing peer)
  *   3. Falls through to the caller to use the default random queue
+ *
+ * NEW: 3-Second Timer Support
+ *   - trackTimer(socketId, gender) → starts a 3s countdown
+ *   - isTimerExpired(socketId) → true after 3s
+ *   - Clients can call findMatch first for gender, then fall back
  *
  * Valid gender values: 'male' | 'female' | null (unset / prefer not to say)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 const VALID_GENDERS = new Set(['male', 'female']);
+const GENDER_TIMEOUT_MS = 3000; // 3 seconds priority window
 
 /**
  * Returns a GenderMatcher instance.
@@ -26,16 +32,25 @@ function createGenderMatcher(io) {
 
   /**
    * Gendered waiting queues.
-   * Each entry: { socketId: string, gender: 'male'|'female'|null }
+   * Each entry: { socketId: string, gender: 'male'|'female'|null, joinedAt: number }
    */
-  const maleQueue   = [];   // waiting males
-  const femaleQueue = [];   // waiting females
+  const maleQueue   = [];
+  const femaleQueue = [];
+
+  /**
+   * Timer tracking: socketId → { gender, startedAt, expired: boolean }
+   */
+  const timerMap = new Map();
 
   /* ── Helpers ── */
 
   function _remove(queue, socketId) {
     const idx = queue.findIndex(e => e.socketId === socketId);
     if (idx !== -1) queue.splice(idx, 1);
+  }
+
+  function _find(queue, socketId) {
+    return queue.find(e => e.socketId === socketId);
   }
 
   function _opposite(gender) {
@@ -70,6 +85,21 @@ function createGenderMatcher(io) {
     }
   }
 
+  /**
+   * Clean expired timers.
+   */
+  function _cleanTimers() {
+    const now = Date.now();
+    for (const [socketId, timer] of timerMap.entries()) {
+      if (now - timer.startedAt >= GENDER_TIMEOUT_MS) {
+        timer.expired = true;
+      }
+      if (!_isSocketAlive(socketId)) {
+        timerMap.delete(socketId);
+      }
+    }
+  }
+
   /* ── Public API ── */
 
   /**
@@ -90,16 +120,13 @@ function createGenderMatcher(io) {
    * @param {'male'|'female'|null} gender
    */
   function enqueue(socketId, gender) {
-    // Always clean stale entries first
     _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
 
     const q = _queueFor(gender);
     if (q) {
-      q.push({ socketId, gender });
+      q.push({ socketId, gender, joinedAt: Date.now() });
     }
-    // If gender is null the socket stays out of gender queues;
-    // the caller should put it in the plain randomQueue instead.
   }
 
   /**
@@ -108,15 +135,67 @@ function createGenderMatcher(io) {
   function dequeue(socketId) {
     _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
+    timerMap.delete(socketId);
   }
 
   /**
-   * Try to find the best match for a socket.
+   * 🆕 Start the 3-second gender priority timer for a socket.
+   * The timer expires after GENDER_TIMEOUT_MS (3 seconds).
    *
-   * Priority:
-   *   1. Opposite gender queue (non-empty)
-   *   2. Same gender queue (if opposite empty)
-   *   3. null → no gender match available; caller falls back to plain queue
+   * @param {string} socketId
+   * @param {'male'|'female'} gender
+   */
+  function startTimer(socketId, gender) {
+    timerMap.set(socketId, {
+      gender,
+      startedAt: Date.now(),
+      expired: false
+    });
+
+    // Auto-expire after timeout
+    setTimeout(() => {
+      const timer = timerMap.get(socketId);
+      if (timer) {
+        timer.expired = true;
+      }
+    }, GENDER_TIMEOUT_MS);
+  }
+
+  /**
+   * 🆕 Check if the gender priority timer has expired for a socket.
+   * Returns true if:
+   *   - Timer was started and 3 seconds have passed
+   *   - No timer was ever started (should use random queue)
+   *
+   * @param {string} socketId
+   * @returns {boolean}
+   */
+  function isTimerExpired(socketId) {
+    _cleanTimers();
+    const timer = timerMap.get(socketId);
+    if (!timer) return true; // No timer = use random
+    return timer.expired;
+  }
+
+  /**
+   * 🆕 Get remaining time in seconds for the gender timer.
+   *
+   * @param {string} socketId
+   * @returns {number} seconds remaining (0 if expired)
+   */
+  function getTimerRemaining(socketId) {
+    const timer = timerMap.get(socketId);
+    if (!timer || timer.expired) return 0;
+    const elapsed = Date.now() - timer.startedAt;
+    const remaining = Math.max(0, GENDER_TIMEOUT_MS - elapsed);
+    return Math.ceil(remaining / 1000);
+  }
+
+  /**
+   * 🆕 Find a match considering the 3-second timer.
+   *
+   * - If timer is active (not expired): try opposite gender only
+   * - If timer expired or no timer: try opposite, then same, then null
    *
    * @param {string} socketId
    * @param {'male'|'female'|null} gender
@@ -124,36 +203,58 @@ function createGenderMatcher(io) {
    */
   function findMatch(socketId, gender) {
     _cleanQueues();
+    _cleanTimers();
 
-    // Remove self from any queue so we don't match with ourselves
     _remove(maleQueue, socketId);
     _remove(femaleQueue, socketId);
 
+    const timerExpired = isTimerExpired(socketId);
     const opposite = _opposite(gender);
 
-    // 1. Try opposite gender
+    // ── Priority 1: Opposite gender (always tried first if gender is set) ──
     if (opposite) {
       const oppQ = _queueFor(opposite);
       while (oppQ.length > 0) {
         const candidate = _popFirst(oppQ);
-        if (candidate.socketId === socketId) continue;     // skip self (safety)
-        if (!_isSocketAlive(candidate.socketId)) continue; // skip dead sockets
-        return candidate;
-      }
-    }
-
-    // 2. Try same gender (any willing peer)
-    const sameQ = _queueFor(gender);
-    if (sameQ) {
-      while (sameQ.length > 0) {
-        const candidate = _popFirst(sameQ);
         if (candidate.socketId === socketId) continue;
         if (!_isSocketAlive(candidate.socketId)) continue;
+
+        // 🆕 If timer is NOT expired, check candidate's timer too
+        if (!timerExpired) {
+          const candidateTimerExpired = isTimerExpired(candidate.socketId);
+          if (!candidateTimerExpired) {
+            // Both have active timers — perfect match!
+            timerMap.delete(socketId);
+            timerMap.delete(candidate.socketId);
+            return candidate;
+          }
+          // Candidate's timer expired, but they're still in opposite queue
+          // Accept them anyway (they're what we want)
+          timerMap.delete(socketId);
+          return candidate;
+        }
+
+        // Timer expired — accept any opposite gender
+        timerMap.delete(socketId);
         return candidate;
       }
     }
 
-    // 3. No gender match found
+    // ── Priority 2: Same gender (only if timer expired or no timer) ──
+    if (timerExpired && gender) {
+      const sameQ = _queueFor(gender);
+      if (sameQ) {
+        while (sameQ.length > 0) {
+          const candidate = _popFirst(sameQ);
+          if (candidate.socketId === socketId) continue;
+          if (!_isSocketAlive(candidate.socketId)) continue;
+          timerMap.delete(socketId);
+          return candidate;
+        }
+      }
+    }
+
+    // ── Priority 3: No gender match ──
     return null;
   }
 
@@ -172,14 +273,28 @@ function createGenderMatcher(io) {
    */
   function stats() {
     _cleanQueues();
+    _cleanTimers();
     return {
       maleWaiting:   maleQueue.length,
       femaleWaiting: femaleQueue.length,
       totalWaiting:  maleQueue.length + femaleQueue.length,
+      activeTimers:  timerMap.size,
+      expiredTimers: [...timerMap.values()].filter(t => t.expired).length,
     };
   }
 
-  return { normalise, enqueue, dequeue, findMatch, isQueued, stats };
+  return {
+    normalise,
+    enqueue,
+    dequeue,
+    findMatch,
+    isQueued,
+    stats,
+    // 🆕 Timer API
+    startTimer,
+    isTimerExpired,
+    getTimerRemaining,
+  };
 }
 
 module.exports = createGenderMatcher;
