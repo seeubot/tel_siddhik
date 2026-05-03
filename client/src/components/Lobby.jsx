@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { 
   Copy, Check, Sparkles, X, 
   ArrowRight, Bell, Globe, ShieldCheck, 
-  ArrowRightCircle, SlidersHorizontal, Clock, Zap, Heart
+  ArrowRightCircle, SlidersHorizontal, Clock, Zap
 } from 'lucide-react';
 import styles from './Lobby.module.css';
 
@@ -50,9 +50,8 @@ export default function Lobby({
   const [lineIndex, setLineIndex] = useState(0);
 
   const x = useMotionValue(0);
-  const sliderWidth = 280;
-  const thumbWidth = 64;
-  const opacity = useTransform(x, [0, sliderWidth - thumbWidth - 20], [1, 0]);
+  const thumbWidth = 56;
+  const opacity = useTransform(x, [0, 236 - thumbWidth], [1, 0]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,7 +63,8 @@ export default function Lobby({
   const copyId = useCallback(() => {
     if (!oreyId || oreyId === 'OREY-·····') return;
     navigator.clipboard.writeText(oreyId).then(() => {
-      setCopied(true); setTimeout(() => setCopied(false), 1800);
+      setCopied(true); 
+      setTimeout(() => setCopied(false), 1800);
     }).catch(() => {});
   }, [oreyId]);
 
@@ -86,54 +86,52 @@ export default function Lobby({
     if (onViewNotifications) onViewNotifications();
   }, [onViewNotifications]);
 
-  const handleDragEnd = (event, info) => {
-    if (info.point.x > (window.innerWidth / 2) + 50) {
+  const handleDragEnd = () => {
+    if (x.get() > 180) {
       onDiscover();
     }
     x.set(0);
   };
 
   const expiryStr = oreyIdExpiry 
-    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) 
+    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
     : null;
 
   return (
-    <div className="fixed inset-0 bg-[#060708] text-slate-200 overflow-hidden font-sans select-none flex flex-col">
+    <div className={styles.root}>
       {/* Premium Ambient Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[70%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[60%] h-[40%] bg-white/5 blur-[100px] rounded-full" />
+      <div className={styles.bgGradient}>
+        <div className={styles.bgGlowTop} />
+        <div className={styles.bgGlowBottom} />
       </div>
 
-      <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto px-8 pt-14 pb-10">
-        
+      <div className={styles.container}>
         {/* Header with Notifications */}
-        <nav className="flex justify-between items-center mb-8">
-          <div className="w-10" /> {/* Spacer */}
+        <nav className={styles.nav}>
           <button 
             onClick={handleNotifOpen}
-            className="relative p-2 text-slate-500 hover:text-white transition-colors"
+            className={styles.bellBtn}
           >
             <Bell size={22} strokeWidth={1.5} />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full border-2 border-[#060708]" />
+              <span className={styles.bellBadge} />
             )}
           </button>
         </nav>
 
         {/* Branding Section */}
-        <header className="mb-12">
-          <h1 className="text-8xl font-black tracking-tighter text-white leading-[0.85]">
-            Orey<span className="text-blue-500 italic">!</span>
+        <header className={styles.branding}>
+          <h1 className={styles.logo}>
+            Orey<span className={styles.logoAccent}>!</span>
           </h1>
-          <div className="mt-6 h-6 overflow-hidden">
+          <div className={styles.taglineContainer}>
             <AnimatePresence mode="wait">
               <motion.p 
                 key={lineIndex}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="text-sm font-semibold text-slate-500 italic"
+                className={styles.tagline}
               >
                 {PICKUP_LINES[lineIndex]}
               </motion.p>
@@ -142,40 +140,40 @@ export default function Lobby({
         </header>
 
         {/* Interaction Body */}
-        <main className="flex-1 flex flex-col justify-center gap-14">
+        <main className={styles.main}>
           {!searching ? (
-            <div className="space-y-16">
+            <div className={styles.idleContent}>
               {/* Discovery Slider */}
-              <div className="flex flex-col items-center gap-6">
-                <div className="relative w-full max-w-[300px] h-16 bg-white/[0.03] border border-white/5 rounded-2xl p-1 flex items-center overflow-hidden">
+              <div className={styles.sliderContainer}>
+                <div className={styles.sliderTrack}>
                   <motion.div 
                     style={{ opacity }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    className={styles.sliderHint}
                   >
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+                    <span className={styles.sliderHintText}>
                       Slide to Discover
                     </span>
                   </motion.div>
                   
                   <motion.div
                     drag="x"
-                    dragConstraints={{ left: 0, right: 232 }}
+                    dragConstraints={{ left: 0, right: 236 }}
                     dragElastic={0.1}
                     onDragEnd={handleDragEnd}
                     style={{ x }}
-                    className="z-10 w-14 h-14 bg-white rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg shadow-white/10"
+                    className={styles.sliderThumb}
                   >
-                    <ArrowRightCircle size={24} className="text-slate-900" />
+                    <ArrowRightCircle size={24} className={styles.sliderThumbIcon} />
                   </motion.div>
                 </div>
 
                 <button 
                   onClick={() => setShowGenderSheet(true)}
-                  className="flex items-center gap-3 text-slate-500 hover:text-white transition-colors"
+                  className={styles.prefsBtn}
                 >
                   <SlidersHorizontal size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    Preferences: <span className="text-blue-500">
+                  <span className={styles.prefsLabel}>
+                    Preferences: <span className={styles.prefsValue}>
                       {gender ? (gender === 'male' ? 'Males' : 'Females') : 'Global'}
                     </span>
                   </span>
@@ -183,44 +181,40 @@ export default function Lobby({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center w-full">
+            <div className={styles.searchingContent}>
               {/* Stage Badge */}
               {matchStage && (
-                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${
-                  matchStage === 'gender' 
-                    ? 'bg-yellow-500/10 text-yellow-400' 
-                    : 'bg-blue-500/10 text-blue-400'
+                <div className={`${styles.stageBadge} ${
+                  matchStage === 'gender' ? styles.stageGender : styles.stageOpen
                 }`}>
                   {matchStage === 'gender' ? (
-                    <><Zap size={12} /> <span className="text-[10px] font-black uppercase tracking-wider">Gender Match • {matchTimer}s</span></>
+                    <><Zap size={12} />Gender Match • {matchTimer}s</>
                   ) : (
-                    <><Globe size={12} /> <span className="text-[10px] font-black uppercase tracking-wider">Open Search</span></>
+                    <><Globe size={12} />Open Search</>
                   )}
                 </div>
               )}
 
               {/* Timer & Pulse */}
-              <div className="relative py-10 flex flex-col items-center">
-                <div className="relative">
-                  <motion.div
-                    animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl"
-                  />
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                    className="relative z-10"
-                  >
-                    <Sparkles size={32} className="text-blue-500" />
-                  </motion.div>
-                </div>
-                <div className="text-6xl font-black text-white tabular-nums tracking-tighter mt-4 mb-2">
+              <div className={styles.pulseContainer}>
+                <motion.div
+                  animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className={styles.pulseRing}
+                />
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  className={styles.pulseIcon}
+                >
+                  <Sparkles size={32} />
+                </motion.div>
+                <div className={styles.timer}>
                   {matchTimer}s
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">
+                <div className={styles.searchingLabel}>
+                  <span className={styles.searchingDot} />
+                  <span className={styles.searchingText}>
                     Searching...
                   </span>
                 </div>
@@ -228,7 +222,7 @@ export default function Lobby({
               
               <button 
                 onClick={onCancelSearch}
-                className="mt-8 px-6 py-2 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-rose-500 hover:border-rose-500/30 transition-all"
+                className={styles.cancelBtn}
               >
                 Abort Search
               </button>
@@ -237,37 +231,37 @@ export default function Lobby({
         </main>
 
         {/* Identity Bar */}
-        <section className="mt-auto space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between px-2">
-              <div onClick={copyId} className="flex flex-col cursor-pointer group">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Your ID</span>
+        <section className={styles.identitySection}>
+          <div className={styles.identityContent}>
+            <div className={styles.idRow}>
+              <div onClick={copyId} className={styles.idBlock}>
+                <div className={styles.idLabelRow}>
+                  <span className={styles.idLabel}>Your ID</span>
                   {expiryStr && (
-                    <span className="text-[8px] text-rose-500/50 flex items-center gap-1">
+                    <span className={styles.idExpiry}>
                       <Clock size={8} />{expiryStr}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black tracking-widest text-white">{oreyId}</span>
+                <div className={styles.idDisplay}>
+                  <span className={styles.idCode}>{oreyId}</span>
                   {copied ? (
-                    <Check size={16} className="text-emerald-500" />
+                    <Check size={16} className={styles.copySuccess} />
                   ) : (
-                    <Copy size={14} className="text-slate-800" />
+                    <Copy size={14} className={styles.copyIcon} />
                   )}
                 </div>
               </div>
               
-              <div className="flex flex-col items-end opacity-40">
-                <ShieldCheck size={16} className="text-slate-500" />
-                <span className="text-[8px] font-bold uppercase tracking-tighter">Private</span>
+              <div className={styles.privateBadge}>
+                <ShieldCheck size={16} className={styles.privateIcon} />
+                <span className={styles.privateText}>Private</span>
               </div>
             </div>
 
             {/* Connect Input */}
-            <div className="flex items-center bg-white/[0.02] border border-white/5 rounded-2xl p-1.5 focus-within:border-blue-500/30 transition-all">
-              <span className="text-[10px] font-black text-slate-800 pl-3 pr-1">OREY-</span>
+            <div className={styles.connectCard}>
+              <span className={styles.connectPrefix}>OREY-</span>
               <input 
                 type="text"
                 placeholder="ENTER ID"
@@ -275,7 +269,7 @@ export default function Lobby({
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
                 onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                className="bg-transparent flex-1 px-2 text-xs font-black tracking-[0.2em] outline-none text-white placeholder:text-slate-800"
+                className={styles.connectInput}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -283,10 +277,8 @@ export default function Lobby({
               <button 
                 onClick={handleConnect}
                 disabled={targetId.length !== 5}
-                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                  targetId.length === 5 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                    : 'bg-white/5 text-slate-800'
+                className={`${styles.connectBtn} ${
+                  targetId.length === 5 ? styles.connectBtnActive : styles.connectBtnDisabled
                 }`}
               >
                 <ArrowRight size={20} />
@@ -302,7 +294,7 @@ export default function Lobby({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+              className={styles.sheetOverlay}
               onClick={() => setShowGenderSheet(false)}
             >
               <motion.div 
@@ -311,11 +303,11 @@ export default function Lobby({
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 280 }}
                 onClick={(e) => e.stopPropagation()}
-                className="absolute inset-x-0 bottom-0 bg-[#0c0d0e] border-t border-white/10 rounded-t-[3rem] p-10 shadow-2xl"
+                className={styles.sheetContent}
               >
-                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
-                <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">Show me</h3>
-                <div className="flex flex-col gap-3">
+                <div className={styles.sheetHandle} />
+                <h3 className={styles.sheetTitle}>Show me</h3>
+                <div className={styles.genderOptions}>
                   {[
                     { id: 'male', label: 'Males', icon: <MaleIcon />, color: '#3b82f6' },
                     { id: 'female', label: 'Females', icon: <FemaleIcon />, color: '#ec4899' },
@@ -324,23 +316,21 @@ export default function Lobby({
                     <button
                       key={opt.id ?? 'any'}
                       onClick={() => handleGenderSelect(opt.id)}
-                      className={`flex items-center gap-6 p-6 rounded-2xl border transition-all ${
-                        gender === opt.id 
-                          ? 'bg-blue-600 border-blue-500 text-white' 
-                          : 'bg-white/[0.02] border-white/5 text-slate-500 hover:bg-white/[0.04]'
+                      className={`${styles.genderOption} ${
+                        gender === opt.id ? styles.genderOptionActive : styles.genderOptionInactive
                       }`}
                     >
-                      <span className="text-xl" style={{ color: gender === opt.id ? 'white' : opt.color }}>
+                      <span style={{ color: gender === opt.id ? 'white' : opt.color }}>
                         {opt.icon}
                       </span>
-                      <span className="text-xs font-black uppercase tracking-widest">{opt.label}</span>
-                      {gender === opt.id && <Check size={18} className="ml-auto" />}
+                      <span className={styles.genderOptionLabel}>{opt.label}</span>
+                      {gender === opt.id && <Check size={18} className={styles.genderOptionCheck} />}
                     </button>
                   ))}
                 </div>
                 <button 
                   onClick={() => setShowGenderSheet(false)} 
-                  className="w-full mt-6 py-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-700 hover:text-slate-500 transition-colors"
+                  className={styles.dismissBtn}
                 >
                   Dismiss
                 </button>
@@ -356,7 +346,7 @@ export default function Lobby({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+              className={styles.sheetOverlay}
               onClick={() => setShowNotifSheet(false)}
             >
               <motion.div 
@@ -365,43 +355,43 @@ export default function Lobby({
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 280 }}
                 onClick={(e) => e.stopPropagation()}
-                className="absolute inset-x-0 bottom-0 bg-[#0c0d0e] border-t border-white/10 rounded-t-[3rem] p-10 shadow-2xl max-h-[70vh] flex flex-col"
+                className={`${styles.sheetContent} ${styles.sheetNotif}`}
               >
-                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8" />
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white">Notifications</h3>
+                <div className={styles.sheetHandle} />
+                <div className={styles.sheetHeader}>
+                  <h3 className={styles.sheetTitle}>Notifications</h3>
                   <button 
                     onClick={() => setShowNotifSheet(false)}
-                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-colors"
+                    className={styles.sheetClose}
                   >
                     <X size={16} />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className={styles.notifScroll}>
                   {notifications.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Bell size={48} className="text-slate-800 mx-auto mb-4" />
-                      <p className="text-sm font-bold text-slate-600">All clear!</p>
-                      <p className="text-[10px] text-slate-800 mt-1">No new notifications</p>
+                    <div className={styles.notifEmpty}>
+                      <Bell size={48} className={styles.notifEmptyIcon} />
+                      <p className={styles.notifEmptyTitle}>All clear!</p>
+                      <p className={styles.notifEmptyText}>No new notifications</p>
                     </div>
                   ) : (
                     notifications.slice(0, 15).map((n) => (
                       <div 
                         key={n.id} 
-                        className={`flex items-start gap-4 p-4 rounded-xl transition-colors ${
-                          !n.isRead ? 'bg-blue-500/5 border border-blue-500/10' : 'bg-white/[0.02] border border-white/5'
+                        className={`${styles.notifItem} ${
+                          !n.isRead ? styles.notifItemUnread : styles.notifItemRead
                         }`}
                       >
-                        <span className="text-xl mt-0.5">{n.icon || '📢'}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-white">{n.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-1">{n.message}</p>
-                          <p className="text-[8px] text-slate-700 mt-2">
+                        <span className={styles.notifIcon}>{n.icon || '📢'}</span>
+                        <div className={styles.notifBody}>
+                          <p className={styles.notifTitle}>{n.title}</p>
+                          <p className={styles.notifMessage}>{n.message}</p>
+                          <p className={styles.notifTime}>
                             {new Date(n.timestamp).toLocaleDateString()}
                           </p>
                         </div>
                         {!n.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                          <span className={styles.notifDot} />
                         )}
                       </div>
                     ))
