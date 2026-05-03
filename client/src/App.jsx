@@ -15,6 +15,7 @@ import Toast from './components/Toast';
 export default function App() {
   const socketRef = useRef(null);
 
+  // ── App State ──
   const [screen, setScreen] = useState('loading');
   const [userName, setUserName] = useState('');
   const [oreyId, setOreyId] = useState('');
@@ -29,16 +30,18 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
+  // ── Gender Timer State ──
   const [matchStage, setMatchStage] = useState(null);
   const [matchTimer, setMatchTimer] = useState(3);
-  const genderTimerRef = useRef(null);
   const genderFallbackRef = useRef(null);
+  const isSearchingRef = useRef(false);
 
   const [shareRequest, setShareRequest] = useState(null);
   const [revealData, setRevealData] = useState(null);
   const [reportModal, setReportModal] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // ── Chat State ──
   const [messages, setMessages] = useState([]);
   const [peerTyping, setPeerTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -48,10 +51,12 @@ export default function App() {
   const { deviceId, isBanned, banInfo, isLoading: deviceLoading } = useDeviceIdentity(socketRef);
   const { reportUser, isReporting } = useReport(deviceId);
 
+  // ── Toast helper ──
   const showToast = useCallback((message, type = 'info') => {
     setToast({ message, type, id: Date.now() });
   }, []);
 
+  // ── Handle Gender Change ──
   const handleSetGender = useCallback((newGender) => {
     const socket = socketRef.current;
     if (socket?.connected) {
@@ -60,29 +65,42 @@ export default function App() {
     setGender(newGender);
   }, []);
 
-  useEffect(() => { setMessages([]); setPeerTyping(false); }, [partner?.socketId]);
+  // ── Clear chat on partner change ──
+  useEffect(() => {
+    setMessages([]);
+    setPeerTyping(false);
+  }, [partner?.socketId]);
 
+  // ── Set screen based on device state ──
   useEffect(() => {
     if (deviceLoading) setScreen('loading');
     else if (isBanned) setScreen('banned');
     else setScreen('lobby');
   }, [deviceLoading, isBanned]);
 
+  // ── Fetch Orey-ID ──
   useEffect(() => {
     if (isBanned || deviceLoading) return;
     fetch('/generate-orey-id')
       .then(r => r.json())
-      .then(({ oreyId, expiresAt }) => { setOreyId(oreyId); setOreyIdExpiry(expiresAt); })
+      .then(({ oreyId, expiresAt }) => {
+        setOreyId(oreyId);
+        setOreyIdExpiry(expiresAt);
+      })
       .catch(() => showToast('Could not generate Orey-ID', 'error'));
   }, [showToast, isBanned, deviceLoading]);
 
+  // ── Fetch Notifications ──
   useEffect(() => {
     if (isBanned || deviceLoading || !deviceId) return;
     const fetchNotifications = () => {
       fetch(`/api/notifications?device_id=${deviceId}&platform=web`)
         .then(r => r.json())
         .then(data => {
-          if (data.notifications) { setNotifications(data.notifications); setUnreadNotifications(data.unread || 0); }
+          if (data.notifications) {
+            setNotifications(data.notifications);
+            setUnreadNotifications(data.unread || 0);
+          }
         }).catch(() => {});
     };
     fetchNotifications();
@@ -90,6 +108,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [deviceId, isBanned, deviceLoading]);
 
+  // ── Mark notifications read ──
   const handleViewNotifications = useCallback(() => {
     if (deviceId) {
       fetch('/api/notifications/read-all', {
@@ -101,30 +120,45 @@ export default function App() {
     }
   }, [deviceId]);
 
+  // ── Match Timer Countdown ──
   useEffect(() => {
     if (matchStage === 'gender' && matchTimer > 0) {
       const t = setTimeout(() => setMatchTimer(c => c - 1), 1000);
       return () => clearTimeout(t);
     }
-    if (matchTimer === 0 && matchStage === 'gender') setMatchStage('anyone');
   }, [matchStage, matchTimer]);
 
+  // ── Chat Send Message ──
   const handleSendMessage = useCallback((text) => {
     const socket = socketRef.current;
     if (!socket?.connected || !roomId) return;
-    const messageData = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), senderId: socket.id, senderName: userName || 'Anonymous', text, timestamp: new Date().toISOString(), roomId, isOwn: true };
+    const messageData = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+      senderId: socket.id,
+      senderName: userName || 'Anonymous',
+      text,
+      timestamp: new Date().toISOString(),
+      roomId,
+      isOwn: true
+    };
     setMessages(prev => [...prev, messageData]);
     socket.emit('chat-message', { roomId, message: text, type: 'text' });
   }, [roomId, userName]);
 
+  // ── Chat Typing Indicator ──
   const handleTyping = useCallback(() => {
     const socket = socketRef.current;
     if (!socket?.connected || !roomId) return;
     socket.emit('chat-typing', { roomId, isTyping: true });
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => socket.emit('chat-typing', { roomId, isTyping: false }), 2000);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('chat-typing', { roomId, isTyping: false });
+    }, 2000);
   }, [roomId]);
 
+  // ═══════════════════════════════════════════
+  // SOCKET SETUP
+  // ═══════════════════════════════════════════
   useEffect(() => {
     const socket = getSocket();
     socketRef.current = socket;
@@ -135,126 +169,453 @@ export default function App() {
       if (oreyId) socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
     });
 
-    socket.on('device-banned', (serverBanInfo) => { DeviceIdentity.storeBan(serverBanInfo); showToast('Your device has been banned', 'error'); setScreen('banned'); });
-    socket.on('device-registered', ({ deviceId: registeredId }) => console.log('Device registered:', registeredId?.substring(0, 12) + '...'));
+    socket.on('device-banned', (serverBanInfo) => {
+      DeviceIdentity.storeBan(serverBanInfo);
+      showToast('Your device has been banned', 'error');
+      setScreen('banned');
+    });
+
+    socket.on('device-registered', ({ deviceId: registeredId }) => {
+      console.log('Device registered:', registeredId?.substring(0, 12) + '...');
+    });
+
     socket.on('device-error', ({ error }) => showToast(error, 'error'));
-    socket.on('warning', ({ reason, message }) => showToast(message || `Warning: ${reason}`, 'warning'));
-    socket.on('report-submitted', ({ autoBanned }) => { if (autoBanned) showToast('User has been automatically banned', 'warning'); else showToast('Report submitted', 'info'); });
+
+    socket.on('warning', ({ reason, message }) => {
+      showToast(message || `Warning: ${reason}`, 'warning');
+    });
+
+    socket.on('report-submitted', ({ autoBanned }) => {
+      if (autoBanned) showToast('User banned due to multiple reports', 'warning');
+      else showToast('Report submitted', 'info');
+    });
+
     socket.on('report-error', ({ error }) => showToast(error, 'error'));
-    socket.on('gender-set', ({ gender: serverGender, accepted, message }) => { setGender(serverGender); if (message) showToast(message, accepted ? 'info' : 'warning'); });
-    socket.on('waiting-for-match', ({ genderStats: stats }) => { setSearching(true); if (stats) setGenderStats(stats); });
-    socket.on('new-notification', (notification) => { setNotifications(prev => [notification, ...prev]); setUnreadNotifications(prev => prev + 1); showToast(notification.title, 'info'); });
-    socket.on('chat-message', (msg) => { setMessages(prev => { if (prev.some(m => m.id === msg.id)) return prev; return [...prev, { ...msg, isOwn: msg.senderId === socket.id, text: msg.message }]; }); });
-    socket.on('peer-typing', ({ socketId: sid, isTyping }) => { if (sid !== socket.id) { setPeerTyping(isTyping); if (isTyping) setTimeout(() => setPeerTyping(false), 3000); } });
+
+    // ── Gender Events ──
+    socket.on('gender-set', ({ gender: serverGender, accepted, message }) => {
+      setGender(serverGender);
+      if (message) showToast(message, accepted ? 'info' : 'warning');
+    });
+
+    socket.on('waiting-for-match', ({ genderStats: stats }) => {
+      setSearching(true);
+      isSearchingRef.current = true;
+      if (stats) setGenderStats(stats);
+    });
+
+    // ── Notification Events ──
+    socket.on('new-notification', (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+      setUnreadNotifications(prev => prev + 1);
+      showToast(notification.title, 'info');
+    });
+
+    // ── Chat Events ──
+    socket.on('chat-message', (msg) => {
+      setMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, { ...msg, isOwn: msg.senderId === socket.id, text: msg.message }];
+      });
+    });
+
+    socket.on('peer-typing', ({ socketId: sid, isTyping }) => {
+      if (sid !== socket.id) {
+        setPeerTyping(isTyping);
+        if (isTyping) setTimeout(() => setPeerTyping(false), 3000);
+      }
+    });
+
     socket.on('chat-error', ({ error }) => showToast(error, 'error'));
-    socket.on('orey-id-registered', ({ oreyId: id, expiresAt }) => { setOreyId(id); setOreyIdExpiry(expiresAt); });
-    socket.on('random-cancelled', () => { setSearching(false); setMatchStage(null); setMatchTimer(3); });
-    socket.on('room-joined', ({ roomId: rid, peers }) => { setRoomId(rid); setSearching(false); setMatchStage(null); setMatchTimer(3); setMessages([]); if (peers?.length > 0) setPartner({ ...peers[0], deviceId: peers[0].deviceId || null }); setScreen('call'); webrtc.startLocal(); if (genderTimerRef.current) clearTimeout(genderTimerRef.current); if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current); });
-    socket.on('incoming-call', ({ fromName, fromOreyId, partnerGender, autoMatched }) => { setPartner(prev => prev ? { ...prev, userName: fromName, oreyId: fromOreyId, gender: partnerGender } : { userName: fromName, oreyId: fromOreyId, gender: partnerGender }); if (!autoMatched) showToast(`${fromName} is calling…`, 'info'); });
-    socket.on('user-joined', ({ socketId: sid, userName: pName }) => setPartner(prev => ({ ...prev, socketId: sid, userName: pName })));
-    socket.on('offer', async ({ offer, fromId }) => { await webrtc.handleOffer(fromId, offer); });
-    socket.on('answer', async ({ answer }) => { await webrtc.handleAnswer(answer); });
-    socket.on('ice-candidate', async ({ candidate }) => { await webrtc.handleIceCandidate(candidate); });
-    socket.on('peer-media-state', ({ audioEnabled, videoEnabled }) => webrtc.setPartnerMedia({ audio: audioEnabled, video: videoEnabled }));
-    socket.on('partner-left', ({ userName: pName, reason }) => { showToast(`${pName || 'Partner'} ${reason === 'skip' ? 'skipped' : 'left'}`, 'warning'); webrtc.closePeer(); setPartner(null); setMessages([]); setPeerTyping(false); });
-    socket.on('auto-search-scheduled', ({ delay }) => { setAutoSearchDelay(delay); setAutoSearchCountdown(Math.ceil(delay / 1000)); });
-    socket.on('auto-search-cancelled', () => { setAutoSearchCountdown(null); setAutoSearchDelay(null); });
-    socket.on('left-chat-confirmed', () => { setScreen('lobby'); setPartner(null); setRoomId(''); setReportModal(false); setMessages([]); setPeerTyping(false); webrtc.stopLocal(); webrtc.closePeer(); });
-    socket.on('skip-confirmed', () => { webrtc.closePeer(); setPartner(null); setReportModal(false); setMessages([]); setPeerTyping(false); setSearching(true); setMatchStage('anyone'); });
-    socket.on('share-id-request', ({ fromId, fromName }) => setShareRequest({ fromId, fromName }));
-    socket.on('share-id-reveal', ({ oreyId: rid, userName: rName }) => setRevealData({ oreyId: rid, userName: rName }));
+
+    // ── Core Events ──
+    socket.on('orey-id-registered', ({ oreyId: id, expiresAt }) => {
+      setOreyId(id);
+      setOreyIdExpiry(expiresAt);
+    });
+
+    socket.on('random-cancelled', () => {
+      setSearching(false);
+      isSearchingRef.current = false;
+      setMatchStage(null);
+      setMatchTimer(3);
+      if (genderFallbackRef.current) {
+        clearTimeout(genderFallbackRef.current);
+        genderFallbackRef.current = null;
+      }
+    });
+
+    socket.on('room-joined', ({ roomId: rid, peers }) => {
+      setRoomId(rid);
+      setSearching(false);
+      isSearchingRef.current = false;
+      setMatchStage(null);
+      setMatchTimer(3);
+      setMessages([]);
+      
+      if (peers?.length > 0) {
+        setPartner({ ...peers[0], deviceId: peers[0].deviceId || null });
+      }
+      
+      setScreen('call');
+      webrtc.startLocal();
+
+      // Clear gender fallback timer on successful match
+      if (genderFallbackRef.current) {
+        clearTimeout(genderFallbackRef.current);
+        genderFallbackRef.current = null;
+      }
+    });
+
+    socket.on('incoming-call', ({ fromName, fromOreyId, partnerGender, autoMatched }) => {
+      setPartner(prev => prev 
+        ? { ...prev, userName: fromName, oreyId: fromOreyId, gender: partnerGender }
+        : { userName: fromName, oreyId: fromOreyId, gender: partnerGender }
+      );
+      if (!autoMatched) showToast(`${fromName} is calling…`, 'info');
+    });
+
+    socket.on('user-joined', ({ socketId: sid, userName: pName }) => {
+      setPartner(prev => ({ ...prev, socketId: sid, userName: pName }));
+    });
+
+    socket.on('offer', async ({ offer, fromId }) => {
+      await webrtc.handleOffer(fromId, offer);
+    });
+
+    socket.on('answer', async ({ answer }) => {
+      await webrtc.handleAnswer(answer);
+    });
+
+    socket.on('ice-candidate', async ({ candidate }) => {
+      await webrtc.handleIceCandidate(candidate);
+    });
+
+    socket.on('peer-media-state', ({ audioEnabled, videoEnabled }) => {
+      webrtc.setPartnerMedia({ audio: audioEnabled, video: videoEnabled });
+    });
+
+    socket.on('partner-left', ({ userName: pName, reason }) => {
+      showToast(`${pName || 'Partner'} ${reason === 'skip' ? 'skipped' : 'left'}`, 'warning');
+      webrtc.closePeer();
+      setPartner(null);
+      setMessages([]);
+      setPeerTyping(false);
+    });
+
+    socket.on('auto-search-scheduled', ({ delay }) => {
+      setAutoSearchDelay(delay);
+      setAutoSearchCountdown(Math.ceil(delay / 1000));
+    });
+
+    socket.on('auto-search-cancelled', () => {
+      setAutoSearchCountdown(null);
+      setAutoSearchDelay(null);
+    });
+
+    socket.on('left-chat-confirmed', () => {
+      setScreen('lobby');
+      setPartner(null);
+      setRoomId('');
+      setReportModal(false);
+      setMessages([]);
+      setPeerTyping(false);
+      webrtc.stopLocal();
+      webrtc.closePeer();
+    });
+
+    socket.on('skip-confirmed', () => {
+      webrtc.closePeer();
+      setPartner(null);
+      setReportModal(false);
+      setMessages([]);
+      setPeerTyping(false);
+      setSearching(true);
+      isSearchingRef.current = true;
+      setMatchStage('anyone');
+    });
+
+    socket.on('share-id-request', ({ fromId, fromName }) => {
+      setShareRequest({ fromId, fromName });
+    });
+
+    socket.on('share-id-reveal', ({ oreyId: rid, userName: rName }) => {
+      setRevealData({ oreyId: rid, userName: rName });
+    });
+
     socket.on('share-id-declined', () => showToast('Partner declined to share ID', 'warning'));
+
     socket.on('orey-id-not-found', () => showToast('Orey-ID not found', 'error'));
     socket.on('orey-id-expired', () => showToast('Orey-ID has expired', 'error'));
     socket.on('orey-id-offline', () => showToast('User is offline', 'error'));
     socket.on('orey-id-invalid', () => showToast('Invalid Orey-ID', 'error'));
     socket.on('room-full', () => showToast('Room is full', 'error'));
 
-    return () => { socket.removeAllListeners(); if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); if (genderTimerRef.current) clearTimeout(genderTimerRef.current); if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current); };
+    return () => {
+      socket.removeAllListeners();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current);
+    };
   }, [oreyId, userName, deviceId, webrtc, showToast]);
 
-  useEffect(() => { const socket = socketRef.current; if (socket?.connected && oreyId) socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' }); }, [oreyId, userName]);
-  useEffect(() => { const socket = socketRef.current; if (socket?.connected && deviceId) socket.emit('register-device', { deviceId }); }, [deviceId]);
+  // ── Register IDs when available ──
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (socket?.connected && oreyId) {
+      socket.emit('register-orey-id', { oreyId, userName: userName || 'Anonymous' });
+    }
+  }, [oreyId, userName]);
 
-  useEffect(() => { if (autoSearchCountdown === null) return; if (autoSearchCountdown <= 0) { setAutoSearchCountdown(null); return; } const t = setTimeout(() => setAutoSearchCountdown(c => (c !== null ? c - 1 : null)), 1000); return () => clearTimeout(t); }, [autoSearchCountdown]);
-  useEffect(() => { const socket = socketRef.current; if (!socket) return; const handle = ({ socketId }) => webrtc.makeOffer(socketId); socket.on('user-joined', handle); return () => socket.off('user-joined', handle); }, [webrtc]);
-  useEffect(() => { const socket = socketRef.current; if (!socket) return; const handle = ({ peers, autoMatched }) => { if (autoMatched && peers?.length > 0) setTimeout(() => { if (socket.id < peers[0].socketId) webrtc.makeOffer(peers[0].socketId); }, 300); }; socket.on('room-joined', handle); return () => socket.off('room-joined', handle); }, [webrtc]);
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (socket?.connected && deviceId) {
+      socket.emit('register-device', { deviceId });
+    }
+  }, [deviceId]);
 
+  // ── Auto-search countdown ──
+  useEffect(() => {
+    if (autoSearchCountdown === null) return;
+    if (autoSearchCountdown <= 0) {
+      setAutoSearchCountdown(null);
+      return;
+    }
+    const t = setTimeout(() => setAutoSearchCountdown(c => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [autoSearchCountdown]);
+
+  // ── WebRTC offer handling ──
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    const handle = ({ socketId }) => webrtc.makeOffer(socketId);
+    socket.on('user-joined', handle);
+    return () => socket.off('user-joined', handle);
+  }, [webrtc]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    const handle = ({ peers, autoMatched }) => {
+      if (autoMatched && peers?.length > 0) {
+        setTimeout(() => {
+          if (socket.id < peers[0].socketId) {
+            webrtc.makeOffer(peers[0].socketId);
+          }
+        }, 300);
+      }
+    };
+    socket.on('room-joined', handle);
+    return () => socket.off('room-joined', handle);
+  }, [webrtc]);
+
+  // ═══════════════════════════════════════════
+  // ACTIONS
+  // ═══════════════════════════════════════════
+
+  // ── Discover with 3-second gender timer ──
   const handleDiscover = useCallback(() => {
     const socket = socketRef.current;
     if (!socket?.connected) return;
-    if (genderTimerRef.current) clearTimeout(genderTimerRef.current);
-    if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current);
+
+    // Clear any existing fallback timer
+    if (genderFallbackRef.current) {
+      clearTimeout(genderFallbackRef.current);
+      genderFallbackRef.current = null;
+    }
+
     if (gender) {
+      // PHASE 1: Gender priority
       setMatchStage('gender');
       setMatchTimer(3);
+      isSearchingRef.current = true;
       socket.emit('join-random');
-      genderFallbackRef.current = setTimeout(() => setMatchStage('anyone'), 3000);
+
+      // PHASE 2: After 3 seconds, fallback to random queue
+      genderFallbackRef.current = setTimeout(() => {
+        if (!isSearchingRef.current) return; // Already matched or cancelled
+        
+        setMatchStage('anyone');
+        
+        // Cancel current gender search
+        socket.emit('cancel-random');
+        
+        // Small delay then re-join for random matching
+        setTimeout(() => {
+          if (socket.connected && isSearchingRef.current) {
+            socket.emit('join-random');
+          }
+        }, 150);
+      }, 3000);
     } else {
+      // No gender preference — straight to open matching
       setMatchStage('anyone');
       setMatchTimer(0);
+      isSearchingRef.current = true;
       socket.emit('join-random');
     }
   }, [gender]);
 
+  // ── Cancel search ──
   const handleCancelSearch = useCallback(() => {
-    socketRef.current?.emit('cancel-random');
+    const socket = socketRef.current;
+    socket?.emit('cancel-random');
     setSearching(false);
+    isSearchingRef.current = false;
     setMatchStage(null);
     setMatchTimer(3);
-    if (genderTimerRef.current) { clearTimeout(genderTimerRef.current); genderTimerRef.current = null; }
-    if (genderFallbackRef.current) { clearTimeout(genderFallbackRef.current); genderFallbackRef.current = null; }
+    if (genderFallbackRef.current) {
+      clearTimeout(genderFallbackRef.current);
+      genderFallbackRef.current = null;
+    }
   }, []);
 
-  const handleConnectById = (targetOreyId) => socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
-  const handleSkip = () => { socketRef.current?.emit('skip', { roomId }); setMessages([]); setPeerTyping(false); setMatchStage('anyone'); };
-  const handleLeave = () => { socketRef.current?.emit('leave-chat', { roomId }); setAutoSearchCountdown(null); cancelAutoSearch(); setMessages([]); setPeerTyping(false); };
-  const cancelAutoSearch = () => { socketRef.current?.emit('cancel-auto-search'); setAutoSearchCountdown(null); setAutoSearchDelay(null); };
-  const handleShareId = () => { socketRef.current?.emit('share-id-request', { roomId }); showToast('ID share request sent', 'info'); };
-  const handleAcceptShare = () => { socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest.fromId }); setShareRequest(null); };
-  const handleDeclineShare = () => { socketRef.current?.emit('share-id-decline', { roomId }); setShareRequest(null); };
-  const handleOpenReport = () => setReportModal(true);
-  const handleCloseReport = () => setReportModal(false);
+  // ── Connect by Orey ID ──
+  const handleConnectById = useCallback((targetOreyId) => {
+    socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
+  }, []);
 
-  const handleSubmitReport = async (reason, description) => {
-    if (!partner) { showToast('No partner to report', 'error'); return; }
+  // ── Skip current partner ──
+  const handleSkip = useCallback(() => {
+    socketRef.current?.emit('skip', { roomId });
+    setMessages([]);
+    setPeerTyping(false);
+    setMatchStage('anyone');
+  }, [roomId]);
+
+  // ── Leave chat ──
+  const handleLeave = useCallback(() => {
+    socketRef.current?.emit('leave-chat', { roomId });
+    setAutoSearchCountdown(null);
+    cancelAutoSearch();
+    setMessages([]);
+    setPeerTyping(false);
+  }, [roomId]);
+
+  // ── Cancel auto search ──
+  const cancelAutoSearch = useCallback(() => {
+    socketRef.current?.emit('cancel-auto-search');
+    setAutoSearchCountdown(null);
+    setAutoSearchDelay(null);
+  }, []);
+
+  // ── Share ID ──
+  const handleShareId = useCallback(() => {
+    socketRef.current?.emit('share-id-request', { roomId });
+    showToast('ID share request sent', 'info');
+  }, [roomId, showToast]);
+
+  // ── Share accept/decline ──
+  const handleAcceptShare = useCallback(() => {
+    socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest?.fromId });
+    setShareRequest(null);
+  }, [roomId, shareRequest]);
+
+  const handleDeclineShare = useCallback(() => {
+    socketRef.current?.emit('share-id-decline', { roomId });
+    setShareRequest(null);
+  }, [roomId]);
+
+  // ── Report ──
+  const handleOpenReport = useCallback(() => setReportModal(true), []);
+  const handleCloseReport = useCallback(() => setReportModal(false), []);
+
+  const handleSubmitReport = useCallback(async (reason, description) => {
+    if (!partner) {
+      showToast('No partner to report', 'error');
+      return;
+    }
     try {
       if (socketRef.current?.connected) {
-        socketRef.current.emit('report-user', { reportedDeviceId: partner.deviceId || partner.socketId, reportedUserId: partner.oreyId || null, reason, description });
+        socketRef.current.emit('report-user', {
+          reportedDeviceId: partner.deviceId || partner.socketId,
+          reportedUserId: partner.oreyId || null,
+          reason,
+          description
+        });
       } else {
-        const response = await fetch('/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': 'oryx_2024_secure_key_change_this' }, body: JSON.stringify({ reporterDeviceId: deviceId, reportedDeviceId: partner.deviceId || partner.socketId, reportedUserId: partner.oreyId || null, reason, description }) });
+        const response = await fetch('/api/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'oryx_2024_secure_key_change_this'
+          },
+          body: JSON.stringify({
+            reporterDeviceId: deviceId,
+            reportedDeviceId: partner.deviceId || partner.socketId,
+            reportedUserId: partner.oreyId || null,
+            reason,
+            description
+          })
+        });
         const result = await response.json();
         if (result.autoBanned) showToast('User has been automatically banned', 'warning');
         else showToast('Report submitted', 'info');
       }
       setReportModal(false);
-    } catch (error) { showToast('Failed to submit report', 'error'); }
-  };
+    } catch (error) {
+      showToast('Failed to submit report', 'error');
+    }
+  }, [partner, deviceId, showToast]);
 
+  // ═══════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════
+
+  // Loading screen
   if (deviceLoading || screen === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#06080d', flexDirection: 'column', gap: '16px' }}>
-        <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ fontSize: '3.5rem' }}>🔷</motion.div>
-        <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#6366f1', letterSpacing: '-0.5px' }}>Orey<span style={{ color: '#a855f7' }}>!</span></div>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#06080d',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          style={{ fontSize: '3.5rem' }}
+        >
+          🔷
+        </motion.div>
+        <div style={{
+          fontSize: '1.8rem',
+          fontWeight: '900',
+          color: '#6366f1',
+          letterSpacing: '-0.5px'
+        }}>
+          Orey<span style={{ color: '#a855f7' }}>!</span>
+        </div>
       </div>
     );
   }
 
+  // Ban screen
   if (screen === 'banned' || isBanned) {
-    return <BanScreen reason={banInfo?.reason || 'Your device has been banned due to violations of our terms of service.'} expiresAt={banInfo?.expiresAt || null} permanent={!banInfo?.expiresAt} />;
+    return (
+      <BanScreen
+        reason={banInfo?.reason || 'Your device has been banned due to violations of our terms of service.'}
+        expiresAt={banInfo?.expiresAt || null}
+        permanent={!banInfo?.expiresAt}
+      />
+    );
   }
 
+  // Normal app
   return (
     <>
       {screen === 'lobby' && (
-        <Lobby 
-          oreyId={oreyId} 
-          oreyIdExpiry={oreyIdExpiry} 
+        <Lobby
+          oreyId={oreyId}
+          oreyIdExpiry={oreyIdExpiry}
           searching={searching}
           matchStage={matchStage}
           matchTimer={matchTimer}
-          onDiscover={handleDiscover} 
-          onCancelSearch={handleCancelSearch} 
+          onDiscover={handleDiscover}
+          onCancelSearch={handleCancelSearch}
           onConnectById={handleConnectById}
           gender={gender}
           onSetGender={handleSetGender}
@@ -264,25 +625,61 @@ export default function App() {
         />
       )}
       {screen === 'call' && (
-        <CallScreen 
-          partner={partner} roomId={roomId} oreyId={oreyId} 
-          localVideoRef={webrtc.localVideoRef} remoteVideoRef={webrtc.remoteVideoRef} 
-          audioEnabled={webrtc.audioEnabled} videoEnabled={webrtc.videoEnabled} 
-          partnerMedia={webrtc.partnerMedia} searching={searching} 
-          autoSearchCountdown={autoSearchCountdown} 
-          onToggleAudio={() => webrtc.toggleAudio(roomId)} 
-          onToggleVideo={() => webrtc.toggleVideo(roomId)} 
-          onSkip={handleSkip} onLeave={handleLeave} onShareId={handleShareId} 
-          onCancelAutoSearch={cancelAutoSearch} onReport={handleOpenReport}
-          onSendMessage={handleSendMessage} messages={messages} 
-          peerTyping={peerTyping} onTyping={handleTyping}
-          currentUserName={userName} userOreyId={oreyId}
+        <CallScreen
+          partner={partner}
+          roomId={roomId}
+          oreyId={oreyId}
+          localVideoRef={webrtc.localVideoRef}
+          remoteVideoRef={webrtc.remoteVideoRef}
+          audioEnabled={webrtc.audioEnabled}
+          videoEnabled={webrtc.videoEnabled}
+          partnerMedia={webrtc.partnerMedia}
+          searching={searching}
+          autoSearchCountdown={autoSearchCountdown}
+          onToggleAudio={() => webrtc.toggleAudio(roomId)}
+          onToggleVideo={() => webrtc.toggleVideo(roomId)}
+          onSkip={handleSkip}
+          onLeave={handleLeave}
+          onShareId={handleShareId}
+          onCancelAutoSearch={cancelAutoSearch}
+          onReport={handleOpenReport}
+          onSendMessage={handleSendMessage}
+          messages={messages}
+          peerTyping={peerTyping}
+          onTyping={handleTyping}
+          currentUserName={userName}
+          userOreyId={oreyId}
         />
       )}
-      <ReportModal isOpen={reportModal} onClose={handleCloseReport} onSubmit={handleSubmitReport} reportedUserName={partner?.userName || 'Unknown User'} isReporting={isReporting} />
-      {shareRequest && <ShareRequestModal fromName={shareRequest.fromName} onAccept={handleAcceptShare} onDecline={handleDeclineShare} />}
-      {revealData && <RevealModal oreyId={revealData.oreyId} userName={revealData.userName} onClose={() => setRevealData(null)} />}
-      {toast && <Toast key={toast.id} message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+      <ReportModal
+        isOpen={reportModal}
+        onClose={handleCloseReport}
+        onSubmit={handleSubmitReport}
+        reportedUserName={partner?.userName || 'Unknown User'}
+        isReporting={isReporting}
+      />
+      {shareRequest && (
+        <ShareRequestModal
+          fromName={shareRequest.fromName}
+          onAccept={handleAcceptShare}
+          onDecline={handleDeclineShare}
+        />
+      )}
+      {revealData && (
+        <RevealModal
+          oreyId={revealData.oreyId}
+          userName={revealData.userName}
+          onClose={() => setRevealData(null)}
+        />
+      )}
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onDone={() => setToast(null)}
+        />
+      )}
     </>
   );
 }
