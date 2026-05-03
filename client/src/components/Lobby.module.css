@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════
-   LOBBY - Clean Modern Fast Design
+   LOBBY - Clean Fast Modern Design v2
    ════════════════════════════════════════ */
 
 * {
@@ -15,44 +15,111 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
   color: #fff;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* Background Glow */
+/* ── Background Effects ── */
 .bgGlow {
   position: fixed;
-  width: 600px;
-  height: 600px;
+  width: 500px;
+  height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
-  top: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, transparent 70%);
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-/* Container */
+.bgGrid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 70%);
+}
+
+/* ── Container ── */
 .container {
   width: 100%;
-  max-width: 400px;
-  padding: 20px;
+  max-width: 420px;
+  padding: 16px 20px;
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* Header */
+/* ── Header ── */
 .header {
   text-align: center;
-  padding: 8px 0;
+  padding: 4px 0 8px;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+}
+
+.headerActions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.iconBtn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hasNotifications {
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #ef4444;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
 }
 
 .logo {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 900;
   letter-spacing: -2px;
   margin: 0;
@@ -70,276 +137,167 @@
 }
 
 .subtitle {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.35);
-  margin: 4px 0 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin: 2px 0 0;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   font-weight: 500;
 }
 
-/* Card Base */
-.card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 0.5px solid rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  padding: 18px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* ── Gender Row ── */
-.genderRow {
+/* ── Quick Bar ── */
+.quickBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.genderInfo {
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.genderIcon {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.genderLabel {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.genderSelect {
+.quickLeft {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 0.5px solid rgba(99, 102, 241, 0.2);
-  border-radius: 20px;
-  color: #a5b4fc;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.genderSelect:active {
-  transform: scale(0.96);
-  background: rgba(99, 102, 241, 0.2);
-}
-
-.chevron {
-  font-size: 10px;
-  margin-left: 2px;
-}
-
-/* ── Gender Modal ── */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.modal {
-  width: 100%;
-  max-width: 340px;
-  background: rgba(20, 20, 25, 0.95);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  padding: 24px 20px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-.modal h3 {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.modal p {
-  margin: 0 0 20px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.genderOptions {
-  display: flex;
-  gap: 10px;
-}
-
-.genderOption {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 8px;
-  padding: 16px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 0.5px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.75rem;
-  font-weight: 600;
+  align-items: center;
 }
 
-.genderOption:active {
-  transform: scale(0.96);
-}
-
-.genderOptionActive {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
-}
-
-.genderCircle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+.genderChip {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.genderOptionActive .genderCircle {
-  background: rgba(99, 102, 241, 0.15);
-}
-
-/* ── ID Card ── */
-.idHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.idLabel {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.35);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.expiryBadge {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 3px 8px;
-  border-radius: 10px;
-}
-
-.idDisplay {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 4px;
+  padding: 6px 12px;
   background: rgba(99, 102, 241, 0.08);
   border: 0.5px solid rgba(99, 102, 241, 0.15);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 8px;
-}
-
-.idText {
-  flex: 1;
-  font-family: 'SF Mono', 'Menlo', 'Fira Code', monospace;
-  font-size: 1.6rem;
-  font-weight: 800;
+  border-radius: 20px;
   color: #a5b4fc;
-  letter-spacing: 2px;
-  word-break: break-all;
-}
-
-.copyBtn {
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.copyBtn:active {
-  transform: scale(0.94);
-}
-
-.copyBtn.copied {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.4);
-  color: #a5b4fc;
-}
-
-.idHint {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.2);
-  text-align: center;
-  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-/* ── Action Button ── */
-.actions {
-  display: flex;
-  flex-direction: column;
+.genderChip:active {
+  background: rgba(99, 102, 241, 0.15);
+  transform: scale(0.96);
 }
 
-.discoverBtn {
+.nameChip {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nameChip:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Card Base ── */
+.card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+/* ── Main Action: Match Button ── */
+.mainAction {
+  margin: 4px 0;
+}
+
+.matchBtn {
   width: 100%;
-  padding: 18px;
+  padding: 20px;
   background: linear-gradient(135deg, #6366f1, #a855f7);
   border: none;
   border-radius: 18px;
   color: #fff;
-  font-size: 1rem;
-  font-weight: 700;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.25);
+}
+
+.matchBtnInner {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  font-size: 1rem;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
-.discoverBtn:active {
-  transform: scale(0.97);
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2);
+.matchBtnGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: shimmer 2.5s infinite;
 }
 
-/* Searching */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.matchBtn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* ── Searching State ── */
 .searchingBox {
-  background: rgba(99, 102, 241, 0.06);
-  border: 0.5px solid rgba(99, 102, 241, 0.15);
+  background: rgba(99, 102, 241, 0.04);
+  border: 0.5px solid rgba(99, 102, 241, 0.12);
   border-radius: 18px;
-  padding: 20px;
+  padding: 24px 20px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.searchingRing {
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  border: 0.5px solid rgba(99, 102, 241, 0.08);
+  border-radius: 50%;
+}
+
+.searchingRingInner {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: #a5b4fc;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px rgba(165, 180, 252, 0.5);
 }
 
 .searchingContent {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .spinner {
@@ -359,39 +317,121 @@
 }
 
 .searchingSub {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
   margin: 0;
 }
 
 .cancelBtn {
   width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 0.8rem;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   transition: all 0.2s;
+  position: relative;
+  z-index: 1;
 }
 
 .cancelBtn:active {
-  background: rgba(255, 59, 48, 0.1);
-  border-color: rgba(255, 59, 48, 0.2);
-  color: #ff453a;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
 }
 
-/* ── Connect Input ── */
+/* ── Orey ID Card ── */
+.idHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.idLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.expiryBadge {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.idDisplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 0.5px solid rgba(99, 102, 241, 0.12);
+  border-radius: 12px;
+  padding: 14px 14px;
+  margin-bottom: 6px;
+}
+
+.idText {
+  flex: 1;
+  font-family: 'SF Mono', 'Menlo', 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #a5b4fc;
+  letter-spacing: 1.5px;
+  word-break: break-all;
+  user-select: all;
+}
+
+.copyBtn {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copyBtn.copied {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.idHint {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.18);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Direct Connect ── */
 .connectHeader {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.25);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -405,22 +445,23 @@
   flex: 1;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   overflow: hidden;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .inputWrapper:focus-within {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.04);
 }
 
 .inputPrefix {
-  padding: 12px 0 12px 14px;
+  padding: 11px 0 11px 12px;
   font-family: 'SF Mono', monospace;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.2);
   font-weight: 700;
 }
 
@@ -428,42 +469,277 @@
   flex: 1;
   background: transparent;
   border: none;
-  padding: 12px 14px 12px 4px;
+  padding: 11px 12px 11px 2px;
   color: #fff;
   font-family: 'SF Mono', monospace;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   letter-spacing: 0.08em;
   outline: none;
 }
 
 .codeInput::placeholder {
-  color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.08);
 }
 
 .connectBtn {
-  padding: 0 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 0.85rem;
-  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .connectBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .connectBtnActive {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.25);
   color: #a5b4fc;
 }
 
 .connectBtnActive:active {
+  transform: scale(0.95);
+}
+
+/* ── Gender Modal ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 340px;
+  background: rgba(20, 20, 25, 0.95);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.modal p {
+  margin: 0 0 16px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.genderOptions {
+  display: flex;
+  gap: 8px;
+}
+
+.genderOption {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.genderOption:active {
   transform: scale(0.96);
+}
+
+.genderOptionActive {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+}
+
+.genderCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.genderOptionActive .genderCircle {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+/* ── Mini Modal (Name Edit) ── */
+.miniModal {
+  width: 100%;
+  max-width: 300px;
+  background: rgba(20, 20, 25, 0.95);
+  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 20px;
+  text-align: center;
+}
+
+.miniModal h3 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.nameInput {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  margin-bottom: 12px;
+  text-align: center;
+  font-family: inherit;
+}
+
+.nameInput:focus {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btnPrimary {
+  padding: 8px 20px;
+  background: var(--accent, #6366f1);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnSecondary {
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ── Notifications ── */
+.notifHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.notifHeader h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.closeNotifBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.emptyNotif {
+  text-align: center;
+  padding: 20px 0;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.emptyNotif p {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+}
+
+.notifList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.notifItem {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  align-items: flex-start;
+}
+
+.notifIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.notifContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notifTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.notifMsg {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin: 2px 0 4px;
+}
+
+.notifTime {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.2);
 }
 
 /* ── Footer ── */
@@ -472,37 +748,41 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding-top: 4px;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.15);
+  padding-top: 2px;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.12);
   text-align: center;
 }
 
 /* ── Responsive ── */
 @media (max-width: 380px) {
   .container {
-    padding: 14px;
-    gap: 12px;
+    padding: 12px 14px;
+    gap: 10px;
   }
-  .logo { font-size: 2.8rem; }
-  .idText { font-size: 1.3rem; }
+  .logo { font-size: 2.6rem; }
+  .idText { font-size: 1.2rem; }
+  .matchBtn { padding: 16px; }
 }
 
 @media (min-width: 768px) {
   .container {
-    max-width: 420px;
+    max-width: 440px;
   }
 }
 
 @media (max-height: 600px) and (orientation: landscape) {
   .root {
     align-items: flex-start;
-    padding-top: 16px;
+    padding-top: 12px;
   }
-  .container { gap: 10px; }
-  .logo { font-size: 2.5rem; }
+  .container { gap: 8px; }
+  .logo { font-size: 2.2rem; }
+  .card { padding: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; opacity: 0.5; }
+  .bgGlow { display: none; }
+  .matchBtnGlow { display: none; }
 }
