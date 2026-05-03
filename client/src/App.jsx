@@ -24,10 +24,16 @@ export default function App() {
   const [searching, setSearching] = useState(false);
   const [autoSearchCountdown, setAutoSearchCountdown] = useState(null);
   const [autoSearchDelay, setAutoSearchDelay] = useState(null);
-  const [gender, setGender] = useState(null); // 🆕 Gender state
-  const [genderStats, setGenderStats] = useState(null); // 🆕 Gender queue stats
-  const [notifications, setNotifications] = useState([]); // 🆕 Notifications state
-  const [unreadNotifications, setUnreadNotifications] = useState(0); // 🆕 Unread count
+  const [gender, setGender] = useState(null);
+  const [genderStats, setGenderStats] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // ── Gender Timer State ─────────────────────────────────────────────────────
+  const [matchStage, setMatchStage] = useState(null); // 'gender' | 'anyone' | null
+  const [matchTimer, setMatchTimer] = useState(3);
+  const genderTimerRef = useRef(null);
+  const genderFallbackRef = useRef(null);
 
   const [shareRequest, setShareRequest] = useState(null);
   const [revealData, setRevealData] = useState(null);
@@ -59,7 +65,7 @@ export default function App() {
     setToast({ message, type, id: Date.now() });
   }, []);
 
-  // ── 🆕 Handle Gender Change ───────────────────────────────────────────────
+  // ── Handle Gender Change ───────────────────────────────────────────────────
   const handleSetGender = useCallback((newGender) => {
     const socket = socketRef.current;
     if (socket?.connected) {
@@ -91,15 +97,14 @@ export default function App() {
     
     fetch('/generate-orey-id')
       .then((r) => r.json())
-      .then(({ oreyId, expiresAt, hashId }) => {
-        setOreyId(oreyId); // Display format: OREY-XXXXX
-        // hashId is stored internally by the server
+      .then(({ oreyId, expiresAt }) => {
+        setOreyId(oreyId);
         setOreyIdExpiry(expiresAt);
       })
       .catch(() => showToast('Could not generate Orey-ID', 'error'));
   }, [showToast, isBanned, deviceLoading]);
 
-  // ── 🆕 Fetch Notifications ────────────────────────────────────────────────
+  // ── Fetch Notifications ────────────────────────────────────────────────────
   useEffect(() => {
     if (isBanned || deviceLoading || !deviceId) return;
     
@@ -116,9 +121,32 @@ export default function App() {
     };
     
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [deviceId, isBanned, deviceLoading]);
+
+  // ── Handle View Notifications ──────────────────────────────────────────────
+  const handleViewNotifications = useCallback(() => {
+    if (deviceId) {
+      fetch('/api/notifications/read-all', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': 'oryx_2024_secure_key_change_this' },
+        body: JSON.stringify({ deviceId })
+      }).catch(() => {});
+      setUnreadNotifications(0);
+    }
+  }, [deviceId]);
+
+  // ── Match Timer Countdown ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (matchStage === 'gender' && matchTimer > 0) {
+      const t = setTimeout(() => setMatchTimer(c => c - 1), 1000);
+      return () => clearTimeout(t);
+    }
+    if (matchTimer === 0 && matchStage === 'gender') {
+      setMatchStage('anyone');
+    }
+  }, [matchStage, matchTimer]);
 
   // ── Chat: Send Message ────────────────────────────────────────────────────
   const handleSendMessage = useCallback((text) => {
@@ -198,7 +226,7 @@ export default function App() {
       showToast(error, 'error');
     });
 
-    // ── 🆕 Gender Events ────────────────────────────────────────────────────
+    // ── Gender Events ────────────────────────────────────────────────────────
     socket.on('gender-set', ({ gender: serverGender, accepted, message }) => {
       setGender(serverGender);
       if (message) showToast(message, accepted ? 'info' : 'warning');
@@ -209,7 +237,7 @@ export default function App() {
       if (stats) setGenderStats(stats);
     });
 
-    // ── 🆕 Notification Events ──────────────────────────────────────────────
+    // ── Notification Events ──────────────────────────────────────────────────
     socket.on('new-notification', (notification) => {
       setNotifications(prev => [notification, ...prev]);
       setUnreadNotifications(prev => prev + 1);
@@ -247,11 +275,17 @@ export default function App() {
       setOreyIdExpiry(expiresAt);
     });
 
-    socket.on('random-cancelled', () => setSearching(false));
+    socket.on('random-cancelled', () => {
+      setSearching(false);
+      setMatchStage(null);
+      setMatchTimer(3);
+    });
 
     socket.on('room-joined', ({ roomId: rid, peers }) => {
       setRoomId(rid);
       setSearching(false);
+      setMatchStage(null);
+      setMatchTimer(3);
       setMessages([]);
       if (peers && peers.length > 0) {
         setPartner({
@@ -261,6 +295,10 @@ export default function App() {
       }
       setScreen('call');
       webrtc.startLocal();
+
+      // Clear gender timers
+      if (genderTimerRef.current) clearTimeout(genderTimerRef.current);
+      if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current);
     });
 
     socket.on('incoming-call', ({ fromName, fromOreyId, partnerGender, autoMatched }) => {
@@ -335,6 +373,7 @@ export default function App() {
       setMessages([]);
       setPeerTyping(false);
       setSearching(true);
+      setMatchStage('anyone');
     });
 
     socket.on('share-id-request', ({ fromId, fromName }) => {
@@ -358,6 +397,8 @@ export default function App() {
     return () => {
       socket.removeAllListeners();
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (genderTimerRef.current) clearTimeout(genderTimerRef.current);
+      if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current);
     };
   }, [oreyId, userName, deviceId, webrtc, showToast]);
 
@@ -413,15 +454,93 @@ export default function App() {
   }, [webrtc]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleDiscover = () => socketRef.current?.emit('join-random');
-  const handleCancelSearch = () => { socketRef.current?.emit('cancel-random'); setSearching(false); };
-  const handleConnectById = (targetOreyId) => socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
-  const handleSkip = () => { socketRef.current?.emit('skip', { roomId }); setMessages([]); setPeerTyping(false); };
-  const handleLeave = () => { socketRef.current?.emit('leave-chat', { roomId }); setAutoSearchCountdown(null); cancelAutoSearch(); setMessages([]); setPeerTyping(false); };
-  const cancelAutoSearch = () => { socketRef.current?.emit('cancel-auto-search'); setAutoSearchCountdown(null); setAutoSearchDelay(null); };
-  const handleShareId = () => { socketRef.current?.emit('share-id-request', { roomId }); showToast('ID share request sent', 'info'); };
-  const handleAcceptShare = () => { socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest.fromId }); setShareRequest(null); };
-  const handleDeclineShare = () => { socketRef.current?.emit('share-id-decline', { roomId }); setShareRequest(null); };
+
+  // 🆕 Discover with 3-second gender priority timer
+  const handleDiscover = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket?.connected) return;
+    
+    // Clear any existing timers
+    if (genderTimerRef.current) clearTimeout(genderTimerRef.current);
+    if (genderFallbackRef.current) clearTimeout(genderFallbackRef.current);
+    
+    if (gender) {
+      // Phase 1: Gender priority for 3 seconds
+      setMatchStage('gender');
+      setMatchTimer(3);
+      socket.emit('join-random');
+      
+      // After 3 seconds, transition to anyone
+      genderFallbackRef.current = setTimeout(() => {
+        setMatchStage('anyone');
+        // The server will naturally fall back to random queue
+        // because genderMatcher will return null when no gender match found
+      }, 3000);
+    } else {
+      // No gender preference — straight to open matching
+      setMatchStage('anyone');
+      setMatchTimer(0);
+      socket.emit('join-random');
+    }
+  }, [gender]);
+
+  // 🆕 Cancel search — clear all timers
+  const handleCancelSearch = useCallback(() => {
+    const socket = socketRef.current;
+    socket?.emit('cancel-random');
+    setSearching(false);
+    setMatchStage(null);
+    setMatchTimer(3);
+    if (genderTimerRef.current) {
+      clearTimeout(genderTimerRef.current);
+      genderTimerRef.current = null;
+    }
+    if (genderFallbackRef.current) {
+      clearTimeout(genderFallbackRef.current);
+      genderFallbackRef.current = null;
+    }
+  }, []);
+
+  const handleConnectById = (targetOreyId) => {
+    socketRef.current?.emit('connect-by-orey-id', { targetOreyId });
+  };
+
+  const handleSkip = () => {
+    socketRef.current?.emit('skip', { roomId });
+    setMessages([]);
+    setPeerTyping(false);
+    setMatchStage('anyone');
+  };
+
+  const handleLeave = () => {
+    socketRef.current?.emit('leave-chat', { roomId });
+    setAutoSearchCountdown(null);
+    cancelAutoSearch();
+    setMessages([]);
+    setPeerTyping(false);
+  };
+
+  const cancelAutoSearch = () => {
+    socketRef.current?.emit('cancel-auto-search');
+    setAutoSearchCountdown(null);
+    setAutoSearchDelay(null);
+  };
+
+  const handleShareId = () => {
+    socketRef.current?.emit('share-id-request', { roomId });
+    showToast('ID share request sent', 'info');
+  };
+
+  const handleAcceptShare = () => {
+    socketRef.current?.emit('share-id-accept', { roomId, targetId: shareRequest.fromId });
+    setShareRequest(null);
+  };
+
+  const handleDeclineShare = () => {
+    socketRef.current?.emit('share-id-decline', { roomId });
+    setShareRequest(null);
+  };
+
   const handleOpenReport = () => setReportModal(true);
   const handleCloseReport = () => setReportModal(false);
 
@@ -438,7 +557,12 @@ export default function App() {
         const response = await fetch('/api/report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': 'oryx_2024_secure_key_change_this' },
-          body: JSON.stringify({ reporterDeviceId: deviceId, reportedDeviceId: partner.deviceId || partner.socketId, reportedUserId: partner.oreyId || null, reason, description })
+          body: JSON.stringify({ 
+            reporterDeviceId: deviceId, 
+            reportedDeviceId: partner.deviceId || partner.socketId, 
+            reportedUserId: partner.oreyId || null, 
+            reason, description 
+          })
         });
         const result = await response.json();
         if (result.autoBanned) showToast('User has been automatically banned', 'warning');
@@ -452,17 +576,34 @@ export default function App() {
   // RENDER
   // ═══════════════════════════════════════════════════════════════
 
+  // Loading screen
   if (deviceLoading || screen === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#6366f1', fontSize: '1.5rem', fontWeight: 'bold' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔷</div>
-          Orey! - Mana App
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        backgroundColor: '#06080d', 
+        color: '#6366f1', 
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          style={{ fontSize: '3.5rem' }}
+        >
+          🔷
+        </motion.div>
+        <div style={{ fontSize: '1.8rem', fontWeight: '900', letterSpacing: '-0.5px' }}>
+          Orey<span style={{ color: '#a855f7' }}>!</span>
         </div>
       </div>
     );
   }
 
+  // Ban screen
   if (screen === 'banned' || isBanned) {
     return (
       <BanScreen
@@ -473,20 +614,24 @@ export default function App() {
     );
   }
 
+  // Normal app
   return (
     <>
       {screen === 'lobby' && (
         <Lobby 
-          userName={userName} 
-          setUserName={setUserName} 
           oreyId={oreyId} 
           oreyIdExpiry={oreyIdExpiry} 
-          searching={searching} 
+          searching={searching}
+          matchStage={matchStage}
+          matchTimer={matchTimer}
           onDiscover={handleDiscover} 
           onCancelSearch={handleCancelSearch} 
           onConnectById={handleConnectById}
           gender={gender}
           onSetGender={handleSetGender}
+          notifications={notifications}
+          unreadCount={unreadNotifications}
+          onViewNotifications={handleViewNotifications}
         />
       )}
       {screen === 'call' && (
@@ -508,6 +653,7 @@ export default function App() {
           onShareId={handleShareId} 
           onCancelAutoSearch={cancelAutoSearch} 
           onReport={handleOpenReport}
+          // Chat props
           onSendMessage={handleSendMessage}
           messages={messages}
           peerTyping={peerTyping}
