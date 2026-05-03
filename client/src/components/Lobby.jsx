@@ -27,17 +27,17 @@ const FemaleIcon = () => (
 export default function Lobby({
   oreyId, 
   oreyIdExpiry,
-  searching,
-  matchStage,        // 'gender' | 'anyone' | null
-  matchTimer,        // countdown seconds
-  onDiscover, 
-  onCancelSearch, 
-  onConnectById,
+  searching = false,
+  matchStage = null,
+  matchTimer = 3,
+  onDiscover = () => {}, 
+  onCancelSearch = () => {}, 
+  onConnectById = () => {},
   gender = null,
   onSetGender = () => {},
   notifications = [],
   unreadCount = 0,
-  onViewNotifications,
+  onViewNotifications = () => {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
@@ -74,6 +74,17 @@ export default function Lobby({
   const genderEmoji = gender === 'male' ? '♂️' : gender === 'female' ? '♀️' : '🌐';
   const genderLabel = gender === 'male' ? 'Male' : gender === 'female' ? 'Female' : 'Anyone';
 
+  if (!oreyId && !searching) {
+    return (
+      <div className={styles.root}>
+        <div style={{ textAlign: 'center', color: '#6366f1' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔷</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Loading Orey!</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.root}>
       {/* Background */}
@@ -81,7 +92,7 @@ export default function Lobby({
       <div className={styles.bgOrb2} />
       
       <div className={styles.container}>
-        {/* ── Logo ── */}
+        {/* Logo */}
         <header className={styles.header}>
           <motion.h1 
             className={styles.logo}
@@ -95,7 +106,7 @@ export default function Lobby({
           <p className={styles.tagline}>Connect • Chat • Share</p>
         </header>
 
-        {/* ── Quick Chips Row ── */}
+        {/* Quick Chips Row */}
         <div className={styles.chipRow}>
           <motion.button 
             className={`${styles.chip} ${gender ? styles.chipActive : ''}`}
@@ -112,7 +123,7 @@ export default function Lobby({
               className={styles.chip}
               onClick={() => {
                 setShowNotifications(true);
-                if (onViewNotifications) onViewNotifications();
+                onViewNotifications();
               }}
               whileTap={{ scale: 0.96 }}
               initial={{ scale: 0 }}
@@ -124,7 +135,7 @@ export default function Lobby({
           )}
         </div>
 
-        {/* ── Gender Selection Sheet ── */}
+        {/* Gender Selection Sheet */}
         <AnimatePresence>
           {showGenderModal && (
             <motion.div 
@@ -174,7 +185,7 @@ export default function Lobby({
           )}
         </AnimatePresence>
 
-        {/* ── Main Action ── */}
+        {/* Main Action */}
         <div className={styles.mainCard}>
           {!searching ? (
             <motion.button 
@@ -251,7 +262,7 @@ export default function Lobby({
           )}
         </div>
 
-        {/* ── Orey ID Card ── */}
+        {/* Orey ID Card */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardLabel}>Your Orey ID</span>
@@ -276,7 +287,7 @@ export default function Lobby({
           <p className={styles.hint}>Tap to copy • Share to connect</p>
         </div>
 
-        {/* ── Direct Connect Card ── */}
+        {/* Direct Connect Card */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <span className={styles.cardLabel}>Connect with Code</span>
@@ -308,14 +319,14 @@ export default function Lobby({
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <footer className={styles.footer}>
           <Shield size={10} />
           <span>Encrypted • Private • Secure</span>
         </footer>
       </div>
 
-      {/* ── Notifications Sheet ── */}
+      {/* Notifications Sheet */}
       <AnimatePresence>
         {showNotifications && (
           <motion.div 
