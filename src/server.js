@@ -36,7 +36,7 @@ const ADMIN_KEY                  = process.env.ADMIN_KEY                  || 'ad
 const AUTO_BAN_THRESHOLD         = 3;
 const HIGH_PRIORITY_BAN_THRESHOLD = 2;
 const DEFAULT_BAN_DURATION_HOURS = 720;
-const SESSION_DURATION_MS        = 2 * 60 * 60 * 1000; // 2 hours
+const SESSION_DURATION_MS        = 2 * 60 * 60 * 1000;
 const SERVICE_NAME               = 'Orey! - Mana App';
 
 const VIDEO_QUALITY = {
@@ -65,7 +65,6 @@ const REGULAR_REASONS = [
 
 // ─── MongoDB Schemas ──────────────────────────────────────────────────────────
 
-// Banned devices
 const BanSchema = new mongoose.Schema({
   deviceId:     { type: String, required: true, unique: true, index: true },
   reason:       String,
@@ -80,7 +79,6 @@ const BanSchema = new mongoose.Schema({
 BanSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, partialFilterExpression: { expiresAt: { $ne: null } } });
 const Ban = mongoose.model('Ban', BanSchema);
 
-// Reports
 const ReportSchema = new mongoose.Schema({
   id:               { type: String, required: true, unique: true, index: true },
   reporterDeviceId: String,
@@ -99,7 +97,6 @@ const ReportSchema = new mongoose.Schema({
 });
 const Report = mongoose.model('Report', ReportSchema);
 
-// Notifications
 const NotificationSchema = new mongoose.Schema({
   id:             { type: Number, required: true, unique: true, index: true },
   title:          String,
@@ -119,7 +116,6 @@ const NotificationSchema = new mongoose.Schema({
 });
 const Notification = mongoose.model('Notification', NotificationSchema);
 
-// App config (single persisted document)
 const AppConfigSchema = new mongoose.Schema({
   _id:          { type: String, default: 'main' },
   android:      Object,
@@ -129,7 +125,6 @@ const AppConfigSchema = new mongoose.Schema({
 });
 const AppConfigModel = mongoose.model('AppConfig', AppConfigSchema);
 
-// Report counters (per device)
 const ReportCountSchema = new mongoose.Schema({
   deviceId:         { type: String, required: true, unique: true, index: true },
   total:            { type: Number, default: 0 },
@@ -137,6 +132,18 @@ const ReportCountSchema = new mongoose.Schema({
   reportedBy:       { type: [String], default: [] },
 });
 const ReportCount = mongoose.model('ReportCount', ReportCountSchema);
+
+// ─── Orey ID Hash Schema ──────────────────────────────────────────────────────
+const OreyIdSchema = new mongoose.Schema({
+  hashId:     { type: String, required: true, unique: true, index: true },
+  displayId:  { type: String, required: true, unique: true },
+  socketId:   { type: String, default: null },
+  userName:   { type: String, default: '' },
+  expiresAt:  { type: Date, required: true, index: true },
+  createdAt:  { type: Date, default: Date.now },
+});
+OreyIdSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+const OreyIdModel = mongoose.model('OreyId', OreyIdSchema);
 
 // ─── In-Memory Runtime State ──────────────────────────────────────────────────
 const oreyIds              = new Map();
@@ -156,7 +163,6 @@ async function initDB() {
   await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 });
   console.log('✅ MongoDB connected');
 
-  // Load / create app config
   let cfg = await AppConfigModel.findById('main').lean();
   if (!cfg) {
     cfg = {
@@ -182,18 +188,16 @@ async function initDB() {
   }
   appConfig = cfg;
 
-  // Load bans into cache
   const bans = await Ban.find({}).lean();
   for (const b of bans) bannedDevicesCache.set(b.deviceId, b);
   console.log(`📦 Loaded ${bans.length} bans from DB`);
 
-  // Load notifications
   const notifs = await Notification.find({}).sort({ id: 1 }).lean();
   if (notifs.length === 0) {
     const welcome = {
       id: 1,
       title: '🎉 Welcome to Orey!',
-      message: 'Start video calling with friends using Orey-ID. Share your Orey-XXXXX code to connect!',
+      message: 'Start video calling with friends using Orey-ID. Share your OREY-XXXXX code to connect!',
       type: 'info',
       priority: 'normal',
       targetPlatform: 'all',
@@ -212,36 +216,29 @@ async function initDB() {
     notificationIdCounter = 2;
   } else {
     notificationsCache = notifs.map(n => ({
-      id: n.id,
-      title: n.title,
-      message: n.message,
-      type: n.type || 'info',
-      priority: n.priority || 'normal',
-      targetPlatform: n.targetPlatform || 'all',
-      targetDeviceIds: n.targetDeviceIds || [],
-      timestamp: n.timestamp,
-      actionUrl: n.actionUrl || '/',
-      icon: n.icon || '📢',
-      imageUrl: n.imageUrl || null,
-      isRead: n.isRead || false,
-      readAt: n.readAt || null,
-      readBy: n.readBy || null,
-      expiresIn: n.expiresIn || 30,
+      id: n.id, title: n.title, message: n.message, type: n.type || 'info',
+      priority: n.priority || 'normal', targetPlatform: n.targetPlatform || 'all',
+      targetDeviceIds: n.targetDeviceIds || [], timestamp: n.timestamp,
+      actionUrl: n.actionUrl || '/', icon: n.icon || '📢', imageUrl: n.imageUrl || null,
+      isRead: n.isRead || false, readAt: n.readAt || null,
+      readBy: n.readBy || null, expiresIn: n.expiresIn || 30,
     }));
     notificationIdCounter = Math.max(...notifs.map(n => n.id), 0) + 1;
   }
   console.log(`📦 Loaded ${notificationsCache.length} notifications`);
+
+  // Clean expired Orey IDs from DB
+  await OreyIdModel.deleteMany({ expiresAt: { $lt: new Date() } });
+  console.log('🧹 Cleaned expired Orey IDs from DB');
 }
 
 // ─── Security: Browser Request Detection Middleware ────────────────────────────
 function isBrowserRequest(req) {
   const accept = req.headers.accept || '';
   const userAgent = req.headers['user-agent'] || '';
-  // Check if request is from a browser (accepts HTML) and not API client
   return accept.includes('text/html') && !userAgent.includes('OreyApp') && !req.headers['x-api-key'];
 }
 
-// Middleware to hide API responses from browsers
 app.use('/api/', (req, res, next) => {
   if (isBrowserRequest(req)) {
     return res.status(200).send(`<!DOCTYPE html>
@@ -272,9 +269,8 @@ app.use('/api/', (req, res, next) => {
   next();
 });
 
-// Also hide admin endpoints from browsers without proper headers
 app.use('/admin/', (req, res, next) => {
-  if (req.path === '/login' || req.path === '/logout') return next(); // Allow login/logout
+  if (req.path === '/login' || req.path === '/logout') return next();
   if (isBrowserRequest(req) && !req.headers['x-session-token']) {
     return res.redirect('/admin');
   }
@@ -298,15 +294,19 @@ const io = new Server(server, {
   pingInterval:      25000,
 });
 
-// ─── Gender Matcher Instance ──────────────────────────────────────────────────
 const genderMatcher = createGenderMatcher(io);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function generateOreyId() {
+
+function generateOreyDisplayId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let suffix = '';
   for (let i = 0; i < 5; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
   return 'OREY-' + suffix;
+}
+
+function hashOreyId(displayId) {
+  return crypto.createHash('sha256').update(displayId + Date.now().toString()).digest('hex').substring(0, 16);
 }
 
 function generateRoomId() {
@@ -364,31 +364,25 @@ function attemptMatch(newSocketId) {
   let selfId    = newSocketId;
   let partnerId = null;
 
-  // Priority 1 — gender-aware match (opposite first, then same)
   if (gender) {
     const match = genderMatcher.findMatch(newSocketId, gender);
     if (match) {
       partnerId = match.socketId;
-      genderMatcher.dequeue(selfId);       // matched — remove self from gender queue
-      removeFromQueue(partnerId);          // remove partner from plain queue if present
+      genderMatcher.dequeue(selfId);
+      removeFromQueue(partnerId);
       removeFromQueue(selfId);
     }
   }
 
-  // Priority 2 — plain random queue fallback
   if (!partnerId) {
     if (randomQueue.length < 2) return;
-
     const idxSelf = randomQueue.indexOf(selfId);
     if (idxSelf === -1) return;
-
     let partnerIdx = -1;
     for (let i = 0; i < randomQueue.length; i++) {
       if (i !== idxSelf) { partnerIdx = i; break; }
     }
     if (partnerIdx === -1) return;
-
-    // Capture IDs before mutating the array
     partnerId = randomQueue[partnerIdx];
     const highIdx = Math.max(idxSelf, partnerIdx);
     const lowIdx  = Math.min(idxSelf, partnerIdx);
@@ -396,7 +390,6 @@ function attemptMatch(newSocketId) {
     randomQueue.splice(lowIdx,  1);
   }
 
-  // Wire up the room
   const selfSocket    = io.sockets.sockets.get(selfId);
   const partnerSocket = io.sockets.sockets.get(partnerId);
 
@@ -494,21 +487,13 @@ const verifyApiKey = (req, res, next) => {
 
 const verifySession = (req, res, next) => {
   const token = req.headers['x-session-token'] || req.query.session_token || req.body.sessionToken;
-  
-  if (!token) {
-    return res.status(401).json({ error: 'Session token required. Please login first.' });
-  }
-  
+  if (!token) return res.status(401).json({ error: 'Session token required. Please login first.' });
   const session = ADMIN_SESSIONS.get(token);
-  if (!session) {
-    return res.status(401).json({ error: 'Invalid or expired session. Please login again.' });
-  }
-  
+  if (!session) return res.status(401).json({ error: 'Invalid or expired session. Please login again.' });
   if (session.expiresAt < Date.now()) {
     ADMIN_SESSIONS.delete(token);
     return res.status(401).json({ error: 'Session expired. Please login again.' });
   }
-  
   next();
 };
 
@@ -532,19 +517,16 @@ async function persistAppConfig() {
 // ─── Determine Public Path ────────────────────────────────────────────────────
 const publicPath = (() => {
   const paths = [
-    path.join(__dirname, 'public'),        // server.js in root, public in root
-    path.join(__dirname, '..', 'public'),  // server.js in src, public in root
-    path.join(__dirname, 'src', 'public'), // server.js in root, public in src
+    path.join(__dirname, 'public'),
+    path.join(__dirname, '..', 'public'),
+    path.join(__dirname, 'src', 'public'),
   ];
-  
   for (const p of paths) {
     if (fs.existsSync(p)) {
       console.log(`📂 Found public directory: ${p}`);
       return p;
     }
   }
-  
-  // Create default public directory
   const defaultPath = path.join(__dirname, '..', 'public');
   if (!fs.existsSync(defaultPath)) {
     fs.mkdirSync(defaultPath, { recursive: true });
@@ -568,14 +550,38 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// ─── 🆕 Orey ID Generation with Hash ──────────────────────────────────────────
 app.get('/generate-orey-id', (_req, res) => {
   cleanExpiredOreyIds();
-  let oreyId;
+  let displayId;
   let attempts = 0;
-  do { oreyId = generateOreyId(); attempts++; } while (oreyIds.has(oreyId) && attempts < 20);
+  do { 
+    displayId = generateOreyDisplayId(); 
+    attempts++; 
+  } while (oreyIds.has(displayId) && attempts < 20);
+
+  const hashId = hashOreyId(displayId);
   const expiresAt = Date.now() + OREY_ID_TTL_MS;
-  oreyIds.set(oreyId, { expiresAt, socketId: null, userName: '' });
-  res.json({ oreyId, expiresAt, format: 'OREY-XXXXX (5 characters)', validDuration: '24 hours' });
+
+  // Store in memory (displayId maps to hash)
+  oreyIds.set(displayId, { hashId, displayId, expiresAt, socketId: null, userName: '' });
+
+  // Store in DB
+  OreyIdModel.create({
+    hashId,
+    displayId,
+    socketId: null,
+    userName: '',
+    expiresAt: new Date(expiresAt),
+  }).catch(() => {});
+
+  res.json({ 
+    oreyId: displayId,       // Display format
+    hashId: hashId,          // Internal hash (used for connections)
+    expiresAt, 
+    format: 'OREY-XXXXX (5 characters)', 
+    validDuration: '24 hours' 
+  });
 });
 
 app.get('/create-room', (_req, res) => res.json({ roomId: generateRoomId() }));
@@ -644,7 +650,8 @@ app.get('/api/config', (req, res) => {
       screenShare: clientVersion >= 3, 
       reporting: true, 
       safetyFeatures: true,
-      chat: true
+      chat: true,
+      genderMatching: true,
     },
     videoQuality: appConfig.videoQuality, 
     iceServers: ICE_SERVERS, 
@@ -784,48 +791,26 @@ app.put('/api/notifications/read-all', verifyApiKey, async (req, res) => {
 // ─── Admin Authentication Endpoints ───────────────────────────────────────────
 app.post('/admin/login', (req, res) => {
   const { adminKey } = req.body;
-  
-  if (!adminKey) {
-    return res.status(400).json({ error: 'Admin key required' });
-  }
-  
-  if (adminKey !== ADMIN_KEY) {
-    return res.status(403).json({ error: 'Invalid admin key' });
-  }
+  if (!adminKey) return res.status(400).json({ error: 'Admin key required' });
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key' });
   
   const sessionToken = generateSessionToken();
   const expiresAt = Date.now() + SESSION_DURATION_MS;
+  ADMIN_SESSIONS.set(sessionToken, { expiresAt, createdAt: Date.now() });
   
-  ADMIN_SESSIONS.set(sessionToken, {
-    expiresAt,
-    createdAt: Date.now(),
-  });
-  
-  console.log(`🔐 Admin login successful. Session created: ${sessionToken.substring(0, 16)}...`);
-  
-  res.json({
-    success: true,
-    sessionToken,
-    expiresAt: new Date(expiresAt).toISOString(),
-    durationHours: SESSION_DURATION_MS / (60 * 60 * 1000),
-  });
+  console.log(`🔐 Admin login successful. Session: ${sessionToken.substring(0, 16)}...`);
+  res.json({ success: true, sessionToken, expiresAt: new Date(expiresAt).toISOString(), durationHours: SESSION_DURATION_MS / (60 * 60 * 1000) });
 });
 
 app.post('/admin/logout', (req, res) => {
   const token = req.headers['x-session-token'] || req.body.sessionToken;
-  if (token) {
-    ADMIN_SESSIONS.delete(token);
-    console.log(`🔐 Admin logged out. Session removed: ${token.substring(0, 16)}...`);
-  }
+  if (token) { ADMIN_SESSIONS.delete(token); }
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // ─── Admin Gender Stats Endpoint ──────────────────────────────────────────────
 app.get('/admin/gender-stats', verifySession, (_req, res) => {
-  res.json({
-    ...genderMatcher.stats(),
-    randomQueueLength: randomQueue.length,
-  });
+  res.json({ ...genderMatcher.stats(), randomQueueLength: randomQueue.length });
 });
 
 // ─── App Version (Admin) ─────────────────────────────────────────────────────
@@ -833,13 +818,7 @@ app.put('/api/version', verifySession, async (req, res) => {
   const { platform, versionCode, versionName, updateType, updateMessage, downloadUrl, whatsNew } = req.body;
   if (!platform || !versionCode) return res.status(400).json({ error: 'Platform and versionCode required' });
   if (!appConfig[platform]) appConfig[platform] = {};
-  Object.assign(appConfig[platform], { 
-    versionCode, 
-    versionName: versionName || `v${versionCode}`, 
-    updateType: updateType || 'flexible', 
-    updateMessage: updateMessage || 'New update available!', 
-    downloadUrl: downloadUrl || appConfig[platform].downloadUrl 
-  });
+  Object.assign(appConfig[platform], { versionCode, versionName: versionName || `v${versionCode}`, updateType: updateType || 'flexible', updateMessage: updateMessage || 'New update available!', downloadUrl: downloadUrl || appConfig[platform].downloadUrl });
   if (whatsNew) appConfig[platform].whatsNew = whatsNew;
   await persistAppConfig();
   io.emit('update-available', appConfig[platform]);
@@ -857,24 +836,14 @@ app.post('/admin/notifications', verifySession, async (req, res) => {
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
   
   const newNotification = {
-    id: notificationIdCounter++, 
-    title, 
-    message, 
-    type: type || 'info', 
-    priority: priority || 'normal',
-    targetPlatform: targetPlatform || 'all',
-    targetDeviceIds: [],
-    timestamp: new Date().toISOString(),
-    actionUrl: actionUrl || '/', 
-    icon: icon || '📢', 
-    imageUrl: imageUrl || null,
-    isRead: false,
-    readAt: null,
-    readBy: null,
-    expiresIn: expiresIn || 30,
+    id: notificationIdCounter++, title, message, type: type || 'info', priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all', targetDeviceIds: [],
+    timestamp: new Date().toISOString(), actionUrl: actionUrl || '/', icon: icon || '📢',
+    imageUrl: imageUrl || null, isRead: false, readAt: null, readBy: null, expiresIn: expiresIn || 30,
   };
   
   await saveNotification(newNotification);
+  // 🔔 Broadcast to all connected sockets
   io.emit('new-notification', newNotification);
   
   console.log(`📢 Notification sent: "${title}" to ${io.engine.clientsCount} clients`);
@@ -886,21 +855,10 @@ app.post('/admin/notifications/targeted', verifySession, async (req, res) => {
   if (!title || !message) return res.status(400).json({ error: 'Title and message are required' });
   
   const newNotification = {
-    id: notificationIdCounter++, 
-    title, 
-    message, 
-    type: type || 'info', 
-    priority: priority || 'normal',
-    targetPlatform: targetPlatform || 'all', 
-    targetDeviceIds: targetDeviceIds || [],
-    timestamp: new Date().toISOString(), 
-    actionUrl: actionUrl || '/', 
-    icon: icon || '📢',
-    imageUrl: imageUrl || null, 
-    isRead: false,
-    readAt: null,
-    readBy: null,
-    expiresIn: expiresIn || 30,
+    id: notificationIdCounter++, title, message, type: type || 'info', priority: priority || 'normal',
+    targetPlatform: targetPlatform || 'all', targetDeviceIds: targetDeviceIds || [],
+    timestamp: new Date().toISOString(), actionUrl: actionUrl || '/', icon: icon || '📢',
+    imageUrl: imageUrl || null, isRead: false, readAt: null, readBy: null, expiresIn: expiresIn || 30,
   };
   
   await saveNotification(newNotification);
@@ -914,29 +872,20 @@ app.post('/admin/notifications/targeted', verifySession, async (req, res) => {
     console.log(`📢 Targeted notification sent to ${targetDeviceIds.length} devices: "${title}"`);
   } else {
     io.emit('new-notification', newNotification);
-    console.log(`📢 Notification broadcast to all ${io.engine.clientsCount} clients: "${title}"`);
+    console.log(`📢 Notification broadcast: "${title}"`);
   }
   
   res.json({ success: true, notification: newNotification, activeClients: io.engine.clientsCount });
 });
 
 app.get('/admin/notifications/stats', verifySession, (req, res) => {
-  const stats = { 
-    total: notificationsCache.length, 
-    active: 0, 
-    unread: 0, 
-    byType: {}, 
-    byPriority: {}, 
-    subscriptions: notificationSubscriptions.size 
-  };
-  
+  const stats = { total: notificationsCache.length, active: 0, unread: 0, byType: {}, byPriority: {}, subscriptions: notificationSubscriptions.size };
   for (const n of notificationsCache) {
     if (!isNotifExpired(n)) stats.active++;
     if (!n.isRead) stats.unread++;
     stats.byType[n.type] = (stats.byType[n.type] || 0) + 1;
     stats.byPriority[n.priority] = (stats.byPriority[n.priority] || 0) + 1;
   }
-  
   res.json(stats);
 });
 
@@ -988,9 +937,8 @@ app.get('/admin/reports', verifySession, async (req, res) => {
   if (req.query.status) filter.status = req.query.status;
   const allReports = await Report.find(filter).sort({ timestamp: -1 }).lean();
   res.json({
-    reports: allReports, 
-    total: allReports.length,
-    pending:    await Report.countDocuments({ status: 'pending' }),
+    reports: allReports, total: allReports.length,
+    pending: await Report.countDocuments({ status: 'pending' }),
     autoBanned: await Report.countDocuments({ status: 'auto_banned' }),
     highPriority: await Report.countDocuments({ isHighPriority: true }),
     activeBans: bannedDevicesCache.size,
@@ -1010,24 +958,12 @@ app.post('/admin/reports/:reportId/action', verifySession, async (req, res) => {
   switch (action) {
     case 'ban': {
       const d = banDuration || DEFAULT_BAN_DURATION_HOURS;
-      const bi = { 
-        deviceId: report.reportedDeviceId, 
-        reason: report.reason, 
-        timestamp: new Date().toISOString(), 
-        expiresAt: d > 0 ? new Date(Date.now() + d * 3600000) : null, 
-        durationHours: d > 0 ? d : null, 
-        permanent: d === 0, 
-        source: 'admin', 
-        isHighPriority: report.isHighPriority,
-        reportIds: [reportId] 
-      };
+      const bi = { deviceId: report.reportedDeviceId, reason: report.reason, timestamp: new Date().toISOString(), expiresAt: d > 0 ? new Date(Date.now() + d * 3600000) : null, durationHours: d > 0 ? d : null, permanent: d === 0, source: 'admin', isHighPriority: report.isHighPriority, reportIds: [reportId] };
       await banDeviceAndDisconnect(report.reportedDeviceId, bi);
       report.status = 'banned';
       break;
     }
-    case 'dismiss': 
-      report.status = 'dismissed'; 
-      break;
+    case 'dismiss': report.status = 'dismissed'; break;
     case 'warn': {
       report.status = 'warned';
       for (const [, s] of io.sockets.sockets) {
@@ -1049,17 +985,7 @@ app.post('/admin/ban-device', verifySession, async (req, res) => {
   if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
   const existing = isDeviceBanned(deviceId);
   if (existing) return res.status(400).json({ error: 'Device is already banned', existingBan: existing });
-  const bi = { 
-    deviceId, 
-    reason: reason || 'Violation of terms', 
-    timestamp: new Date().toISOString(), 
-    expiresAt: durationHours ? new Date(Date.now() + durationHours * 3600000) : null, 
-    durationHours: durationHours || null, 
-    permanent: !durationHours, 
-    source: 'manual',
-    isHighPriority: false,
-    reportIds: []
-  };
+  const bi = { deviceId, reason: reason || 'Violation of terms', timestamp: new Date().toISOString(), expiresAt: durationHours ? new Date(Date.now() + durationHours * 3600000) : null, durationHours: durationHours || null, permanent: !durationHours, source: 'manual', isHighPriority: false, reportIds: [] };
   const dced = await banDeviceAndDisconnect(deviceId, bi);
   res.json({ success: true, deviceId: deviceId.substring(0, 12) + '...', banInfo: bi, socketsDisconnected: dced });
 });
@@ -1067,11 +993,9 @@ app.post('/admin/ban-device', verifySession, async (req, res) => {
 app.delete('/admin/ban-device/:deviceId', verifySession, async (req, res) => {
   let { deviceId } = req.params;
   try { deviceId = decodeURIComponent(deviceId); } catch (e) {}
-
   let found = null;
-  if (bannedDevicesCache.has(deviceId)) {
-    found = deviceId;
-  } else {
+  if (bannedDevicesCache.has(deviceId)) found = deviceId;
+  else {
     for (const [id] of bannedDevicesCache.entries()) {
       if (id.toLowerCase() === deviceId.toLowerCase() || id.includes(deviceId) || deviceId.includes(id)) { found = id; break; }
     }
@@ -1080,9 +1004,7 @@ app.delete('/admin/ban-device/:deviceId', verifySession, async (req, res) => {
     const clean = deviceId.replace(/\.\.\.$/, '').replace(/[^A-Za-z0-9\-]/g, '');
     for (const [id] of bannedDevicesCache.entries()) { if (id.startsWith(clean)) { found = id; break; } }
   }
-
   if (!found) return res.status(404).json({ error: 'Device is not banned' });
-
   bannedDevicesCache.delete(found);
   await Ban.deleteOne({ deviceId: found });
   await ReportCount.updateOne({ deviceId: found }, { $set: { total: 0, highPriority: 0 } });
@@ -1099,135 +1021,74 @@ app.get('/admin/banned-devices', verifySession, async (req, res) => {
   }
   const list = [...bannedDevicesCache.entries()].map(([deviceId, info]) => ({
     deviceId, reason: info.reason, timestamp: info.timestamp, expiresAt: info.expiresAt || null,
-    permanent: info.permanent || false, isHighPriority: info.isHighPriority || false,
-    source: info.source || 'manual',
+    permanent: info.permanent || false, isHighPriority: info.isHighPriority || false, source: info.source || 'manual',
   })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   res.json({ bannedDevices: list, total: list.length });
 });
 
 app.get('/admin/stats', verifySession, async (req, res) => {
   res.json({
-    activeConnections: io.engine.clientsCount, 
-    activeRooms: rooms.size,
+    activeConnections: io.engine.clientsCount, activeRooms: rooms.size,
     bannedDevices: bannedDevicesCache.size,
-    pendingReports:  await Report.countDocuments({ status: 'pending' }),
+    pendingReports: await Report.countDocuments({ status: 'pending' }),
     totalNotifications: notificationsCache.length,
     activeAdminSessions: ADMIN_SESSIONS.size,
     uptime: process.uptime(),
     memoryMB: +(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
     safetySettings: appConfig.safety,
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    genderStats: {
-      ...genderMatcher.stats(),
-      randomQueueLength: randomQueue.length,
-    },
+    genderStats: { ...genderMatcher.stats(), randomQueueLength: randomQueue.length },
   });
 });
 
-// ─── Admin Panel & Static Files ───────────────────────────────────────────────
+// ─── 🆕 Admin Panel - Fixed Route ─────────────────────────────────────────────
 app.get('/admin', (_req, res) => {
   const adminPath = path.join(publicPath, 'admin.html');
-  
   if (fs.existsSync(adminPath)) {
-    res.sendFile(adminPath);
-  } else {
-    res.status(200).send(`<!DOCTYPE html>
+    return res.sendFile(adminPath);
+  }
+  res.status(200).send(`<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${SERVICE_NAME} Admin</title>
   <style>
     body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
     .box { text-align: center; background: #1e293b; padding: 2.5rem; border-radius: 24px; border: 1px solid #334155; }
     h1 { color: #3b82f6; }
-    code { background: #0f172a; padding: 0.5rem 1rem; border-radius: 8px; color: #3b82f6; }
+    .login-btn { display: inline-block; margin-top: 1rem; padding: 12px 32px; background: #3b82f6; color: #fff; border: none; border-radius: 12px; font-size: 1rem; cursor: pointer; text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="box">
     <h1>🔷 ${SERVICE_NAME} Admin</h1>
-    <p>Admin panel file not found.</p>
-    <p>Please add <code>admin.html</code> to:</p>
-    <p><code>${publicPath}</code></p>
+    <p>Admin panel HTML file not found at:</p>
+    <code>${adminPath}</code>
+    <br><br>
+    <button class="login-btn" onclick="login()">Login to Admin API</button>
   </div>
+  <script>
+    async function login() {
+      const key = prompt('Enter Admin Key:');
+      if (!key) return;
+      const res = await fetch('/admin/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({adminKey: key}) });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('sessionToken', data.sessionToken);
+        alert('Logged in! Token saved. Reload page to use API endpoints.');
+      } else {
+        alert('Login failed: ' + (data.error || 'Unknown error'));
+      }
+    }
+  </script>
 </body>
 </html>`);
-  }
 });
 
 app.get('/admin.html', (_req, res) => res.redirect('/admin'));
 
-// Serve static files from public directory
+// Serve static files
 app.use(express.static(publicPath, { index: false }));
-
-// Handle all other routes (including browser access to API)
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/admin/')) {
-      if (isBrowserRequest(req)) {
-        return res.status(200).send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${SERVICE_NAME}</title>
-  <style>
-    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .container { text-align: center; background: #1e293b; padding: 3rem; border-radius: 24px; border: 1px solid #334155; max-width: 500px; }
-    h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
-    .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
-    .icon { font-size: 3rem; margin-bottom: 1rem; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="icon">🔷</div>
-    <h1>${SERVICE_NAME}</h1>
-    <p class="subtitle">Video Calling Platform</p>
-    <span class="status">🟢 Service Running</span>
-  </div>
-</body>
-</html>`);
-      }
-      return res.status(404).json({ error: 'Not found' });
-    }
-    if (req.path === '/admin' || req.path === '/admin.html') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
-    const indexPath = path.join(publicPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.status(200).send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${SERVICE_NAME}</title>
-  <style>
-    body { font-family: system-ui; background: #0b0f17; color: #e2e8f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .container { text-align: center; background: #1e293b; padding: 3rem; border-radius: 24px; border: 1px solid #334155; max-width: 500px; }
-    h1 { color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 2rem; }
-    .status { display: inline-block; background: #065f46; color: #6ee7b7; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; }
-    .icon { font-size: 3rem; margin-bottom: 1rem; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="icon">🔷</div>
-    <h1>${SERVICE_NAME}</h1>
-    <p class="subtitle">Video Calling Platform</p>
-    <span class="status">🟢 Service Running</span>
-  </div>
-</body>
-</html>`);
-    }
-  });
-}
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
@@ -1246,8 +1107,8 @@ io.on('connection', (socket) => {
 
   socket.on('report-user', async ({ reportedDeviceId, reportedUserId, reason, description }) => {
     const reporterDeviceId = socket.data.deviceId;
-    if (!reporterDeviceId)                     { socket.emit('report-error', { error: 'Device not registered' }); return; }
-    if (!reportedDeviceId || !reason)          { socket.emit('report-error', { error: 'reportedDeviceId and reason required' }); return; }
+    if (!reporterDeviceId) { socket.emit('report-error', { error: 'Device not registered' }); return; }
+    if (!reportedDeviceId || !reason) { socket.emit('report-error', { error: 'reportedDeviceId and reason required' }); return; }
     if (reporterDeviceId === reportedDeviceId) { socket.emit('report-error', { error: 'Cannot report yourself' }); return; }
 
     const reportedDoc = await ReportCount.findOne({ deviceId: reportedDeviceId }).lean();
@@ -1264,7 +1125,6 @@ io.on('connection', (socket) => {
       { upsert: true, new: true }
     );
     const cc = counter.total, hpc = counter.highPriority;
-    console.log(`🚨 Socket Report #${reportId}: ${reportedDeviceId.substring(0, 12)}... for "${reason}"`);
 
     let ab = false;
     if ((isHP && hpc >= HIGH_PRIORITY_BAN_THRESHOLD) || (!isHP && cc >= AUTO_BAN_THRESHOLD)) {
@@ -1297,7 +1157,19 @@ io.on('connection', (socket) => {
     cleanExpiredOreyIds();
     const validatedId = validateOreyId(targetOreyId);
     if (!validatedId) { socket.emit('orey-id-invalid', { error: 'Invalid ID format' }); return; }
-    const entry = oreyIds.get(validatedId);
+    
+    // 🔍 Find by display ID or hash ID
+    let entry = oreyIds.get(validatedId);
+    if (!entry) {
+      // Try finding by hash
+      for (const [key, val] of oreyIds.entries()) {
+        if (val.hashId === targetOreyId || key.startsWith(targetOreyId)) {
+          entry = val;
+          break;
+        }
+      }
+    }
+    
     if (!entry) { socket.emit('orey-id-not-found'); return; }
     if (entry.expiresAt < Date.now()) { oreyIds.delete(validatedId); socket.emit('orey-id-expired'); return; }
     if (!entry.socketId) { socket.emit('orey-id-offline'); return; }
@@ -1325,54 +1197,42 @@ io.on('connection', (socket) => {
   socket.on('join-random', () => {
     cancelAutoSearch(socket.id);
     removeFromQueue(socket.id);
-    genderMatcher.dequeue(socket.id);          // clear from gender queues
-
+    genderMatcher.dequeue(socket.id);
     const gender = socket.data.gender || null;
-
     if (gender) {
-      genderMatcher.enqueue(socket.id, gender); // gender-aware queue
+      genderMatcher.enqueue(socket.id, gender);
     } else {
-      randomQueue.push(socket.id);              // plain queue
+      randomQueue.push(socket.id);
     }
-
-    socket.emit('waiting-for-match', {
-      gender,
-      genderStats: genderMatcher.stats(),
-    });
-
+    socket.emit('waiting-for-match', { gender, genderStats: genderMatcher.stats() });
     attemptMatch(socket.id);
   });
 
   socket.on('cancel-random', () => {
     removeFromQueue(socket.id);
     cancelAutoSearch(socket.id);
-    genderMatcher.dequeue(socket.id);          // also clear gender queues
+    genderMatcher.dequeue(socket.id);
     socket.emit('random-cancelled');
   });
 
   // ─── Set gender event ──────────────────────────────────────────────────────
   socket.on('set-gender', ({ gender }) => {
-    const normalised = genderMatcher.normalise(gender); // 'male'|'female'|null
-
+    const normalised = genderMatcher.normalise(gender);
     socket.data.gender = normalised;
-
-    // If already queued in plain random, switch to gender queue
     const inRandom = randomQueue.includes(socket.id);
     if (inRandom && normalised) {
       removeFromQueue(socket.id);
       genderMatcher.enqueue(socket.id, normalised);
       attemptMatch(socket.id);
     }
-
     socket.emit('gender-set', {
-      gender:   normalised,
+      gender: normalised,
       accepted: normalised !== null,
-      message:  normalised
+      message: normalised
         ? `Matching you with ${normalised === 'male' ? 'females' : 'males'} first.`
         : 'Gender cleared — standard random matching.',
     });
-
-    console.log(`⚧  Gender: ${socket.id.slice(0, 8)} → ${normalised ?? 'none'}`);
+    console.log(`⚧ Gender: ${socket.id.slice(0, 8)} → ${normalised ?? 'none'}`);
   });
 
   socket.on('join-room', ({ roomId, userName }) => {
@@ -1392,42 +1252,16 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', ({ targetId, candidate}) => io.to(targetId).emit('ice-candidate', { candidate, fromId: socket.id }));
   socket.on('media-state',   ({ roomId, audioEnabled, videoEnabled }) => socket.to(roomId).emit('peer-media-state', { socketId: socket.id, audioEnabled, videoEnabled }));
 
-  // ─── Chat Message Handler ───────────────────────────────────────────────────
   socket.on('chat-message', ({ roomId, message, type }) => {
-    if (!roomId || !message) {
-      socket.emit('chat-error', { error: 'roomId and message are required' });
-      return;
-    }
-    
+    if (!roomId || !message) { socket.emit('chat-error', { error: 'roomId and message are required' }); return; }
     const room = rooms.get(roomId);
-    if (!room || !room.has(socket.id)) {
-      socket.emit('chat-error', { error: 'Not in this room' });
-      return;
-    }
-    
-    const chatMessage = {
-      id: generateRoomId(),
-      senderId: socket.id,
-      senderName: socket.data.userName || 'Anonymous',
-      message: message.substring(0, 500), // Limit message length
-      type: type || 'text',
-      timestamp: new Date().toISOString(),
-      roomId
-    };
-    
-    // Send to all in room including sender (for confirmation)
+    if (!room || !room.has(socket.id)) { socket.emit('chat-error', { error: 'Not in this room' }); return; }
+    const chatMessage = { id: generateRoomId(), senderId: socket.id, senderName: socket.data.userName || 'Anonymous', message: message.substring(0, 500), type: type || 'text', timestamp: new Date().toISOString(), roomId };
     io.to(roomId).emit('chat-message', chatMessage);
-    
-    console.log(`💬 Chat [${roomId}]: ${socket.data.userName || 'Anonymous'}: ${message.substring(0, 50)}`);
   });
 
-  // ─── Chat Typing Indicator ──────────────────────────────────────────────────
   socket.on('chat-typing', ({ roomId, isTyping }) => {
-    socket.to(roomId).emit('peer-typing', {
-      socketId: socket.id,
-      userName: socket.data.userName || 'Anonymous',
-      isTyping
-    });
+    socket.to(roomId).emit('peer-typing', { socketId: socket.id, userName: socket.data.userName || 'Anonymous', isTyping });
   });
 
   socket.on('skip', ({ roomId }) => {
@@ -1509,7 +1343,7 @@ async function start() {
       console.log(`📂 Public Path: ${publicPath}`);
       console.log(`🖥️  Admin Panel: http://localhost:${PORT}/admin`);
       console.log(`🔐 Admin Login: POST /admin/login`);
-      console.log(`🆔 ID Format: OREY-XXXXX (5 characters)`);
+      console.log(`🆔 ID Format: OREY-XXXXX (Hash-backed)`);
       console.log(`🚫 Auto-Ban: ${AUTO_BAN_THRESHOLD} reports`);
       console.log(`🔔 Notification System: ACTIVE`);
       console.log(`💬 Chat System: ACTIVE`);
