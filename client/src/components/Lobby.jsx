@@ -1,300 +1,257 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import React, { useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
-  Copy, Check, Heart, Sparkles, Shield, X, 
-  ArrowRight, Clock, Bell, ChevronRight, User, Zap, Globe
+  Copy, Check, X, ArrowRight, Bell, 
+  Globe, ShieldCheck, ArrowRightCircle, SlidersHorizontal 
 } from 'lucide-react';
 import styles from './Lobby.module.css';
 
-const MaleIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="14" r="5"/><line x1="20" y1="4" x2="13.5" y2="10.5"/><line x1="20" y1="4" x2="16" y2="4"/><line x1="20" y1="4" x2="20" y2="8"/>
-  </svg>
-);
+const PICKUP_LINES = [
+  "Connection is the new currency.",
+  "Your digital soulmate is one tap away.",
+  "Skip the swipe. Start the spark.",
+  "Where mystery meets meaningful.",
+  "Modern love, simplified.",
+  "Your next story starts here."
+];
 
-const FemaleIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="5"/><line x1="12" y1="13" x2="12" y2="22"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="7" y1="2" x2="17" y2="2"/>
-  </svg>
-);
-
+/**
+ * Lobby Component
+ * Handles the main landing state, discovery triggers, and identity management.
+ * * Props from Parent/Backend:
+ * @param {string} oreyId - Unique user identification string
+ * @param {boolean} searching - Global state indicating if match search is active
+ * @param {number} matchTimer - Countdown timer value from backend
+ * @param {function} onDiscover - Triggered when slider reaches threshold
+ * @param {function} onCancelSearch - Triggered to abort searching
+ * @param {function} onConnectById - Triggered for direct ID entry
+ * @param {string|null} gender - Current target filter ('male', 'female', null)
+ * @param {function} onSetGender - Updates the target filter
+ * @param {number} unreadCount - Notification count
+ */
 export default function Lobby({
   oreyId = 'OREY-·····', 
-  oreyIdExpiry = null,
   searching = false,
-  matchStage = null,
-  matchTimer = 3,
+  matchTimer = 0,
   onDiscover = () => {}, 
   onCancelSearch = () => {}, 
   onConnectById = () => {},
   gender = null,
   onSetGender = () => {},
-  notifications = [],
   unreadCount = 0,
-  onViewNotifications = () => {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
   const [showGenderSheet, setShowGenderSheet] = useState(false);
-  const [showNotifSheet, setShowNotifSheet] = useState(false);
+  const [lineIndex, setLineIndex] = useState(0);
+
+  // Framer Motion Slider State
+  const x = useMotionValue(0);
+  const sliderWidth = 300; // Track width
+  const thumbWidth = 56;  // Approx 3.5rem
+  const maxDrag = sliderWidth - thumbWidth - 16; // Bounds check
+  
+  const opacity = useTransform(x, [0, maxDrag - 40], [1, 0]);
+
+  // Pickup line rotator
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLineIndex((prev) => (prev + 1) % PICKUP_LINES.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, []);
 
   const copyId = useCallback(() => {
-    if (!oreyId || oreyId === 'OREY-·····') return;
+    if (!oreyId || oreyId.includes('·')) return;
     navigator.clipboard.writeText(oreyId).then(() => {
-      setCopied(true); setTimeout(() => setCopied(false), 1800);
-    }).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback for document.execCommand if needed in restricted envs
+    });
   }, [oreyId]);
 
   const handleConnect = useCallback(() => {
     const trimmed = targetId.trim().toUpperCase().replace('OREY-', '');
     if (trimmed.length === 5) {
-      onConnectById('OREY-' + trimmed);
+      onConnectById(`OREY-${trimmed}`);
       setTargetId('');
     }
   }, [targetId, onConnectById]);
 
-  const handleGenderSelect = useCallback((value) => {
-    onSetGender(value);
-    setShowGenderSheet(false);
-  }, [onSetGender]);
-
-  const handleNotifOpen = useCallback(() => {
-    setShowNotifSheet(true);
-    onViewNotifications();
-  }, [onViewNotifications]);
-
-  const expiryStr = oreyIdExpiry 
-    ? new Date(oreyIdExpiry).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) 
-    : null;
-
-  const genderIcon = gender === 'male' ? '♂️' : gender === 'female' ? '♀️' : null;
+  const handleDragEnd = (event, info) => {
+    // If dragged more than 80% of the way
+    if (info.offset.x > maxDrag * 0.8) {
+      onDiscover();
+    }
+    x.set(0); // Snap back to start
+  };
 
   return (
-    <div className={styles.root}>
-      <div className={styles.bgGradient} />
-      
-      <div className={styles.container}>
-        {/* ── Top Bar: Logo + Notification ── */}
-        <div className={styles.topBar}>
-          {/* Logo */}
-          <div className={styles.logoBlock}>
-            <span className={styles.logoIcon}>🔷</span>
-            <h1 className={styles.logo}>
-              Orey<span className={styles.logoAccent}>!</span>
-            </h1>
-          </div>
+    <div className={styles.container}>
+      <div className={styles.backgroundAura}>
+        <div className={styles.auraTop} />
+        <div className={styles.auraBottom} />
+      </div>
 
-          {/* Notification Bell (always visible) */}
-          <button 
-            className={`${styles.bellBtn} ${unreadCount > 0 ? styles.bellActive : ''}`}
-            onClick={handleNotifOpen}
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && <span className={styles.bellBadge}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+      <div className={styles.wrapper}>
+        <nav className={styles.nav}>
+          <button className={styles.bellButton}>
+            <Bell size={22} strokeWidth={1.5} />
+            {unreadCount > 0 && <span className={styles.notificationBadge} />}
           </button>
-        </div>
+        </nav>
 
-        <p className={styles.tagline}>Connect • Chat • Share</p>
+        <header className={styles.header}>
+          <h1 className={styles.logo}>
+            Orey<span className={styles.logoAccent}>!</span>
+          </h1>
+          <div className={styles.pickupLineContainer}>
+            <AnimatePresence mode="wait">
+              <motion.p 
+                key={lineIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className={styles.pickupLine}
+              >
+                {PICKUP_LINES[lineIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+        </header>
 
-        {/* ── Match Card ── */}
-        <div className={styles.matchCard}>
+        <main className={styles.main}>
           {!searching ? (
-            <>
-              {/* Gender chip */}
-              <button 
-                className={`${styles.genderChip} ${gender ? styles.genderChipSet : ''}`}
-                onClick={() => setShowGenderSheet(true)}
-              >
-                {genderIcon ? (
-                  <span className={styles.genderEmoji}>{genderIcon}</span>
-                ) : (
-                  <Globe size={13} />
-                )}
-                <span>{gender ? (gender === 'male' ? 'Female' : 'Male') : 'Anyone'}</span>
-                <ChevronRight size={11} />
-              </button>
-
-              {/* Match Button */}
-              <motion.button 
-                className={styles.matchBtn}
-                onClick={onDiscover}
-                whileTap={{ scale: 0.96 }}
-              >
-                <motion.span 
-                  className={styles.matchBtnLabel}
-                  animate={{ scale: [1, 1.04, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+            <div className={styles.sliderContainer}>
+              <div className={styles.sliderTrack}>
+                <motion.div style={{ opacity }} className={styles.sliderLabel}>
+                  Slide to Discover
+                </motion.div>
+                
+                <motion.div
+                  drag="x"
+                  dragConstraints={{ left: 0, right: maxDrag }}
+                  dragElastic={0.05}
+                  onDragEnd={handleDragEnd}
+                  style={{ x }}
+                  className={styles.sliderThumb}
                 >
-                  <Heart size={20} fill="currentColor" className={styles.matchHeart} />
-                  Find Match
-                </motion.span>
-              </motion.button>
-            </>
-          ) : (
-            <div className={styles.searchingBlock}>
-              {/* Stage badge */}
-              <span className={`${styles.stageBadge} ${matchStage === 'gender' ? styles.stageGender : styles.stageOpen}`}>
-                {matchStage === 'gender' ? (
-                  <><Zap size={10} /> Gender • {matchTimer}s</>
-                ) : (
-                  <><Globe size={10} /> Open</>
-                )}
-              </span>
-
-              {/* Pulse animation */}
-              <div className={styles.pulseWrap}>
-                <motion.span 
-                  className={styles.pulseDot}
-                  animate={{ scale: [1, 2], opacity: [0.6, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                />
-                <motion.span 
-                  className={styles.pulseDot}
-                  animate={{ scale: [1, 2], opacity: [0.6, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity, delay: 0.6 }}
-                />
-                <div className={styles.pulseInner}>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  >
-                    <Sparkles size={20} />
-                  </motion.div>
-                </div>
+                  <ArrowRightCircle size={24} className="text-slate-900" />
+                </motion.div>
               </div>
 
-              <p className={styles.searchingLabel}>Finding match...</p>
+              <button 
+                onClick={() => setShowGenderSheet(true)}
+                className={styles.preferenceButton}
+              >
+                <SlidersHorizontal size={14} />
+                <span className={styles.preferenceLabel}>
+                  Preferences: <span className={styles.preferenceValue}>
+                    {gender ? (gender === 'male' ? 'Males' : 'Females') : 'Global'}
+                  </span>
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className={styles.searchingContainer}>
+              <div className={styles.timerWrapper}>
+                <div className={styles.timerText}>{matchTimer}s</div>
+                <div className={styles.statusRow}>
+                  <span className={styles.pingDot} />
+                  <span className={styles.statusText}>Searching...</span>
+                </div>
+              </div>
               
-              <button className={styles.cancelBtn} onClick={onCancelSearch}>
-                <X size={14} /> Cancel
+              <button onClick={onCancelSearch} className={styles.abortButton}>
+                Abort Search
               </button>
             </div>
           )}
-        </div>
+        </main>
 
-        {/* ── Orey ID Card ── */}
-        <div className={styles.idCard}>
-          <div className={styles.idTop}>
-            <span className={styles.idLabel}>YOUR ID</span>
-            {expiryStr && (
-              <span className={styles.idExpiry}><Clock size={9} />{expiryStr}</span>
-            )}
-          </div>
+        <section className={styles.identitySection}>
           <div className={styles.idRow}>
-            <code className={styles.idCode} onClick={copyId}>{oreyId}</code>
-            <button className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} onClick={copyId}>
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-            </button>
+            <div onClick={copyId} className={styles.idDisplay}>
+              <span className={styles.idLabel}>Your ID</span>
+              <div className={styles.idValueContainer}>
+                <span className={styles.idValue}>{oreyId}</span>
+                {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={14} className="text-slate-800" />}
+              </div>
+            </div>
+            
+            <div className={styles.privateBadge}>
+              <ShieldCheck size={16} className="text-slate-500" />
+              <span className={styles.privateLabel}>Private</span>
+            </div>
           </div>
-        </div>
 
-        {/* ── Connect Card ── */}
-        <div className={styles.connectCard}>
-          <div className={styles.connectRow}>
-            <span className={styles.connectPrefix}>OREY-</span>
-            <input
-              className={styles.connectInput}
+          <div className={styles.directInputBar}>
+            <input 
               type="text"
-              placeholder="XXXXX"
-              maxLength={5}
+              placeholder="ENTER FRIEND ID"
+              maxLength={10}
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
-              onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              inputMode="text"
+              onChange={(e) => setTargetId(e.target.value.toUpperCase())}
+              className={styles.directInput}
             />
             <button 
-              className={`${styles.goBtn} ${targetId.length === 5 ? styles.goActive : ''}`}
               onClick={handleConnect}
-              disabled={targetId.length !== 5}
+              disabled={targetId.length < 5}
+              className={`${styles.directSubmit} ${targetId.length >= 5 ? styles.submitActive : styles.submitInactive}`}
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={20} />
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* ── Footer ── */}
-        <footer className={styles.footer}>
-          <Shield size={9} />
-          <span>Encrypted • Secure</span>
-        </footer>
-      </div>
-
-      {/* ═══ Gender Sheet ═══ */}
-      <AnimatePresence>
-        {showGenderSheet && (
-          <motion.div className={styles.sheetOverlay} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={() => setShowGenderSheet(false)}>
-            <motion.div 
-              className={styles.sheet} 
-              initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
-              transition={{ type:'spring', damping:28, stiffness:280 }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className={styles.sheetHandle} />
-              <h3 className={styles.sheetTitle}>Show me</h3>
-              {[
-                { v:'male', i:<MaleIcon/>, l:'Males', c:'#3b82f6' },
-                { v:'female', i:<FemaleIcon/>, l:'Females', c:'#ec4899' },
-                { v:null, i:<Globe size={14}/>, l:'Anyone', c:'#8b5cf6' },
-              ].map(({v,i,l,c}) => (
-                <motion.button
-                  key={v??'any'}
-                  className={`${styles.sheetOption} ${gender===v ? styles.sheetOptionActive : ''}`}
-                  onClick={()=>handleGenderSelect(v)}
-                  whileTap={{scale:0.97}}
+        <AnimatePresence>
+          {showGenderSheet && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowGenderSheet(false)}
+                className={styles.sheetOverlay}
+              />
+              <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className={styles.sheet}
+              >
+                <div className={styles.sheetHandle} />
+                <div className={styles.sheetOptions}>
+                  {[
+                    { id: null, label: 'Global (Everyone)', icon: <Globe size={18} /> },
+                    { id: 'male', label: 'Connect with Males', icon: '♂' },
+                    { id: 'female', label: 'Connect with Females', icon: '♀' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => { onSetGender(opt.id); setShowGenderSheet(false); }}
+                      className={`${styles.optionButton} ${gender === opt.id ? styles.optionActive : ''}`}
+                    >
+                      <span className={styles.optionIcon}>{opt.icon}</span>
+                      <span className={styles.optionLabel}>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => setShowGenderSheet(false)} 
+                  className={styles.sheetClose}
                 >
-                  <span className={styles.sheetOptIcon} style={{background:`${c}20`,color:c}}>{i}</span>
-                  <span className={styles.sheetOptLabel}>{l}</span>
-                  {gender===v && <Check size={16} color="#6366f1" />}
-                </motion.button>
-              ))}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ Notifications Sheet ═══ */}
-      <AnimatePresence>
-        {showNotifSheet && (
-          <motion.div className={styles.sheetOverlay} initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} onClick={() => setShowNotifSheet(false)}>
-            <motion.div 
-              className={styles.sheet} 
-              initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
-              transition={{ type:'spring', damping:28, stiffness:280 }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className={styles.sheetHandle} />
-              <div className={styles.sheetTop}>
-                <h3 className={styles.sheetTitle}>Notifications</h3>
-                <button onClick={() => setShowNotifSheet(false)} className={styles.sheetClose}><X size={18} /></button>
-              </div>
-              <div className={styles.notifScroll}>
-                {notifications.length === 0 ? (
-                  <div className={styles.notifEmpty}>
-                    <Bell size={36} />
-                    <p>All clear!</p>
-                    <span>No new notifications</span>
-                  </div>
-                ) : (
-                  notifications.slice(0,15).map(n => (
-                    <div key={n.id} className={`${styles.notifItem} ${!n.isRead ? styles.notifNew : ''}`}>
-                      <span className={styles.notifIcon}>{n.icon||'📢'}</span>
-                      <div className={styles.notifBody}>
-                        <p className={styles.notifTitle}>{n.title}</p>
-                        <p className={styles.notifMsg}>{n.message}</p>
-                        <span className={styles.notifTime}>{new Date(n.timestamp).toLocaleDateString()}</span>
-                      </div>
-                      {!n.isRead && <span className={styles.notifDot} />}
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  Dismiss
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
+
