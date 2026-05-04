@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, ShieldCheck, Camera, Mic
+  ArrowRight, Bell, ShieldCheck
 } from 'lucide-react';
 import './styles.css';
 
@@ -20,165 +20,6 @@ const PERM = { IDLE: 'idle', REQUESTING: 'requesting', DENIED: 'denied', GRANTED
 
 function resolvePermState(granted) {
   return granted ? PERM.GRANTED : PERM.DENIED;
-}
-
-function PermissionDialog({ state, onGrant, onDismiss }) {
-  const isDenied = state === PERM.DENIED;
-  const isRequesting = state === PERM.REQUESTING;
-
-  return (
-    <motion.div
-      key="perm-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 200,
-        backgroundColor: 'rgba(0,0,0,0.65)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-      }}
-      onClick={onDismiss}
-    >
-      <motion.div
-        key="perm-dialog"
-        initial={{ scale: 0.88, opacity: 0, y: 12 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0, y: 8 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: '320px',
-          backgroundColor: '#0c0d0e',
-          border: isDenied
-            ? '1px solid rgba(244,63,94,0.25)'
-            : '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '1.5rem',
-          padding: '2rem',
-          boxShadow: '0 32px 64px -12px rgba(0,0,0,0.7)',
-        }}
-      >
-        <div style={{
-          width: '4rem',
-          height: '4rem',
-          borderRadius: '1.25rem',
-          backgroundColor: isDenied ? 'rgba(244,63,94,0.1)' : 'rgba(59,130,246,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 1.5rem',
-        }}>
-          {isDenied
-            ? <Camera size={28} color="#fb7185" />
-            : <Camera size={28} color="#60a5fa" />
-          }
-        </div>
-
-        <h3 style={{
-          fontSize: '1.125rem',
-          fontWeight: 900,
-          color: '#fff',
-          textAlign: 'center',
-          marginBottom: '0.75rem',
-          textTransform: 'uppercase',
-          letterSpacing: '-0.025em',
-        }}>
-          {isDenied ? 'Permissions Denied' : 'Camera & Mic Required'}
-        </h3>
-
-        <p style={{
-          fontSize: '0.75rem',
-          color: '#94a3b8',
-          textAlign: 'center',
-          lineHeight: 1.7,
-          marginBottom: '1.5rem',
-        }}>
-          {isDenied
-            ? 'Camera and microphone access was denied. Please grant permissions in your device settings or try again to use Orey.'
-            : 'Orey needs camera and microphone access to connect you with others. This is essential for the full experience.'
-          }
-        </p>
-
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
-          {[
-            { Icon: Camera, label: 'Camera', color: '#60a5fa' },
-            { Icon: Mic,    label: 'Microphone', color: '#a78bfa' },
-          ].map(({ Icon, label, color }) => (
-            <div key={label} style={{
-              flex: 1,
-              padding: '0.75rem',
-              borderRadius: '0.75rem',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              textAlign: 'center',
-            }}>
-              <Icon size={20} color={color} style={{ margin: '0 auto 0.35rem', display: 'block' }} />
-              <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <motion.button
-          whileHover={!isRequesting ? { scale: 1.02 } : {}}
-          whileTap={!isRequesting ? { scale: 0.97 } : {}}
-          onClick={onGrant}
-          disabled={isRequesting}
-          style={{
-            width: '100%',
-            padding: '0.875rem',
-            borderRadius: '0.75rem',
-            border: 'none',
-            backgroundColor: isRequesting
-              ? 'rgba(59,130,246,0.3)'
-              : isDenied ? '#dc2626' : '#2563eb',
-            color: '#fff',
-            fontSize: '0.75rem',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            cursor: isRequesting ? 'wait' : 'pointer',
-            marginBottom: '0.75rem',
-            transition: 'background-color 0.2s',
-          }}
-        >
-          {isRequesting
-            ? 'Waiting for permission…'
-            : isDenied
-              ? 'Open Settings'
-              : 'Grant Permissions'
-          }
-        </motion.button>
-
-        <button
-          onClick={onDismiss}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            borderRadius: '0.75rem',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backgroundColor: 'transparent',
-            color: '#64748b',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            cursor: 'pointer',
-          }}
-        >
-          {isDenied ? 'Cancel' : 'Not Now'}
-        </button>
-      </motion.div>
-    </motion.div>
-  );
 }
 
 export default function Lobby({
@@ -201,7 +42,6 @@ export default function Lobby({
   const [lineIndex, setLineIndex] = useState(0);
 
   const [permState, setPermState] = useState(PERM.IDLE);
-  const [showPermDialog, setShowPermDialog] = useState(false);
 
   const controls = useAnimation();
   const x = useMotionValue(0);
@@ -219,10 +59,7 @@ export default function Lobby({
         setPermState(next);
         
         if (granted) {
-          setShowPermDialog(false);
           onDiscover();
-        } else {
-          setShowPermDialog(true);
         }
       };
     }
@@ -272,69 +109,36 @@ export default function Lobby({
 
     if (typeof window !== 'undefined' && window.OreyNative) {
       window.OreyNative.requestPermissions();
-      setShowPermDialog(false);
       
-    } else if (navigator?.permissions?.query) {
-      Promise.all([
-        navigator.permissions.query({ name: 'camera' }),
-        navigator.permissions.query({ name: 'microphone' }),
-      ])
-        .then(([cam, mic]) => {
-          if (cam.state === 'granted' && mic.state === 'granted') {
-            setPermState(PERM.GRANTED);
-            setShowPermDialog(false);
-            onDiscover();
-          } else if (cam.state === 'prompt' || mic.state === 'prompt') {
-            return navigator.mediaDevices
-              .getUserMedia({ video: true, audio: true })
-              .then((stream) => {
-                stream.getTracks().forEach((t) => t.stop());
-                setPermState(PERM.GRANTED);
-                setShowPermDialog(false);
-                onDiscover();
-              })
-              .catch((err) => {
-                console.log('Permission error:', err.name);
-                setPermState(PERM.DENIED);
-                setShowPermDialog(true);
-              });
-          } else {
-            setPermState(PERM.DENIED);
-            setShowPermDialog(true);
-          }
+    } else if (navigator?.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((t) => t.stop());
+          setPermState(PERM.GRANTED);
+          onDiscover();
         })
-        .catch(() => {
-          navigator.mediaDevices
-            .getUserMedia({ video: true, audio: true })
-            .then((stream) => {
-              stream.getTracks().forEach((t) => t.stop());
-              setPermState(PERM.GRANTED);
-              setShowPermDialog(false);
-              onDiscover();
-            })
-            .catch((err) => {
-              setPermState(PERM.DENIED);
-              setShowPermDialog(true);
-            });
+        .catch((err) => {
+          console.log('Permission error:', err.name);
+          setPermState(PERM.DENIED);
         });
     } else {
       setPermState(PERM.DENIED);
-      setShowPermDialog(true);
     }
   }, [onDiscover]);
 
-  const handlePermissionDismiss = useCallback(() => {
-    setShowPermDialog(false);
-    if (permState !== PERM.GRANTED) setPermState(PERM.IDLE);
-  }, [permState]);
+  const openSettings = useCallback(() => {
+    if (typeof window !== 'undefined' && window.OreyNative) {
+      window.OreyNative.openAppSettings();
+    }
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
-      } else if (permState === PERM.DENIED) {
-        setShowPermDialog(true);
       } else {
+        // Trigger system dialog directly
         requestPermissions();
       }
     }
@@ -449,6 +253,28 @@ export default function Lobby({
                     <span className="thumbLogo">O</span>
                   </motion.div>
                 </div>
+
+                {permState === PERM.DENIED && (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={openSettings}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '0.75rem',
+                      border: '1px solid rgba(244,63,94,0.3)',
+                      backgroundColor: 'rgba(244,63,94,0.1)',
+                      color: '#fb7185',
+                      fontSize: '10px',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Enable Camera & Mic in Settings
+                  </motion.button>
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -577,16 +403,6 @@ export default function Lobby({
           </div>
         </footer>
       </div>
-
-      <AnimatePresence>
-        {showPermDialog && permState !== PERM.GRANTED && (
-          <PermissionDialog
-            state={permState}
-            onGrant={requestPermissions}
-            onDismiss={handlePermissionDismiss}
-          />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showNotifSheet && (
