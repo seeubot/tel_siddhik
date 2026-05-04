@@ -197,7 +197,8 @@ export default function Lobby({
                   </motion.div>
                 </div>
 
-                <button onClick={() => setShowGenderSheet(true)} className="prefsBtn">
+                {/* Gender preference button hidden */}
+                {/* <button onClick={() => setShowGenderSheet(true)} className="prefsBtn">
                   <SlidersHorizontal size={14} />
                   <span className="prefsLabel">
                     Looking for:{' '}
@@ -205,7 +206,7 @@ export default function Lobby({
                       {gender ? (gender === 'male' ? 'Males' : 'Females') : 'Anyone'}
                     </span>
                   </span>
-                </button>
+                </button> */}
               </motion.div>
             ) : (
               <motion.div
@@ -367,65 +368,10 @@ export default function Lobby({
         </footer>
 
         <AnimatePresence>
-          {showGenderSheet && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overlay"
-              onClick={() => setShowGenderSheet(false)}
-            >
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="sheet"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="handle" />
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff', marginBottom: '1.5rem' }}>
-                  Discover Settings
-                </h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'male',   label: 'Males Only',     icon: <MaleIcon />,          color: '#60a5fa' },
-                    { id: 'female', label: 'Females Only',   icon: <FemaleIcon />,        color: '#fb7185' },
-                    { id: null,     label: 'Anyone (Global)',icon: <Globe size={18} />,   color: '#a78bfa' },
-                  ].map((opt) => {
-                    const active = gender === opt.id;
-                    return (
-                      <motion.button
-                        key={opt.id ?? 'any'}
-                        onClick={() => { onSetGender(opt.id); setShowGenderSheet(false); }}
-                        whileTap={{ scale: 0.97 }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          padding: '1.25rem',
-                          borderRadius: '1rem',
-                          border: `1px solid ${active ? '#3b82f6' : 'rgba(255,255,255,0.05)'}`,
-                          backgroundColor: active ? '#2563eb' : 'rgba(255,255,255,0.05)',
-                          color: active ? '#ffffff' : '#94a3b8',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                      >
-                        <span style={{ color: active ? '#ffffff' : opt.color }}>{opt.icon}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                          {opt.label}
-                        </span>
-                        {active && <Check size={18} style={{ marginLeft: 'auto' }} />}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+          {/* Gender selection sheet removed - no longer rendered */}
+          {/* {showGenderSheet && (
+            ... gender sheet content ...
+          )} */}
 
           {showNotifSheet && (
             <motion.div
