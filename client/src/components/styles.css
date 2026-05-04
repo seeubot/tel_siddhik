@@ -283,7 +283,7 @@
   color: #060708;
 }
 
-/* Preferences button */
+/* Preferences button - kept for reference, hidden via JSX */
 .prefsBtn {
   display: flex;
   align-items: center;
