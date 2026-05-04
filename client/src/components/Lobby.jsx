@@ -2,8 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, Globe, ShieldCheck,
-  SlidersHorizontal
+  ArrowRight, Bell, Globe, ShieldCheck, Camera, Mic
 } from 'lucide-react';
 import './styles.css';
 
@@ -54,14 +53,40 @@ export default function Lobby({
   const [showGenderSheet, setShowGenderSheet] = useState(false);
   const [showNotifSheet, setShowNotifSheet] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [hasPermissions, setHasPermissions] = useState(false);
+  const [waitingForPermission, setWaitingForPermission] = useState(false);
 
-  // Fixed: Use animation controls for proper reset
   const controls = useAnimation();
   const x = useMotionValue(0);
   const trackWidth = 280;
   const thumbSize = 56;
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
+
+  // Check permissions on mount and setup callback
+  useEffect(() => {
+    checkPermissions();
+    
+    // Setup callback for permission results from Android
+    if (typeof window !== 'undefined') {
+      window.onPermissionResult = (granted) => {
+        setWaitingForPermission(false);
+        if (granted) {
+          setHasPermissions(true);
+          setShowPermissionDialog(false);
+        } else {
+          setHasPermissions(false);
+        }
+      };
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.onPermissionResult;
+      }
+    };
+  }, []);
 
   // Reset slider when switching back from searching
   useEffect(() => {
@@ -76,6 +101,49 @@ export default function Lobby({
       setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
     }, 4500);
     return () => clearInterval(interval);
+  }, []);
+
+  const checkPermissions = useCallback(() => {
+    // Check if OreyNative bridge is available (Android WebView)
+    if (typeof window !== 'undefined' && window.OreyNative) {
+      const granted = window.OreyNative.hasPermissions();
+      setHasPermissions(granted);
+    } else {
+      // Fallback for web/browser testing
+      if (navigator?.mediaDevices?.getUserMedia) {
+        Promise.all([
+          navigator.permissions?.query({ name: 'camera' }),
+          navigator.permissions?.query({ name: 'microphone' })
+        ]).then(([cam, mic]) => {
+          setHasPermissions(cam?.state === 'granted' && mic?.state === 'granted');
+        }).catch(() => {
+          setHasPermissions(false);
+        });
+      }
+    }
+  }, []);
+
+  const requestAndroidPermissions = useCallback(() => {
+    if (typeof window !== 'undefined' && window.OreyNative) {
+      setWaitingForPermission(true);
+      window.OreyNative.requestPermissions();
+    } else {
+      // Fallback for web/browser - request directly
+      if (navigator?.mediaDevices?.getUserMedia) {
+        setWaitingForPermission(true);
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then((stream) => {
+            stream.getTracks().forEach(track => track.stop());
+            setHasPermissions(true);
+            setWaitingForPermission(false);
+            setShowPermissionDialog(false);
+          })
+          .catch(() => {
+            setHasPermissions(false);
+            setWaitingForPermission(false);
+          });
+      }
+    }
   }, []);
 
   const copyId = useCallback(() => {
@@ -96,11 +164,17 @@ export default function Lobby({
 
   const handleDragEnd = useCallback(() => {
     if (x.get() > maxDrag * 0.8) {
-      onDiscover();
+      // Check permissions before allowing discovery
+      if (hasPermissions) {
+        onDiscover();
+      } else {
+        // Show permission dialog
+        setShowPermissionDialog(true);
+      }
     }
     // Always spring back
     controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
-  }, [x, maxDrag, onDiscover, controls]);
+  }, [x, maxDrag, onDiscover, controls, hasPermissions]);
 
   const getSearchStatusText = () => {
     if (matchStage === 'gender') {
@@ -170,7 +244,6 @@ export default function Lobby({
                 className="flex flex-col items-center"
               >
                 <div className="sliderTrack">
-                  {/* Fixed: Hint text fades as you slide */}
                   <motion.div style={{ opacity }} className="sliderHint">
                     <motion.span
                       animate={{ opacity: [0.6, 1, 0.6] }}
@@ -181,7 +254,6 @@ export default function Lobby({
                     </motion.span>
                   </motion.div>
 
-                  {/* Fixed: Use animate controls for spring-back */}
                   <motion.div
                     drag="x"
                     dragConstraints={{ left: 0, right: maxDrag }}
@@ -196,17 +268,6 @@ export default function Lobby({
                     <span className="thumbLogo">O</span>
                   </motion.div>
                 </div>
-
-                {/* Gender preference button hidden */}
-                {/* <button onClick={() => setShowGenderSheet(true)} className="prefsBtn">
-                  <SlidersHorizontal size={14} />
-                  <span className="prefsLabel">
-                    Looking for:{' '}
-                    <span className="prefsValue">
-                      {gender ? (gender === 'male' ? 'Males' : 'Females') : 'Anyone'}
-                    </span>
-                  </span>
-                </button> */}
               </motion.div>
             ) : (
               <motion.div
@@ -218,7 +279,6 @@ export default function Lobby({
                 className="searchingContent"
               >
                 <div className="pulseContainer">
-                  {/* Enhanced connecting animation */}
                   <motion.div
                     animate={{
                       scale: [1, 1.5, 1],
@@ -238,7 +298,6 @@ export default function Lobby({
                     style={{ width: 200, height: 200 }}
                   />
                   
-                  {/* Main icon with rotation */}
                   <motion.div
                     animate={{ 
                       scale: [1, 1.08, 1],
@@ -270,7 +329,6 @@ export default function Lobby({
                     </motion.span>
                   </motion.div>
 
-                  {/* Status text */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -280,7 +338,6 @@ export default function Lobby({
                     {matchStage === 'gender' ? 'Finding Match' : 'Searching...'}
                   </motion.div>
 
-                  {/* Status badge */}
                   <div className="statusLabel">
                     <span className="statusDot" />
                     <motion.span
@@ -301,20 +358,6 @@ export default function Lobby({
                   className="cancelSearchBtn"
                   whileHover={{ scale: 1.05, color: '#f43f5e', borderColor: 'rgba(244,63,94,0.4)' }}
                   whileTap={{ scale: 0.95 }}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.625rem 1.5rem',
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    fontSize: '10px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    color: '#64748b',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
                 >
                   Cancel Search
                 </motion.button>
@@ -367,12 +410,151 @@ export default function Lobby({
           </div>
         </footer>
 
+        {/* Permission Dialog */}
         <AnimatePresence>
-          {/* Gender selection sheet removed - no longer rendered */}
-          {/* {showGenderSheet && (
-            ... gender sheet content ...
-          )} */}
+          {showPermissionDialog && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overlay"
+              onClick={() => setShowPermissionDialog(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 'calc(100% - 3rem)',
+                  maxWidth: '320px',
+                  backgroundColor: '#0c0d0e',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '1.5rem',
+                  padding: '2rem',
+                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                  zIndex: 101,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ 
+                  width: '4rem', 
+                  height: '4rem', 
+                  borderRadius: '1.25rem', 
+                  backgroundColor: 'rgba(59,130,246,0.1)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  marginBottom: '1.5rem',
+                  marginLeft: 'auto',
+                  marginRight: 'auto'
+                }}>
+                  <Camera size={28} color="#60a5fa" />
+                </div>
 
+                <h3 style={{ 
+                  fontSize: '1.125rem', 
+                  fontWeight: 900, 
+                  color: '#fff', 
+                  textAlign: 'center',
+                  marginBottom: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '-0.025em'
+                }}>
+                  Camera & Mic Required
+                </h3>
+
+                <p style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#94a3b8', 
+                  textAlign: 'center',
+                  lineHeight: '1.625',
+                  marginBottom: '1.5rem'
+                }}>
+                  Orey needs camera and microphone access to connect you with others. This is essential for the full experience.
+                </p>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '0.75rem',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '0.75rem',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    textAlign: 'center'
+                  }}>
+                    <Camera size={20} color="#60a5fa" style={{ margin: '0 auto 0.25rem' }} />
+                    <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Camera</p>
+                  </div>
+                  <div style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '0.75rem',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    textAlign: 'center'
+                  }}>
+                    <Mic size={20} color="#a78bfa" style={{ margin: '0 auto 0.25rem' }} />
+                    <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Microphone</p>
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={requestAndroidPermissions}
+                  disabled={waitingForPermission}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem',
+                    borderRadius: '0.75rem',
+                    border: 'none',
+                    backgroundColor: waitingForPermission ? 'rgba(59,130,246,0.3)' : '#2563eb',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    cursor: waitingForPermission ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                    marginBottom: '0.75rem'
+                  }}
+                >
+                  {waitingForPermission ? 'Waiting...' : 'Grant Permissions'}
+                </motion.button>
+
+                <button
+                  onClick={() => setShowPermissionDialog(false)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.75rem',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: 'transparent',
+                    color: '#64748b',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Notifications Sheet */}
+        <AnimatePresence>
           {showNotifSheet && (
             <motion.div
               initial={{ opacity: 0 }}
