@@ -284,33 +284,29 @@
   color: #060708;
 }
 
-/* Preferences button */
-.prefsBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #64748b;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  margin-left: auto;
-  margin-right: auto;
-  transition: color 0.2s;
-}
-
-.prefsBtn:hover {
-  color: #ffffff;
-}
-
-.prefsLabel {
+/* Settings button for denied permissions */
+.settingsBtn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  background-color: rgba(244, 63, 94, 0.1);
+  color: #fb7185;
   font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s ease;
 }
 
-.prefsValue {
-  color: #3b82f6;
+.settingsBtn:hover {
+  background-color: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.5);
+}
+
+.settingsBtn:active {
+  transform: scale(0.97);
 }
 
 /* Searching State */
@@ -575,129 +571,6 @@
 }
 
 /* ============================================ */
-/* PERMISSION DIALOG STYLES */
-/* ============================================ */
-
-.permissionDialog {
-  width: 100%;
-  max-width: 320px;
-  background-color: #0c0d0e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
-  padding: 2rem;
-  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.7);
-}
-
-.permissionDialogDenied {
-  border-color: rgba(244, 63, 94, 0.25);
-}
-
-.permissionIcon {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-}
-
-.permissionIconDenied {
-  background-color: rgba(244, 63, 94, 0.1);
-}
-
-.permissionIconDefault {
-  background-color: rgba(59, 130, 246, 0.1);
-}
-
-.permissionTitle {
-  font-size: 1.125rem;
-  font-weight: 900;
-  color: #ffffff;
-  text-align: center;
-  margin-bottom: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: -0.025em;
-}
-
-.permissionDescription {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  text-align: center;
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-}
-
-.permissionFeatures {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.permissionFeature {
-  flex: 1;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.05);
-  text-align: center;
-}
-
-.permissionFeatureIcon {
-  margin: 0 auto 0.35rem;
-  display: block;
-}
-
-.permissionFeatureLabel {
-  font-size: 8px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.permissionButton {
-  width: 100%;
-  padding: 0.875rem;
-  border-radius: 0.75rem;
-  border: none;
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  margin-bottom: 0.75rem;
-  transition: background-color 0.2s;
-}
-
-.permissionButtonRequesting {
-  background-color: rgba(59, 130, 246, 0.3);
-  cursor: wait;
-}
-
-.permissionButtonDenied {
-  background-color: #dc2626;
-}
-
-.permissionButtonDefault {
-  background-color: #2563eb;
-}
-
-.permissionButtonCancel {
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: transparent;
-  color: #64748b;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
-
-/* ============================================ */
 /* ANIMATIONS */
 /* ============================================ */
 
@@ -752,19 +625,15 @@
     font-size: 1.25rem;
   }
 
-  .permissionDialog {
-    max-width: 280px;
-    padding: 1.5rem;
+  .settingsBtn {
+    padding: 0.625rem 1.25rem;
+    font-size: 9px;
   }
 }
 
 @media (min-width: 768px) {
   .container {
     max-width: 32rem;
-  }
-
-  .permissionDialog {
-    max-width: 360px;
   }
 }
 
@@ -817,8 +686,7 @@
 .connectBtn:focus-visible,
 .bellBtn:focus-visible,
 .cancelSearchBtn:focus-visible,
-.permissionButton:focus-visible,
-.permissionButtonCancel:focus-visible {
+.settingsBtn:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
@@ -832,8 +700,7 @@
   .bellBtn,
   .connectBtn,
   .cancelSearchBtn,
-  .permissionButton,
-  .permissionButtonCancel {
+  .settingsBtn {
     min-height: 44px;
     min-width: 44px;
   }
