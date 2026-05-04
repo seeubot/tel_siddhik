@@ -2,27 +2,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, Globe, ShieldCheck, Camera, Mic
+  ArrowRight, Bell, ShieldCheck, Camera, Mic
 } from 'lucide-react';
 import './styles.css';
-
-const MaleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="14" r="5" />
-    <line x1="20" y1="4" x2="13.5" y2="10.5" />
-    <line x1="20" y1="4" x2="16" y2="4" />
-    <line x1="20" y1="4" x2="20" y2="8" />
-  </svg>
-);
-
-const FemaleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="5" />
-    <line x1="12" y1="13" x2="12" y2="22" />
-    <line x1="9" y1="18" x2="15" y2="18" />
-    <line x1="7" y1="2" x2="17" y2="2" />
-  </svg>
-);
 
 const LOVE_PICKUP_LINES = [
   "Are you a camera? Because every time I look at you, I smile.",
@@ -34,28 +16,207 @@ const LOVE_PICKUP_LINES = [
   "If beauty were time, you'd be an eternity."
 ];
 
+// ─── Permission States ────────────────────────────────────────────────────────
+// idle       → dialog not shown
+// requesting → waiting for native/browser response
+// denied     → user denied, show retry/settings prompt
+// granted    → permissions OK
+const PERM = { IDLE: 'idle', REQUESTING: 'requesting', DENIED: 'denied', GRANTED: 'granted' };
+
+function resolvePermState(granted) {
+  return granted ? PERM.GRANTED : PERM.DENIED;
+}
+
+// ─── Permission Dialog ────────────────────────────────────────────────────────
+function PermissionDialog({ state, onGrant, onDismiss }) {
+  const isDenied = state === PERM.DENIED;
+  const isRequesting = state === PERM.REQUESTING;
+
+  return (
+    // Portal-style overlay: uses flex centering, NOT absolute + transform hack
+    <motion.div
+      key="perm-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.5rem',
+      }}
+      onClick={onDismiss}
+    >
+      <motion.div
+        key="perm-dialog"
+        initial={{ scale: 0.88, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0, y: 8 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '320px',
+          backgroundColor: '#0c0d0e',
+          border: isDenied
+            ? '1px solid rgba(244,63,94,0.25)'
+            : '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '1.5rem',
+          padding: '2rem',
+          boxShadow: '0 32px 64px -12px rgba(0,0,0,0.7)',
+        }}
+      >
+        {/* Icon */}
+        <div style={{
+          width: '4rem',
+          height: '4rem',
+          borderRadius: '1.25rem',
+          backgroundColor: isDenied ? 'rgba(244,63,94,0.1)' : 'rgba(59,130,246,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 1.5rem',
+        }}>
+          {isDenied
+            ? <Camera size={28} color="#fb7185" />
+            : <Camera size={28} color="#60a5fa" />
+          }
+        </div>
+
+        {/* Title */}
+        <h3 style={{
+          fontSize: '1.125rem',
+          fontWeight: 900,
+          color: '#fff',
+          textAlign: 'center',
+          marginBottom: '0.75rem',
+          textTransform: 'uppercase',
+          letterSpacing: '-0.025em',
+        }}>
+          {isDenied ? 'Permissions Denied' : 'Camera & Mic Required'}
+        </h3>
+
+        {/* Description */}
+        <p style={{
+          fontSize: '0.75rem',
+          color: '#94a3b8',
+          textAlign: 'center',
+          lineHeight: 1.7,
+          marginBottom: '1.5rem',
+        }}>
+          {isDenied
+            ? 'You denied camera and microphone access. Please grant permissions in your device settings to use Orey.'
+            : 'Orey needs camera and microphone access to connect you with others. This is essential for the full experience.'
+          }
+        </p>
+
+        {/* Camera / Mic icons row */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          {[
+            { Icon: Camera, label: 'Camera', color: '#60a5fa' },
+            { Icon: Mic,    label: 'Microphone', color: '#a78bfa' },
+          ].map(({ Icon, label, color }) => (
+            <div key={label} style={{
+              flex: 1,
+              padding: '0.75rem',
+              borderRadius: '0.75rem',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              textAlign: 'center',
+            }}>
+              <Icon size={20} color={color} style={{ margin: '0 auto 0.35rem', display: 'block' }} />
+              <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Primary action */}
+        <motion.button
+          whileHover={!isRequesting ? { scale: 1.02 } : {}}
+          whileTap={!isRequesting ? { scale: 0.97 } : {}}
+          onClick={onGrant}
+          disabled={isRequesting}
+          style={{
+            width: '100%',
+            padding: '0.875rem',
+            borderRadius: '0.75rem',
+            border: 'none',
+            backgroundColor: isRequesting
+              ? 'rgba(59,130,246,0.3)'
+              : isDenied ? '#dc2626' : '#2563eb',
+            color: '#fff',
+            fontSize: '0.75rem',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            cursor: isRequesting ? 'wait' : 'pointer',
+            marginBottom: '0.75rem',
+            transition: 'background-color 0.2s',
+          }}
+        >
+          {isRequesting
+            ? 'Waiting for permission…'
+            : isDenied
+              ? 'Try Again'
+              : 'Grant Permissions'
+          }
+        </motion.button>
+
+        {/* Cancel */}
+        <button
+          onClick={onDismiss}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            borderRadius: '0.75rem',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backgroundColor: 'transparent',
+            color: '#64748b',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            cursor: 'pointer',
+          }}
+        >
+          {isDenied ? 'Cancel' : 'Not Now'}
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Main Lobby ───────────────────────────────────────────────────────────────
 export default function Lobby({
   oreyId = 'OREY-X7R2P',
   searching = false,
   matchStage = null,
   matchTimer = 3,
-  onDiscover = () => console.log("Discover triggered"),
-  onCancelSearch = () => console.log("Search cancelled"),
-  onConnectById = (id) => console.log("Connecting to", id),
+  onDiscover = () => console.log('Discover triggered'),
+  onCancelSearch = () => console.log('Search cancelled'),
+  onConnectById = (id) => console.log('Connecting to', id),
   gender = null,
-  onSetGender = (g) => console.log("Gender set to", g),
+  onSetGender = (g) => console.log('Gender set to', g),
   notifications = [],
   unreadCount = 2,
   onViewNotifications = () => {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
-  const [showGenderSheet, setShowGenderSheet] = useState(false);
   const [showNotifSheet, setShowNotifSheet] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const [hasPermissions, setHasPermissions] = useState(false);
-  const [waitingForPermission, setWaitingForPermission] = useState(false);
+
+  // Permission state machine
+  const [permState, setPermState] = useState(PERM.IDLE);
+  const [showPermDialog, setShowPermDialog] = useState(false);
 
   const controls = useAnimation();
   const x = useMotionValue(0);
@@ -64,31 +225,28 @@ export default function Lobby({
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
-  // Check permissions on mount and setup callback
+  // ── Bootstrap: check permissions + wire Android callback ──────────────────
   useEffect(() => {
     checkPermissions();
-    
-    // Setup callback for permission results from Android
+
     if (typeof window !== 'undefined') {
+      // Android native bridge calls this after requestPermissions()
       window.onPermissionResult = (granted) => {
-        setWaitingForPermission(false);
+        const next = resolvePermState(granted);
+        setPermState(next);
         if (granted) {
-          setHasPermissions(true);
-          setShowPermissionDialog(false);
-        } else {
-          setHasPermissions(false);
+          setShowPermDialog(false);
         }
+        // If denied: keep dialog open and show the denied variant
       };
     }
-    
+
     return () => {
-      if (typeof window !== 'undefined') {
-        delete window.onPermissionResult;
-      }
+      if (typeof window !== 'undefined') delete window.onPermissionResult;
     };
   }, []);
 
-  // Reset slider when switching back from searching
+  // Reset slider whenever we leave searching mode
   useEffect(() => {
     if (!searching) {
       x.set(0);
@@ -96,59 +254,83 @@ export default function Lobby({
     }
   }, [searching, x, controls]);
 
+  // Rotate pickup lines
   useEffect(() => {
-    const interval = setInterval(() => {
+    const id = setInterval(() => {
       setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
     }, 4500);
-    return () => clearInterval(interval);
+    return () => clearInterval(id);
   }, []);
 
+  // ── Permission helpers ─────────────────────────────────────────────────────
   const checkPermissions = useCallback(() => {
-    // Check if OreyNative bridge is available (Android WebView)
     if (typeof window !== 'undefined' && window.OreyNative) {
       const granted = window.OreyNative.hasPermissions();
-      setHasPermissions(granted);
-    } else {
-      // Fallback for web/browser testing
-      if (navigator?.mediaDevices?.getUserMedia) {
-        Promise.all([
-          navigator.permissions?.query({ name: 'camera' }),
-          navigator.permissions?.query({ name: 'microphone' })
-        ]).then(([cam, mic]) => {
-          setHasPermissions(cam?.state === 'granted' && mic?.state === 'granted');
-        }).catch(() => {
-          setHasPermissions(false);
-        });
-      }
+      setPermState(resolvePermState(granted));
+    } else if (navigator?.permissions?.query) {
+      Promise.all([
+        navigator.permissions.query({ name: 'camera' }),
+        navigator.permissions.query({ name: 'microphone' }),
+      ])
+        .then(([cam, mic]) => {
+          const granted = cam.state === 'granted' && mic.state === 'granted';
+          setPermState(resolvePermState(granted));
+        })
+        .catch(() => setPermState(PERM.DENIED));
     }
   }, []);
 
-  const requestAndroidPermissions = useCallback(() => {
+  const requestPermissions = useCallback(() => {
+    setPermState(PERM.REQUESTING);
+
     if (typeof window !== 'undefined' && window.OreyNative) {
-      setWaitingForPermission(true);
+      // Android: result arrives via window.onPermissionResult callback
       window.OreyNative.requestPermissions();
+    } else if (navigator?.mediaDevices?.getUserMedia) {
+      // Browser fallback
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((t) => t.stop());
+          setPermState(PERM.GRANTED);
+          setShowPermDialog(false);
+        })
+        .catch(() => {
+          setPermState(PERM.DENIED);
+          // Keep dialog open so user sees the denied state
+        });
     } else {
-      // Fallback for web/browser - request directly
-      if (navigator?.mediaDevices?.getUserMedia) {
-        setWaitingForPermission(true);
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then((stream) => {
-            stream.getTracks().forEach(track => track.stop());
-            setHasPermissions(true);
-            setWaitingForPermission(false);
-            setShowPermissionDialog(false);
-          })
-          .catch(() => {
-            setHasPermissions(false);
-            setWaitingForPermission(false);
-          });
-      }
+      setPermState(PERM.DENIED);
     }
   }, []);
 
+  const handlePermissionDismiss = useCallback(() => {
+    setShowPermDialog(false);
+    // Reset to idle so re-opening the dialog starts fresh
+    if (permState !== PERM.GRANTED) setPermState(PERM.IDLE);
+  }, [permState]);
+
+  // ── Slider ─────────────────────────────────────────────────────────────────
+  const handleDragEnd = useCallback(() => {
+    if (x.get() > maxDrag * 0.8) {
+      if (permState === PERM.GRANTED) {
+        onDiscover();
+      } else {
+        setShowPermDialog(true);
+        // If we know they're denied, show denied variant immediately
+        if (permState === PERM.IDLE) {
+          // Will become DENIED or GRANTED after checkPermissions re-runs
+          checkPermissions();
+        }
+      }
+    }
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
+  }, [x, maxDrag, permState, onDiscover, controls, checkPermissions]);
+
+  // ── Misc helpers ───────────────────────────────────────────────────────────
   const copyId = useCallback(() => {
     if (!oreyId || oreyId.includes('·')) return;
-    navigator.clipboard.writeText(oreyId).then(() => {
+    navigator.clipboard?.writeText(oreyId).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -162,20 +344,6 @@ export default function Lobby({
     }
   }, [targetId, onConnectById]);
 
-  const handleDragEnd = useCallback(() => {
-    if (x.get() > maxDrag * 0.8) {
-      // Check permissions before allowing discovery
-      if (hasPermissions) {
-        onDiscover();
-      } else {
-        // Show permission dialog
-        setShowPermissionDialog(true);
-      }
-    }
-    // Always spring back
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
-  }, [x, maxDrag, onDiscover, controls, hasPermissions]);
-
   const getSearchStatusText = () => {
     if (matchStage === 'gender') {
       return `Matching ${gender === 'male' ? 'Males' : 'Females'} · ${matchTimer}s`;
@@ -183,6 +351,7 @@ export default function Lobby({
     return 'Matching Anyone';
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="root">
       <div className="bgGradient">
@@ -191,6 +360,7 @@ export default function Lobby({
       </div>
 
       <div className="container">
+        {/* ── Header ── */}
         <header className="header">
           <div className="flex flex-col">
             <h1 className="logo">
@@ -232,6 +402,7 @@ export default function Lobby({
           </button>
         </header>
 
+        {/* ── Main / Slider / Searching ── */}
         <main className="main">
           <AnimatePresence mode="wait">
             {!searching ? (
@@ -280,30 +451,20 @@ export default function Lobby({
               >
                 <div className="pulseContainer">
                   <motion.div
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.4, 0.1, 0.4],
-                    }}
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0.1, 0.4] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                     className="pulseRing"
                     style={{ width: 160, height: 160 }}
                   />
                   <motion.div
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [0.3, 0.05, 0.3],
-                    }}
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.05, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
                     className="pulseRing"
                     style={{ width: 200, height: 200 }}
                   />
-                  
                   <motion.div
-                    animate={{ 
-                      scale: [1, 1.08, 1],
-                      rotate: [0, 5, -5, 0],
-                    }}
-                    transition={{ 
+                    animate={{ scale: [1, 1.08, 1], rotate: [0, 5, -5, 0] }}
+                    transition={{
                       scale: { duration: 2, repeat: Infinity },
                       rotate: { duration: 3, repeat: Infinity },
                     }}
@@ -340,11 +501,7 @@ export default function Lobby({
 
                   <div className="statusLabel">
                     <span className="statusDot" />
-                    <motion.span
-                      key={matchStage + matchTimer}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
+                    <motion.span key={matchStage + matchTimer} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                       {getSearchStatusText()}
                     </motion.span>
                   </div>
@@ -356,7 +513,7 @@ export default function Lobby({
                   transition={{ delay: 0.4 }}
                   onClick={onCancelSearch}
                   className="cancelSearchBtn"
-                  whileHover={{ scale: 1.05, color: '#f43f5e', borderColor: 'rgba(244,63,94,0.4)' }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   Cancel Search
@@ -366,6 +523,7 @@ export default function Lobby({
           </AnimatePresence>
         </main>
 
+        {/* ── Footer ── */}
         <footer className="footer">
           <div className="idRow">
             <div onClick={copyId} className="idBlock">
@@ -409,220 +567,94 @@ export default function Lobby({
             </button>
           </div>
         </footer>
-
-        {/* Permission Dialog */}
-        <AnimatePresence>
-          {showPermissionDialog && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overlay"
-              onClick={() => setShowPermissionDialog(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: 'calc(100% - 3rem)',
-                  maxWidth: '320px',
-                  backgroundColor: '#0c0d0e',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '1.5rem',
-                  padding: '2rem',
-                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                  zIndex: 101,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{ 
-                  width: '4rem', 
-                  height: '4rem', 
-                  borderRadius: '1.25rem', 
-                  backgroundColor: 'rgba(59,130,246,0.1)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  marginBottom: '1.5rem',
-                  marginLeft: 'auto',
-                  marginRight: 'auto'
-                }}>
-                  <Camera size={28} color="#60a5fa" />
-                </div>
-
-                <h3 style={{ 
-                  fontSize: '1.125rem', 
-                  fontWeight: 900, 
-                  color: '#fff', 
-                  textAlign: 'center',
-                  marginBottom: '0.75rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '-0.025em'
-                }}>
-                  Camera & Mic Required
-                </h3>
-
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: '#94a3b8', 
-                  textAlign: 'center',
-                  lineHeight: '1.625',
-                  marginBottom: '1.5rem'
-                }}>
-                  Orey needs camera and microphone access to connect you with others. This is essential for the full experience.
-                </p>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '0.75rem',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '0.75rem',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    textAlign: 'center'
-                  }}>
-                    <Camera size={20} color="#60a5fa" style={{ margin: '0 auto 0.25rem' }} />
-                    <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Camera</p>
-                  </div>
-                  <div style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '0.75rem',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    textAlign: 'center'
-                  }}>
-                    <Mic size={20} color="#a78bfa" style={{ margin: '0 auto 0.25rem' }} />
-                    <p style={{ fontSize: '8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Microphone</p>
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={requestAndroidPermissions}
-                  disabled={waitingForPermission}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem',
-                    borderRadius: '0.75rem',
-                    border: 'none',
-                    backgroundColor: waitingForPermission ? 'rgba(59,130,246,0.3)' : '#2563eb',
-                    color: '#fff',
-                    fontSize: '0.75rem',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    cursor: waitingForPermission ? 'wait' : 'pointer',
-                    transition: 'all 0.2s',
-                    marginBottom: '0.75rem'
-                  }}
-                >
-                  {waitingForPermission ? 'Waiting...' : 'Grant Permissions'}
-                </motion.button>
-
-                <button
-                  onClick={() => setShowPermissionDialog(false)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '0.75rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backgroundColor: 'transparent',
-                    color: '#64748b',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Notifications Sheet */}
-        <AnimatePresence>
-          {showNotifSheet && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overlay"
-              onClick={() => setShowNotifSheet(false)}
-            >
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="sheet"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="handle" />
-                <div className="flex justify-between items-center mb-6">
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff' }}>
-                    Notifications
-                  </h3>
-                  <button
-                    onClick={() => setShowNotifSheet(false)}
-                    style={{ padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '9999px', color: '#64748b', border: 'none', cursor: 'pointer' }}
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                <div className="overflow-y-auto space-y-2 pr-2">
-                  {notifications.length === 0 ? (
-                    <div style={{ padding: '3rem 0', textAlign: 'center', opacity: 0.3 }}>
-                      <Bell size={40} style={{ margin: '0 auto 0.5rem' }} />
-                      <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                        No activity yet
-                      </p>
-                    </div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className="notifItem"
-                        style={{
-                          backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
-                          borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
-                        }}
-                      >
-                        <div style={{ fontSize: '1.25rem', flexShrink: 0 }}>{n.icon || '✨'}</div>
-                        <div className="flex-1 min-w-0">
-                          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {n.title}
-                          </p>
-                          <p style={{ fontSize: '10px', color: '#64748b', marginTop: '0.25rem', lineHeight: 1.625 }}>
-                            {n.message}
-                          </p>
-                        </div>
-                        {!n.isRead && (
-                          <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '9999px', backgroundColor: '#3b82f6', marginTop: '0.25rem', flexShrink: 0 }} />
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* ── Permission Dialog (rendered outside .container to avoid stacking context issues) ── */}
+      <AnimatePresence>
+        {showPermDialog && permState !== PERM.GRANTED && (
+          <PermissionDialog
+            state={permState}
+            onGrant={requestPermissions}
+            onDismiss={handlePermissionDismiss}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Notifications Sheet ── */}
+      <AnimatePresence>
+        {showNotifSheet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 150,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(12px)',
+            }}
+            onClick={() => setShowNotifSheet(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="handle" />
+              <div className="flex justify-between items-center mb-6">
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff' }}>
+                  Notifications
+                </h3>
+                <button
+                  onClick={() => setShowNotifSheet(false)}
+                  style={{ padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '9999px', color: '#64748b', border: 'none', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="overflow-y-auto space-y-2 pr-2">
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '3rem 0', textAlign: 'center', opacity: 0.3 }}>
+                    <Bell size={40} style={{ margin: '0 auto 0.5rem' }} />
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      No activity yet
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className="notifItem"
+                      style={{
+                        backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
+                        borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
+                      }}
+                    >
+                      <div style={{ fontSize: '1.25rem', flexShrink: 0 }}>{n.icon || '✨'}</div>
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {n.title}
+                        </p>
+                        <p style={{ fontSize: '10px', color: '#64748b', marginTop: '0.25rem', lineHeight: 1.625 }}>
+                          {n.message}
+                        </p>
+                      </div>
+                      {!n.isRead && (
+                        <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '9999px', backgroundColor: '#3b82f6', marginTop: '0.25rem', flexShrink: 0 }} />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
