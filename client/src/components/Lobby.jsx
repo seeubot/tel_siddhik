@@ -16,18 +16,12 @@ const LOVE_PICKUP_LINES = [
   "If beauty were time, you'd be an eternity."
 ];
 
-// ─── Permission States ────────────────────────────────────────────────────────
-// idle       → dialog not shown
-// requesting → waiting for native/browser response
-// denied     → user denied, show retry/settings prompt
-// granted    → permissions OK
 const PERM = { IDLE: 'idle', REQUESTING: 'requesting', DENIED: 'denied', GRANTED: 'granted' };
 
 function resolvePermState(granted) {
   return granted ? PERM.GRANTED : PERM.DENIED;
 }
 
-// ─── Permission Dialog (Only shown after denial or as fallback) ────────────────
 function PermissionDialog({ state, onGrant, onDismiss }) {
   const isDenied = state === PERM.DENIED;
   const isRequesting = state === PERM.REQUESTING;
@@ -72,7 +66,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           boxShadow: '0 32px 64px -12px rgba(0,0,0,0.7)',
         }}
       >
-        {/* Icon */}
         <div style={{
           width: '4rem',
           height: '4rem',
@@ -89,7 +82,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           }
         </div>
 
-        {/* Title */}
         <h3 style={{
           fontSize: '1.125rem',
           fontWeight: 900,
@@ -102,7 +94,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           {isDenied ? 'Permissions Denied' : 'Camera & Mic Required'}
         </h3>
 
-        {/* Description */}
         <p style={{
           fontSize: '0.75rem',
           color: '#94a3b8',
@@ -116,7 +107,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           }
         </p>
 
-        {/* Camera / Mic icons row */}
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
           {[
             { Icon: Camera, label: 'Camera', color: '#60a5fa' },
@@ -137,7 +127,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           ))}
         </div>
 
-        {/* Primary action */}
         <motion.button
           whileHover={!isRequesting ? { scale: 1.02 } : {}}
           whileTap={!isRequesting ? { scale: 0.97 } : {}}
@@ -169,7 +158,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
           }
         </motion.button>
 
-        {/* Cancel */}
         <button
           onClick={onDismiss}
           style={{
@@ -193,7 +181,6 @@ function PermissionDialog({ state, onGrant, onDismiss }) {
   );
 }
 
-// ─── Main Lobby ───────────────────────────────────────────────────────────────
 export default function Lobby({
   oreyId = 'OREY-X7R2P',
   searching = false,
@@ -213,7 +200,6 @@ export default function Lobby({
   const [showNotifSheet, setShowNotifSheet] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
 
-  // Permission state machine
   const [permState, setPermState] = useState(PERM.IDLE);
   const [showPermDialog, setShowPermDialog] = useState(false);
 
@@ -224,23 +210,18 @@ export default function Lobby({
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
-  // ── Bootstrap: check permissions + wire Android callback ──────────────────
   useEffect(() => {
-    // Check current permission state on mount
     checkPermissions();
 
     if (typeof window !== 'undefined') {
-      // Android native bridge calls this after the system permission dialog
       window.onPermissionResult = (granted) => {
         const next = resolvePermState(granted);
         setPermState(next);
         
         if (granted) {
-          // Permissions granted - hide any dialog and proceed
           setShowPermDialog(false);
           onDiscover();
         } else {
-          // Permissions denied - show our custom dialog explaining next steps
           setShowPermDialog(true);
         }
       };
@@ -251,7 +232,6 @@ export default function Lobby({
     };
   }, []);
 
-  // Reset slider whenever we leave searching mode
   useEffect(() => {
     if (!searching) {
       x.set(0);
@@ -259,7 +239,6 @@ export default function Lobby({
     }
   }, [searching, x, controls]);
 
-  // Rotate pickup lines
   useEffect(() => {
     const id = setInterval(() => {
       setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
@@ -267,14 +246,11 @@ export default function Lobby({
     return () => clearInterval(id);
   }, []);
 
-  // ── Permission helpers ─────────────────────────────────────────────────────
   const checkPermissions = useCallback(() => {
     if (typeof window !== 'undefined' && window.OreyNative) {
-      // Native Android - use the native bridge to check
       const granted = window.OreyNative.hasPermissions();
       setPermState(resolvePermState(granted));
     } else if (navigator?.permissions?.query) {
-      // Browser - query permissions
       Promise.all([
         navigator.permissions.query({ name: 'camera' }),
         navigator.permissions.query({ name: 'microphone' }),
@@ -284,11 +260,9 @@ export default function Lobby({
           setPermState(resolvePermState(granted));
         })
         .catch(() => {
-          // Can't query permissions - assume we need to request
           setPermState(PERM.IDLE);
         });
     } else {
-      // No permission API - assume not granted
       setPermState(PERM.IDLE);
     }
   }, []);
@@ -297,32 +271,53 @@ export default function Lobby({
     setPermState(PERM.REQUESTING);
 
     if (typeof window !== 'undefined' && window.OreyNative) {
-      // ANDROID NATIVE: This triggers the SYSTEM permission dialog
-      // Result will come through window.onPermissionResult callback
       window.OreyNative.requestPermissions();
-      // Don't show our custom dialog - let the system dialog appear
       setShowPermDialog(false);
       
-    } else if (navigator?.mediaDevices?.getUserMedia) {
-      // BROWSER: This triggers the browser's native permission popup
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then((stream) => {
-          // Permission granted!
-          stream.getTracks().forEach((t) => t.stop());
-          setPermState(PERM.GRANTED);
-          setShowPermDialog(false);
-          onDiscover();
+    } else if (navigator?.permissions?.query) {
+      Promise.all([
+        navigator.permissions.query({ name: 'camera' }),
+        navigator.permissions.query({ name: 'microphone' }),
+      ])
+        .then(([cam, mic]) => {
+          if (cam.state === 'granted' && mic.state === 'granted') {
+            setPermState(PERM.GRANTED);
+            setShowPermDialog(false);
+            onDiscover();
+          } else if (cam.state === 'prompt' || mic.state === 'prompt') {
+            return navigator.mediaDevices
+              .getUserMedia({ video: true, audio: true })
+              .then((stream) => {
+                stream.getTracks().forEach((t) => t.stop());
+                setPermState(PERM.GRANTED);
+                setShowPermDialog(false);
+                onDiscover();
+              })
+              .catch((err) => {
+                console.log('Permission error:', err.name);
+                setPermState(PERM.DENIED);
+                setShowPermDialog(true);
+              });
+          } else {
+            setPermState(PERM.DENIED);
+            setShowPermDialog(true);
+          }
         })
-        .catch((err) => {
-          // Permission denied or error
-          console.log('Permission error:', err.name);
-          setPermState(PERM.DENIED);
-          // Only show our custom dialog after the browser's dialog is dismissed
-          setShowPermDialog(true);
+        .catch(() => {
+          navigator.mediaDevices
+            .getUserMedia({ video: true, audio: true })
+            .then((stream) => {
+              stream.getTracks().forEach((t) => t.stop());
+              setPermState(PERM.GRANTED);
+              setShowPermDialog(false);
+              onDiscover();
+            })
+            .catch((err) => {
+              setPermState(PERM.DENIED);
+              setShowPermDialog(true);
+            });
         });
     } else {
-      // Fallback for devices without mediaDevices API
       setPermState(PERM.DENIED);
       setShowPermDialog(true);
     }
@@ -330,28 +325,22 @@ export default function Lobby({
 
   const handlePermissionDismiss = useCallback(() => {
     setShowPermDialog(false);
-    // Reset to idle so re-opening the dialog starts fresh
     if (permState !== PERM.GRANTED) setPermState(PERM.IDLE);
   }, [permState]);
 
-  // ── Slider ─────────────────────────────────────────────────────────────────
   const handleDragEnd = useCallback(() => {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
-        // Already have permissions - proceed directly
         onDiscover();
       } else if (permState === PERM.DENIED) {
-        // Previously denied - show custom dialog with settings/retry options
         setShowPermDialog(true);
       } else {
-        // IDLE or REQUESTING - trigger system permission dialog
         requestPermissions();
       }
     }
     controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
   }, [x, maxDrag, permState, onDiscover, controls, requestPermissions]);
 
-  // ── Misc helpers ───────────────────────────────────────────────────────────
   const copyId = useCallback(() => {
     if (!oreyId || oreyId.includes('·')) return;
     navigator.clipboard?.writeText(oreyId).then(() => {
@@ -375,7 +364,6 @@ export default function Lobby({
     return 'Matching Anyone';
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="root">
       <div className="bgGradient">
@@ -384,7 +372,6 @@ export default function Lobby({
       </div>
 
       <div className="container">
-        {/* ── Header ── */}
         <header className="header">
           <div className="flex flex-col">
             <h1 className="logo">
@@ -426,7 +413,6 @@ export default function Lobby({
           </button>
         </header>
 
-        {/* ── Main / Slider / Searching ── */}
         <main className="main">
           <AnimatePresence mode="wait">
             {!searching ? (
@@ -547,7 +533,6 @@ export default function Lobby({
           </AnimatePresence>
         </main>
 
-        {/* ── Footer ── */}
         <footer className="footer">
           <div className="idRow">
             <div onClick={copyId} className="idBlock">
@@ -593,7 +578,6 @@ export default function Lobby({
         </footer>
       </div>
 
-      {/* ── Permission Dialog - Only shown when user has denied or needs explanation ── */}
       <AnimatePresence>
         {showPermDialog && permState !== PERM.GRANTED && (
           <PermissionDialog
@@ -604,7 +588,6 @@ export default function Lobby({
         )}
       </AnimatePresence>
 
-      {/* ── Notifications Sheet ── */}
       <AnimatePresence>
         {showNotifSheet && (
           <motion.div
