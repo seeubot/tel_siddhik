@@ -283,7 +283,7 @@
   color: #060708;
 }
 
-/* Preferences button - kept for reference, hidden via JSX */
+/* Preferences button - hidden but kept for reference */
 .prefsBtn {
   display: flex;
   align-items: center;
@@ -570,4 +570,349 @@
 
 .notifItem:hover {
   background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ============================================ */
+/* PERMISSION DIALOG STYLES */
+/* ============================================ */
+
+.permissionDialogOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.permissionDialog {
+  width: calc(100% - 3rem);
+  max-width: 320px;
+  background-color: #0c0d0e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  z-index: 101;
+}
+
+.permissionIconWrapper {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
+  background-color: rgba(59, 130, 246, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.permissionTitle {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+}
+
+.permissionDescription {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.625;
+  margin-bottom: 1.5rem;
+}
+
+.permissionIconsRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.permissionIconBox {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+.permissionIconLabel {
+  font-size: 8px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.25rem;
+}
+
+.grantButton {
+  width: 100%;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.grantButton:hover {
+  background-color: #1d4ed8;
+  transform: scale(1.02);
+}
+
+.grantButton:active {
+  transform: scale(0.98);
+}
+
+.grantButton:disabled {
+  background-color: rgba(59, 130, 246, 0.3);
+  cursor: wait;
+  transform: none;
+}
+
+.cancelButton {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: transparent;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton:hover {
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================ */
+/* ANDROID PERMISSION DENIED DIALOG */
+/* ============================================ */
+
+.permissionDeniedOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 110;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.permissionDeniedDialog {
+  width: calc(100% - 3rem);
+  max-width: 340px;
+  background-color: #0c0d0e;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  z-index: 111;
+}
+
+.permissionDeniedIcon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
+  background-color: rgba(244, 63, 94, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.permissionDeniedTitle {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+}
+
+.permissionDeniedDescription {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.625;
+  margin-bottom: 1.5rem;
+}
+
+.permissionDeniedButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.retryButton {
+  width: 100%;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retryButton:hover {
+  background-color: #1d4ed8;
+}
+
+.exitButton {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  background-color: transparent;
+  color: #f43f5e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exitButton:hover {
+  background-color: rgba(244, 63, 94, 0.05);
+}
+
+/* ============================================ */
+/* ANIMATIONS */
+/* ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.permissionDialogEnter {
+  animation: scaleIn 0.3s ease-out;
+}
+
+.permissionDialogExit {
+  animation: scaleIn 0.2s ease-in reverse;
+}
+
+.permissionOverlayEnter {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.permissionOverlayExit {
+  animation: fadeIn 0.2s ease-in reverse;
+}
+
+/* ============================================ */
+/* RESPONSIVE ADJUSTMENTS */
+/* ============================================ */
+
+@media (max-width: 360px) {
+  .permissionDialog {
+    width: calc(100% - 2rem);
+    padding: 1.5rem;
+  }
+  
+  .permissionTitle {
+    font-size: 1rem;
+  }
+  
+  .permissionDescription {
+    font-size: 0.7rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .permissionDialog {
+    max-width: 360px;
+  }
+}
+
+/* ============================================ */
+/* DARK MODE SUPPORT (System) */
+/* ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .permissionDialog {
+    background-color: #0c0d0e;
+  }
+}
+
+/* ============================================ */
+/* ACCESSIBILITY */
+/* ============================================ */
+
+.grantButton:focus-visible,
+.cancelButton:focus-visible,
+.retryButton:focus-visible,
+.exitButton:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .permissionDialogEnter,
+  .permissionDialogExit,
+  .permissionOverlayEnter,
+  .permissionOverlayExit {
+    animation: none;
+  }
+  
+  .grantButton,
+  .cancelButton,
+  .retryButton,
+  .exitButton {
+    transition: none;
+  }
 }
