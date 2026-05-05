@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, ShieldCheck, VideoIcon
+  ArrowRight, Bell, ShieldCheck, Settings
 } from 'lucide-react';
 import './styles.css';
 
@@ -16,12 +16,17 @@ const LOVE_PICKUP_LINES = [
   "If beauty were time, you'd be an eternity."
 ];
 
-// Permission states:
-//  IDLE       → unknown / first-time, no dialog shown yet
-//  REQUESTING → system dialog is currently open
-//  GRANTED    → both camera + mic allowed
-//  DENIED     → permanently denied, must go to Settings
-const PERM = { IDLE: 'idle', REQUESTING: 'requesting', DENIED: 'denied', GRANTED: 'granted' };
+// Permission states
+// IDLE       = first time, no dialog shown
+// REQUESTING = system dialog currently open
+// GRANTED    = camera + mic allowed
+// DENIED     = permanently denied, must go to Settings
+const PERM = { 
+  IDLE: 'idle', 
+  REQUESTING: 'requesting', 
+  DENIED: 'denied', 
+  GRANTED: 'granted' 
+};
 
 function resolvePermState(granted) {
   return granted ? PERM.GRANTED : PERM.DENIED;
@@ -54,15 +59,13 @@ export default function Lobby({
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
-  // ─── Mount: read-only permission check + wire up native callback ───
+  // Mount: check permissions + wire native callback
   useEffect(() => {
     checkPermissions();
 
     if (typeof window !== 'undefined') {
-      // Called by MainActivity after the system dialog closes
-      window.onPermissionResult = function(granted) {
-        const next = resolvePermState(granted);
-        setPermState(next);
+      window.onPermissionResult = (granted) => {
+        setPermState(resolvePermState(granted));
         if (granted) {
           onDiscover();
         }
@@ -74,13 +77,13 @@ export default function Lobby({
     };
   }, []);
 
-  // Reset slider when not searching
+  // Reset slider when search stops
   useEffect(() => {
     if (!searching) {
       x.set(0);
       controls.start({ x: 0 });
     }
-  }, [searching, x, controls]);
+  }, [searching]);
 
   // Rotate pickup lines
   useEffect(() => {
@@ -90,57 +93,45 @@ export default function Lobby({
     return () => clearInterval(id);
   }, []);
 
-  // ─── Read-only permission check — never shows a dialog ───
+  // Read-only permission check — never triggers dialog
   const checkPermissions = useCallback(() => {
     if (typeof window !== 'undefined' && window.OreyNative) {
       const granted = window.OreyNative.hasPermissions();
       setPermState(resolvePermState(granted));
-    } else if (navigator && navigator.permissions && navigator.permissions.query) {
+    } else if (navigator?.permissions?.query) {
       Promise.all([
         navigator.permissions.query({ name: 'camera' }),
         navigator.permissions.query({ name: 'microphone' }),
-      ])
-        .then(function(results) {
-          const cam = results[0];
-          const mic = results[1];
-          if (cam.state === 'granted' && mic.state === 'granted') {
-            setPermState(PERM.GRANTED);
-          } else if (cam.state === 'denied' || mic.state === 'denied') {
-            setPermState(PERM.DENIED);
-          } else {
-            // 'prompt' — user hasn't been asked yet
-            setPermState(PERM.IDLE);
-          }
-        })
-        .catch(function() {
+      ]).then(([cam, mic]) => {
+        if (cam.state === 'granted' && mic.state === 'granted') {
+          setPermState(PERM.GRANTED);
+        } else if (cam.state === 'denied' || mic.state === 'denied') {
+          setPermState(PERM.DENIED);
+        } else {
           setPermState(PERM.IDLE);
-        });
+        }
+      }).catch(() => {
+        setPermState(PERM.IDLE);
+      });
     } else {
       setPermState(PERM.IDLE);
     }
   }, []);
 
-  /**
-   * Triggers the native system permission dialog via the JS bridge.
-   * ONLY called from handleDragEnd — never automatically.
-   */
+  // Triggers native dialog — ONLY from slider swipe
   const requestPermissions = useCallback(() => {
     setPermState(PERM.REQUESTING);
 
     if (typeof window !== 'undefined' && window.OreyNative) {
-      // Native bridge handles rationale dialog + system dialog
       window.OreyNative.requestPermissions();
-    } else if (navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // Web fallback (browser preview / desktop testing)
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: true })
-        .then(function(stream) {
-          stream.getTracks().forEach(function(t) { t.stop(); });
+    } else if (navigator?.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((t) => t.stop());
           setPermState(PERM.GRANTED);
           onDiscover();
         })
-        .catch(function(err) {
-          console.log('Permission error:', err.name);
+        .catch(() => {
           setPermState(PERM.DENIED);
         });
     } else {
@@ -148,7 +139,7 @@ export default function Lobby({
     }
   }, [onDiscover]);
 
-  /** Opens system app Settings so the user can re-enable denied permissions. */
+  // Opens app settings — uses policy-safe ACTION_APPLICATION_DETAILS_SETTINGS
   const openSettings = useCallback(() => {
     if (typeof window !== 'undefined' && window.OreyNative) {
       window.OreyNative.openAppSettings();
@@ -156,11 +147,11 @@ export default function Lobby({
   }, []);
 
   /**
-   * Slider release handler — the ONLY place permissions are ever requested.
+   * Slider release handler — the ONLY place permissions are requested
    *
-   * GRANTED    → go straight to discover
-   * DENIED     → open system Settings (can't re-prompt after permanent denial)
-   * IDLE       → request in-context (first time, user just swiped = expected)
+   * GRANTED    → discover
+   * DENIED     → open Settings (permanent denial can't re-prompt)
+   * IDLE       → request in-context (first swipe)
    * REQUESTING → dialog already open, do nothing
    */
   const handleDragEnd = useCallback(() => {
@@ -172,17 +163,19 @@ export default function Lobby({
       } else if (permState === PERM.IDLE) {
         requestPermissions();
       }
-      // REQUESTING: system dialog is open — do nothing
     }
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
+    controls.start({ 
+      x: 0, 
+      transition: { type: 'spring', stiffness: 300, damping: 25 } 
+    });
   }, [x, maxDrag, permState, onDiscover, openSettings, requestPermissions, controls]);
 
   const copyId = useCallback(() => {
     if (!oreyId || oreyId.includes('·')) return;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(oreyId).then(function() {
+      navigator.clipboard.writeText(oreyId).then(() => {
         setCopied(true);
-        setTimeout(function() { setCopied(false); }, 2000);
+        setTimeout(() => setCopied(false), 2000);
       });
     }
   }, [oreyId]);
@@ -197,14 +190,13 @@ export default function Lobby({
 
   const getSearchStatusText = () => {
     if (matchStage === 'gender') {
-      return 'Matching ' + (gender === 'male' ? 'Males' : 'Females') + ' · ' + matchTimer + 's';
+      return `Matching ${gender === 'male' ? 'Males' : 'Females'} · ${matchTimer}s`;
     }
     return 'Matching Anyone';
   };
 
-  // Slider hint text changes based on permission state
-  const sliderHintText = () => {
-    if (permState === PERM.DENIED) return 'Enable in Settings →';
+  const getSliderHint = () => {
+    if (permState === PERM.DENIED) return 'Swipe to Open Settings';
     if (permState === PERM.REQUESTING) return 'Waiting...';
     return 'Slide to Connect';
   };
@@ -231,7 +223,7 @@ export default function Lobby({
                 transition={{ duration: 0.3 }}
                 className="styleContainer"
               >
-                <span className="styleLabel">DAILY SPARK:</span>
+                <span className="styleLabel">Daily Spark:</span>
                 <div className="h-10 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.p
@@ -251,7 +243,10 @@ export default function Lobby({
           </div>
 
           <button
-            onClick={() => { setShowNotifSheet(true); onViewNotifications(); }}
+            onClick={() => { 
+              setShowNotifSheet(true); 
+              onViewNotifications(); 
+            }}
             className="bellBtn"
           >
             <Bell size={18} strokeWidth={2.5} />
@@ -271,35 +266,12 @@ export default function Lobby({
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center"
               >
-                {/* Permission rationale hint — shown before first request */}
-                {permState === PERM.IDLE && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="permHint"
-                  >
-                    <VideoIcon size={12} style={{ color: '#60a5fa', flexShrink: 0 }} />
-                    <span>Camera &amp; mic needed to connect</span>
-                  </motion.div>
-                )}
-
-                {/* Denied hint */}
-                {permState === PERM.DENIED && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="permHintDenied"
-                  >
-                    <span>Permissions denied — swipe to open Settings</span>
-                  </motion.div>
-                )}
-
-                {/* Slider */}
+                {/* ── Slider ── */}
                 <div
                   className="sliderTrack"
                   style={{
                     borderColor: permState === PERM.DENIED
-                      ? 'rgba(244,63,94,0.2)'
+                      ? 'rgba(244,63,94,0.25)'
                       : 'rgba(255,255,255,0.05)',
                   }}
                 >
@@ -312,7 +284,7 @@ export default function Lobby({
                         color: permState === PERM.DENIED ? '#fb7185' : '#64748b',
                       }}
                     >
-                      {sliderHintText()}
+                      {getSliderHint()}
                     </motion.span>
                   </motion.div>
 
@@ -331,28 +303,54 @@ export default function Lobby({
                   </motion.div>
                 </div>
 
-                {/* Requesting indicator */}
-                {permState === PERM.REQUESTING && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="requestingLabel"
-                  >
-                    Waiting for permission…
-                  </motion.p>
-                )}
+                {/* ── Permission status indicators ── */}
+                <AnimatePresence mode="wait">
+                  {/* IDLE: quiet rationale hint */}
+                  {permState === PERM.IDLE && (
+                    <motion.p
+                      key="hint-idle"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                      className="permHintIdle"
+                    >
+                      Camera & mic required to connect
+                    </motion.p>
+                  )}
 
-                {/* Settings button — shown only after permanent denial */}
-                {permState === PERM.DENIED && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={openSettings}
-                    className="settingsBtn"
-                  >
-                    Enable Camera &amp; Mic in Settings
-                  </motion.button>
-                )}
+                  {/* REQUESTING: waiting indicator */}
+                  {permState === PERM.REQUESTING && (
+                    <motion.p
+                      key="hint-requesting"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                      className="permHintRequesting"
+                    >
+                      Waiting for permission…
+                    </motion.p>
+                  )}
+
+                  {/* DENIED: settings button */}
+                  {permState === PERM.DENIED && (
+                    <motion.button
+                      key="hint-denied"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={openSettings}
+                      className="settingsBtn"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Settings size={13} style={{ flexShrink: 0 }} />
+                      Open App Settings
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ) : (
               /* ── Searching state ── */
@@ -383,23 +381,12 @@ export default function Lobby({
                       scale: { duration: 2, repeat: Infinity },
                       rotate: { duration: 3, repeat: Infinity },
                     }}
-                    style={{
-                      backgroundColor: '#2563eb',
-                      width: '6rem',
-                      height: '6rem',
-                      borderRadius: '1.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 25px 50px -12px rgba(59,130,246,0.5)',
-                      zIndex: 10,
-                      position: 'relative',
-                    }}
+                    className="searchIcon"
                   >
                     <motion.span
                       animate={{ opacity: [0.7, 1, 0.7] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
-                      style={{ fontSize: '2.25rem', fontWeight: 900, color: '#fff' }}
+                      className="text-4xl font-black text-white"
                     >
                       O
                     </motion.span>
@@ -457,7 +444,7 @@ export default function Lobby({
             </div>
             <div className="flex flex-col items-end opacity-40">
               <ShieldCheck size={18} style={{ color: '#64748b' }} />
-              <span style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '-0.025em' }}>
+              <span className="text-[8px] font-bold uppercase tracking-tighter">
                 Private
               </span>
             </div>
@@ -467,7 +454,7 @@ export default function Lobby({
             <span className="connectPrefix">OREY-</span>
             <input
               type="text"
-              placeholder="ENTER PARTNER ID"
+              placeholder="Enter Partner ID"
               maxLength={5}
               value={targetId}
               onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
@@ -496,13 +483,7 @@ export default function Lobby({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 150,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(12px)',
-            }}
+            className="overlay"
             onClick={() => setShowNotifSheet(false)}
           >
             <motion.div
@@ -515,21 +496,21 @@ export default function Lobby({
             >
               <div className="handle" />
               <div className="flex justify-between items-center mb-6">
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#fff' }}>
+                <h3 className="text-lg font-black uppercase tracking-tighter text-white">
                   Notifications
                 </h3>
                 <button
                   onClick={() => setShowNotifSheet(false)}
-                  style={{ padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '9999px', color: '#64748b', border: 'none', cursor: 'pointer' }}
+                  className="p-2 bg-white/5 rounded-full text-slate-500 hover:text-white transition-all"
                 >
                   <X size={18} />
                 </button>
               </div>
               <div className="overflow-y-auto space-y-2 pr-2">
                 {notifications.length === 0 ? (
-                  <div style={{ padding: '3rem 0', textAlign: 'center', opacity: 0.3 }}>
-                    <Bell size={40} style={{ margin: '0 auto 0.5rem' }} />
-                    <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  <div className="py-12 text-center opacity-30">
+                    <Bell size={40} className="mx-auto mb-2" />
+                    <p className="text-xs font-bold uppercase tracking-widest">
                       No activity yet
                     </p>
                   </div>
@@ -543,17 +524,17 @@ export default function Lobby({
                         borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
                       }}
                     >
-                      <div style={{ fontSize: '1.25rem', flexShrink: 0 }}>{n.icon || '✨'}</div>
+                      <div className="text-xl flex-shrink-0">{n.icon || '✨'}</div>
                       <div className="flex-1 min-w-0">
-                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p className="text-xs font-bold text-white truncate">
                           {n.title}
                         </p>
-                        <p style={{ fontSize: '10px', color: '#64748b', marginTop: '0.25rem', lineHeight: 1.625 }}>
+                        <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                           {n.message}
                         </p>
                       </div>
                       {!n.isRead && (
-                        <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '9999px', backgroundColor: '#3b82f6', marginTop: '0.25rem', flexShrink: 0 }} />
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1 flex-shrink-0" />
                       )}
                     </div>
                   ))
