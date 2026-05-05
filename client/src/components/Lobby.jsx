@@ -41,6 +41,8 @@ export default function Lobby({
   const [showNotifSheet, setShowNotifSheet] = useState(false);
   const [lineIndex, setLineIndex] = useState(0);
 
+  // Permission state — IDLE means unknown/first-time, not denied.
+  // We never speculatively request; we only read the current state on mount.
   const [permState, setPermState] = useState(PERM.IDLE);
 
   const controls = useAnimation();
@@ -50,6 +52,9 @@ export default function Lobby({
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
+  // On mount: READ current permission state only — no dialog, no request.
+  // The window.onPermissionResult callback handles results from native dialogs
+  // triggered later by the slider swipe.
   useEffect(() => {
     checkPermissions();
 
@@ -57,7 +62,9 @@ export default function Lobby({
       window.onPermissionResult = (granted) => {
         const next = resolvePermState(granted);
         setPermState(next);
-        
+
+        // Only proceed to discover if the user just granted — they intentionally
+        // swiped and then accepted the system dialog.
         if (granted) {
           onDiscover();
         }
@@ -83,6 +90,10 @@ export default function Lobby({
     return () => clearInterval(id);
   }, []);
 
+  /**
+   * READ-ONLY permission check — never triggers a system dialog.
+   * Used on mount and after returning from Settings to refresh UI state.
+   */
   const checkPermissions = useCallback(() => {
     if (typeof window !== 'undefined' && window.OreyNative) {
       const granted = window.OreyNative.hasPermissions();
@@ -93,8 +104,14 @@ export default function Lobby({
         navigator.permissions.query({ name: 'microphone' }),
       ])
         .then(([cam, mic]) => {
-          const granted = cam.state === 'granted' && mic.state === 'granted';
-          setPermState(resolvePermState(granted));
+          if (cam.state === 'granted' && mic.state === 'granted') {
+            setPermState(PERM.GRANTED);
+          } else if (cam.state === 'denied' || mic.state === 'denied') {
+            setPermState(PERM.DENIED);
+          } else {
+            // 'prompt' state — user hasn't been asked yet
+            setPermState(PERM.IDLE);
+          }
         })
         .catch(() => {
           setPermState(PERM.IDLE);
@@ -104,12 +121,17 @@ export default function Lobby({
     }
   }, []);
 
+  /**
+   * Triggers the native system permission dialog.
+   * Must only be called in DIRECT response to the user's slider swipe gesture.
+   * Never call this on app load, onResume, or any automatic trigger.
+   */
   const requestPermissions = useCallback(() => {
     setPermState(PERM.REQUESTING);
 
     if (typeof window !== 'undefined' && window.OreyNative) {
+      // Native bridge — result comes back via window.onPermissionResult
       window.OreyNative.requestPermissions();
-      
     } else if (navigator?.mediaDevices?.getUserMedia) {
       navigator.mediaDevices
         .getUserMedia({ video: true, audio: true })
@@ -127,23 +149,39 @@ export default function Lobby({
     }
   }, [onDiscover]);
 
+  /**
+   * Opens system app settings so the user can re-enable denied permissions.
+   * Only shown when permState === DENIED.
+   */
   const openSettings = useCallback(() => {
     if (typeof window !== 'undefined' && window.OreyNative) {
       window.OreyNative.openAppSettings();
     }
   }, []);
 
+  /**
+   * Handles the slider release.
+   *
+   * Permission flow (Google Play policy-compliant):
+   *  - GRANTED  → go straight to discover (camera/mic already allowed)
+   *  - DENIED   → send user to Settings (they previously denied; can't re-prompt)
+   *  - IDLE     → request permissions now, in context of this explicit user action
+   *  - REQUESTING → do nothing (dialog already open)
+   */
   const handleDragEnd = useCallback(() => {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
-      } else {
-        // Trigger system dialog directly
+      } else if (permState === PERM.DENIED) {
+        openSettings();
+      } else if (permState === PERM.IDLE) {
+        // First time — user just swiped, so the request is in-context and expected.
         requestPermissions();
       }
+      // REQUESTING: dialog is already visible, do nothing.
     }
     controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
-  }, [x, maxDrag, permState, onDiscover, controls, requestPermissions]);
+  }, [x, maxDrag, permState, onDiscover, openSettings, requestPermissions, controls]);
 
   const copyId = useCallback(() => {
     if (!oreyId || oreyId.includes('·')) return;
@@ -228,6 +266,25 @@ export default function Lobby({
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center"
               >
+                {/* Hint text shown only before permissions are granted */}
+                {permState === PERM.IDLE && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.15em',
+                      color: '#475569',
+                      marginBottom: '0.75rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Camera & mic needed to connect
+                  </motion.p>
+                )}
+
                 <div className="sliderTrack">
                   <motion.div style={{ opacity }} className="sliderHint">
                     <motion.span
@@ -235,7 +292,7 @@ export default function Lobby({
                       transition={{ duration: 2, repeat: Infinity }}
                       className="sliderHintText"
                     >
-                      Slide to Connect
+                      {permState === PERM.DENIED ? 'Enable in Settings' : 'Slide to Connect'}
                     </motion.span>
                   </motion.div>
 
@@ -254,26 +311,34 @@ export default function Lobby({
                   </motion.div>
                 </div>
 
+                {/* Settings button — only visible after a hard denial */}
                 {permState === PERM.DENIED && (
                   <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={openSettings}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '0.75rem',
-                      border: '1px solid rgba(244,63,94,0.3)',
-                      backgroundColor: 'rgba(244,63,94,0.1)',
-                      color: '#fb7185',
-                      fontSize: '10px',
-                      fontWeight: 900,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      cursor: 'pointer',
-                    }}
+                    className="settingsBtn"
                   >
                     Enable Camera & Mic in Settings
                   </motion.button>
+                )}
+
+                {/* Requesting state indicator */}
+                {permState === PERM.REQUESTING && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.15em',
+                      color: '#60a5fa',
+                      marginTop: '0.75rem',
+                    }}
+                  >
+                    Waiting for permission…
+                  </motion.p>
                 )}
               </motion.div>
             ) : (
