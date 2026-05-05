@@ -331,6 +331,12 @@
   position: relative;
 }
 
+.searchIconText {
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
 .timer {
   font-size: 1.25rem;
   font-weight: 700;
@@ -450,6 +456,20 @@
   color: #ffffff;
 }
 
+.privateBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  opacity: 0.4;
+}
+
+.privateText {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+}
+
 /* ============================================ */
 /* CONNECT CARD                                  */
 /* ============================================ */
@@ -559,6 +579,57 @@
   flex-shrink: 0;
 }
 
+.sheetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.sheetTitle {
+  font-size: 1.125rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  color: #ffffff;
+}
+
+.sheetCloseBtn {
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  color: #64748b;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sheetCloseBtn:hover {
+  color: #ffffff;
+}
+
+.sheetContent {
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.emptyState {
+  padding: 3rem 0;
+  text-align: center;
+  opacity: 0.3;
+}
+
+.emptyStateIcon {
+  margin: 0 auto 0.5rem;
+}
+
+.emptyStateText {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 .notifItem {
   display: flex;
   align-items: flex-start;
@@ -574,6 +645,41 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
+.notifIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.notifContent {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.notifTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notifMessage {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 0.25rem;
+  line-height: 1.625;
+}
+
+.unreadDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: #3b82f6;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+
 /* ============================================ */
 /* UTILITY CLASSES                               */
 /* ============================================ */
@@ -586,43 +692,8 @@
 .flex-1 { flex: 1 1 0%; }
 .flex-shrink-0 { flex-shrink: 0; }
 .min-w-0 { min-width: 0; }
-.mx-auto { margin-left: auto; margin-right: auto; }
-.mt-1 { margin-top: 0.25rem; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-6 { margin-bottom: 1.5rem; }
-.pr-2 { padding-right: 0.5rem; }
-.p-2 { padding: 0.5rem; }
-.py-12 { padding-top: 3rem; padding-bottom: 3rem; }
-.space-y-2 > * + * { margin-top: 0.5rem; }
-.overflow-y-auto { overflow-y: auto; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.w-2 { width: 0.5rem; }
-.h-2 { height: 0.5rem; }
 .h-10 { height: 2.5rem; }
 .overflow-hidden { overflow: hidden; }
-.rounded-full { border-radius: 9999px; }
-.opacity-30 { opacity: 0.3; }
-.opacity-40 { opacity: 0.4; }
-.text-center { text-align: center; }
-.text-white { color: #ffffff; }
-.text-slate-500 { color: #64748b; }
-.text-4xl { font-size: 2.25rem; }
-.text-xl { font-size: 1.25rem; }
-.text-lg { font-size: 1.125rem; }
-.text-xs { font-size: 0.75rem; }
-.text-\[10px\] { font-size: 10px; }
-.text-\[8px\] { font-size: 8px; }
-.font-bold { font-weight: 700; }
-.font-black { font-weight: 900; }
-.uppercase { text-transform: uppercase; }
-.tracking-tighter { letter-spacing: -0.05em; }
-.tracking-widest { letter-spacing: 0.1em; }
-.leading-relaxed { line-height: 1.625; }
-.bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
-.bg-blue-500 { background-color: #3b82f6; }
-.transition-all { transition: all 0.2s; }
-
-.hover\:text-white:hover { color: #ffffff; }
 
 /* ============================================ */
 /* RESPONSIVE                                    */
@@ -697,7 +768,8 @@
 .connectBtn:focus-visible,
 .bellBtn:focus-visible,
 .cancelSearchBtn:focus-visible,
-.settingsBtn:focus-visible {
+.settingsBtn:focus-visible,
+.sheetCloseBtn:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
@@ -706,12 +778,12 @@
   outline: none;
 }
 
-/* Touch targets for mobile */
 @media (pointer: coarse) {
   .bellBtn,
   .connectBtn,
   .cancelSearchBtn,
-  .settingsBtn {
+  .settingsBtn,
+  .sheetCloseBtn {
     min-height: 44px;
     min-width: 44px;
   }
@@ -722,7 +794,6 @@
   }
 }
 
-/* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .statusDot,
   .pulseRing,
@@ -744,6 +815,10 @@
 .sheet::-webkit-scrollbar-track { background: transparent; }
 .sheet::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
 .sheet::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+.sheetContent::-webkit-scrollbar { width: 4px; }
+.sheetContent::-webkit-scrollbar-track { background: transparent; }
+.sheetContent::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
 
 /* ============================================ */
 /* MISC                                          */
