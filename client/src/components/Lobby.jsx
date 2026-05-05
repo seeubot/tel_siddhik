@@ -16,11 +16,6 @@ const LOVE_PICKUP_LINES = [
   "If beauty were time, you'd be an eternity."
 ];
 
-// Permission states
-// IDLE       = first time, no dialog shown
-// REQUESTING = system dialog currently open
-// GRANTED    = camera + mic allowed
-// DENIED     = permanently denied, must go to Settings
 const PERM = { 
   IDLE: 'idle', 
   REQUESTING: 'requesting', 
@@ -37,14 +32,14 @@ export default function Lobby({
   searching = false,
   matchStage = null,
   matchTimer = 3,
-  onDiscover = () => console.log('Discover triggered'),
-  onCancelSearch = () => console.log('Search cancelled'),
-  onConnectById = (id) => console.log('Connecting to', id),
+  onDiscover = function() { console.log('Discover triggered'); },
+  onCancelSearch = function() { console.log('Search cancelled'); },
+  onConnectById = function(id) { console.log('Connecting to', id); },
   gender = null,
-  onSetGender = (g) => console.log('Gender set to', g),
+  onSetGender = function(g) { console.log('Gender set to', g); },
   notifications = [],
   unreadCount = 2,
-  onViewNotifications = () => {},
+  onViewNotifications = function() {},
 }) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
@@ -60,11 +55,11 @@ export default function Lobby({
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
   // Mount: check permissions + wire native callback
-  useEffect(() => {
+  useEffect(function() {
     checkPermissions();
 
     if (typeof window !== 'undefined') {
-      window.onPermissionResult = (granted) => {
+      window.onPermissionResult = function(granted) {
         setPermState(resolvePermState(granted));
         if (granted) {
           onDiscover();
@@ -72,13 +67,15 @@ export default function Lobby({
       };
     }
 
-    return () => {
-      if (typeof window !== 'undefined') delete window.onPermissionResult;
+    return function() {
+      if (typeof window !== 'undefined') {
+        delete window.onPermissionResult;
+      }
     };
   }, []);
 
   // Reset slider when search stops
-  useEffect(() => {
+  useEffect(function() {
     if (!searching) {
       x.set(0);
       controls.start({ x: 0 });
@@ -86,63 +83,50 @@ export default function Lobby({
   }, [searching]);
 
   // Rotate pickup lines
-  useEffect(() => {
-    const id = setInterval(() => {
-      setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
+  useEffect(function() {
+    var id = setInterval(function() {
+      setLineIndex(function(prev) { return (prev + 1) % LOVE_PICKUP_LINES.length; });
     }, 4500);
-    return () => clearInterval(id);
+    return function() { clearInterval(id); };
   }, []);
 
   // Read-only permission check — never triggers dialog
-  const checkPermissions = useCallback(() => {
+  var checkPermissions = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
-      const granted = window.OreyNative.hasPermissions();
-      setPermState(resolvePermState(granted));
-    } else if (navigator?.permissions?.query) {
-      Promise.all([
-        navigator.permissions.query({ name: 'camera' }),
-        navigator.permissions.query({ name: 'microphone' }),
-      ]).then(([cam, mic]) => {
-        if (cam.state === 'granted' && mic.state === 'granted') {
-          setPermState(PERM.GRANTED);
-        } else if (cam.state === 'denied' || mic.state === 'denied') {
-          setPermState(PERM.DENIED);
-        } else {
-          setPermState(PERM.IDLE);
-        }
-      }).catch(() => {
+      try {
+        var granted = window.OreyNative.hasPermissions();
+        setPermState(resolvePermState(granted));
+      } catch (e) {
         setPermState(PERM.IDLE);
-      });
+      }
     } else {
       setPermState(PERM.IDLE);
     }
   }, []);
 
   // Triggers native dialog — ONLY from slider swipe
-  const requestPermissions = useCallback(() => {
+  var requestPermissions = useCallback(function() {
     setPermState(PERM.REQUESTING);
 
     if (typeof window !== 'undefined' && window.OreyNative) {
-      window.OreyNative.requestPermissions();
-    } else if (navigator?.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then((stream) => {
-          stream.getTracks().forEach((t) => t.stop());
-          setPermState(PERM.GRANTED);
-          onDiscover();
-        })
-        .catch(() => {
-          setPermState(PERM.DENIED);
-        });
+      try {
+        window.OreyNative.requestPermissions();
+      } catch (e) {
+        setPermState(PERM.DENIED);
+      }
     } else {
       setPermState(PERM.DENIED);
     }
-  }, [onDiscover]);
+  }, []);
 
   // Opens app settings — uses policy-safe ACTION_APPLICATION_DETAILS_SETTINGS
-  const openSettings = useCallback(() => {
+  var openSettings = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
-      window.OreyNative.openAppSettings();
+      try {
+        window.OreyNative.openAppSettings();
+      } catch (e) {
+        console.log('Error opening settings:', e);
+      }
     }
   }, []);
 
@@ -154,7 +138,7 @@ export default function Lobby({
    * IDLE       → request in-context (first swipe)
    * REQUESTING → dialog already open, do nothing
    */
-  const handleDragEnd = useCallback(() => {
+  var handleDragEnd = useCallback(function() {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
@@ -170,32 +154,32 @@ export default function Lobby({
     });
   }, [x, maxDrag, permState, onDiscover, openSettings, requestPermissions, controls]);
 
-  const copyId = useCallback(() => {
-    if (!oreyId || oreyId.includes('·')) return;
+  var copyId = useCallback(function() {
+    if (!oreyId || oreyId.indexOf('·') !== -1) return;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(oreyId).then(() => {
+      navigator.clipboard.writeText(oreyId).then(function() {
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setTimeout(function() { setCopied(false); }, 2000);
       });
     }
   }, [oreyId]);
 
-  const handleConnect = useCallback(() => {
-    const trimmed = targetId.trim().toUpperCase();
+  var handleConnect = useCallback(function() {
+    var trimmed = targetId.trim().toUpperCase();
     if (trimmed.length === 5) {
       onConnectById('OREY-' + trimmed);
       setTargetId('');
     }
   }, [targetId, onConnectById]);
 
-  const getSearchStatusText = () => {
+  var getSearchStatusText = function() {
     if (matchStage === 'gender') {
-      return `Matching ${gender === 'male' ? 'Males' : 'Females'} · ${matchTimer}s`;
+      return 'Matching ' + (gender === 'male' ? 'Males' : 'Females') + ' · ' + matchTimer + 's';
     }
     return 'Matching Anyone';
   };
 
-  const getSliderHint = () => {
+  var getSliderHint = function() {
     if (permState === PERM.DENIED) return 'Swipe to Open Settings';
     if (permState === PERM.REQUESTING) return 'Waiting...';
     return 'Slide to Connect';
@@ -243,11 +227,12 @@ export default function Lobby({
           </div>
 
           <button
-            onClick={() => { 
+            onClick={function() { 
               setShowNotifSheet(true); 
               onViewNotifications(); 
             }}
             className="bellBtn"
+            aria-label="Notifications"
           >
             <Bell size={18} strokeWidth={2.5} />
             {unreadCount > 0 && <span className="bellBadge" />}
@@ -298,6 +283,8 @@ export default function Lobby({
                     className="sliderThumb"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    role="slider"
+                    aria-label="Slide to connect"
                   >
                     <span className="thumbLogo">O</span>
                   </motion.div>
@@ -305,7 +292,6 @@ export default function Lobby({
 
                 {/* ── Permission status indicators ── */}
                 <AnimatePresence mode="wait">
-                  {/* IDLE: quiet rationale hint */}
                   {permState === PERM.IDLE && (
                     <motion.p
                       key="hint-idle"
@@ -315,11 +301,10 @@ export default function Lobby({
                       transition={{ duration: 0.2 }}
                       className="permHintIdle"
                     >
-                      Camera & mic required to connect
+                      Camera & microphone required to connect
                     </motion.p>
                   )}
 
-                  {/* REQUESTING: waiting indicator */}
                   {permState === PERM.REQUESTING && (
                     <motion.p
                       key="hint-requesting"
@@ -329,11 +314,10 @@ export default function Lobby({
                       transition={{ duration: 0.2 }}
                       className="permHintRequesting"
                     >
-                      Waiting for permission…
+                      Waiting for permission...
                     </motion.p>
                   )}
 
-                  {/* DENIED: settings button */}
                   {permState === PERM.DENIED && (
                     <motion.button
                       key="hint-denied"
@@ -386,7 +370,7 @@ export default function Lobby({
                     <motion.span
                       animate={{ opacity: [0.7, 1, 0.7] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
-                      className="text-4xl font-black text-white"
+                      className="searchIconText"
                     >
                       O
                     </motion.span>
@@ -442,11 +426,9 @@ export default function Lobby({
                 }
               </div>
             </div>
-            <div className="flex flex-col items-end opacity-40">
+            <div className="privateBadge">
               <ShieldCheck size={18} style={{ color: '#64748b' }} />
-              <span className="text-[8px] font-bold uppercase tracking-tighter">
-                Private
-              </span>
+              <span className="privateText">Private</span>
             </div>
           </div>
 
@@ -454,11 +436,14 @@ export default function Lobby({
             <span className="connectPrefix">OREY-</span>
             <input
               type="text"
-              placeholder="Enter Partner ID"
+              placeholder="ENTER PARTNER ID"
               maxLength={5}
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value.toUpperCase().slice(0, 5))}
+              onChange={function(e) { setTargetId(e.target.value.toUpperCase().slice(0, 5)); }}
               className="connectInput"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
             <button
               onClick={handleConnect}
@@ -468,6 +453,7 @@ export default function Lobby({
                 backgroundColor: targetId.length === 5 ? '#2563eb' : 'rgba(255,255,255,0.05)',
                 color: targetId.length === 5 ? '#ffffff' : '#334155',
               }}
+              aria-label="Connect to partner"
             >
               <ArrowRight size={20} />
             </button>
@@ -484,7 +470,7 @@ export default function Lobby({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overlay"
-            onClick={() => setShowNotifSheet(false)}
+            onClick={function() { setShowNotifSheet(false); }}
           >
             <motion.div
               initial={{ y: '100%' }}
@@ -492,52 +478,47 @@ export default function Lobby({
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="sheet"
-              onClick={(e) => e.stopPropagation()}
+              onClick={function(e) { e.stopPropagation(); }}
             >
               <div className="handle" />
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-black uppercase tracking-tighter text-white">
-                  Notifications
-                </h3>
+              <div className="sheetHeader">
+                <h3 className="sheetTitle">Notifications</h3>
                 <button
-                  onClick={() => setShowNotifSheet(false)}
-                  className="p-2 bg-white/5 rounded-full text-slate-500 hover:text-white transition-all"
+                  onClick={function() { setShowNotifSheet(false); }}
+                  className="sheetCloseBtn"
+                  aria-label="Close notifications"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <div className="overflow-y-auto space-y-2 pr-2">
+              <div className="sheetContent">
                 {notifications.length === 0 ? (
-                  <div className="py-12 text-center opacity-30">
-                    <Bell size={40} className="mx-auto mb-2" />
-                    <p className="text-xs font-bold uppercase tracking-widest">
-                      No activity yet
-                    </p>
+                  <div className="emptyState">
+                    <Bell size={40} className="emptyStateIcon" />
+                    <p className="emptyStateText">No activity yet</p>
                   </div>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="notifItem"
-                      style={{
-                        backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
-                        borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
-                      }}
-                    >
-                      <div className="text-xl flex-shrink-0">{n.icon || '✨'}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-white truncate">
-                          {n.title}
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                          {n.message}
-                        </p>
+                  notifications.map(function(n) {
+                    return (
+                      <div
+                        key={n.id}
+                        className="notifItem"
+                        style={{
+                          backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
+                          borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
+                        }}
+                      >
+                        <div className="notifIcon">{n.icon || '✨'}</div>
+                        <div className="notifContent">
+                          <p className="notifTitle">{n.title}</p>
+                          <p className="notifMessage">{n.message}</p>
+                        </div>
+                        {!n.isRead && (
+                          <div className="unreadDot" />
+                        )}
                       </div>
-                      {!n.isRead && (
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1 flex-shrink-0" />
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </motion.div>
