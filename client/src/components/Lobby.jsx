@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import {
   Copy, Check, X,
-  ArrowRight, Bell, ShieldCheck, Settings
+  ArrowRight, Bell, ShieldCheck, Settings, User, Users
 } from 'lucide-react';
 import './styles.css';
 
@@ -35,7 +35,7 @@ export default function Lobby({
   onDiscover = function() { console.log('Discover triggered'); },
   onCancelSearch = function() { console.log('Search cancelled'); },
   onConnectById = function(id) { console.log('Connecting to', id); },
-  gender = null,
+  gender = null,               // 'male', 'female', or null
   onSetGender = function(g) { console.log('Gender set to', g); },
   notifications = [],
   unreadCount = 2,
@@ -104,7 +104,7 @@ export default function Lobby({
     }
   }, []);
 
-  // Triggers native dialog — works even if previously denied (system decides if dialog appears)
+  // Triggers native dialog — works even if previously denied
   var requestPermissions = useCallback(function() {
     setPermState(PERM.REQUESTING);
 
@@ -119,7 +119,7 @@ export default function Lobby({
     }
   }, []);
 
-  // Opens app settings — kept as a fallback, but slider no longer calls it automatically
+  // Opens app settings — manual fallback
   var openSettings = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
       try {
@@ -132,16 +132,12 @@ export default function Lobby({
 
   /**
    * Slider release handler — ALWAYS requests permissions if not already granted.
-   * No longer redirects to settings. If the user permanently denied the permission,
-   * the system will simply not show a dialog and the state will remain DENIED.
    */
   var handleDragEnd = useCallback(function() {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
       } else {
-        // For IDLE, REQUESTING, or DENIED → always attempt to request
-        // This gives the user a chance to grant permission without leaving the app.
         requestPermissions();
       }
     }
@@ -169,17 +165,22 @@ export default function Lobby({
     }
   }, [targetId, onConnectById]);
 
-  var getSearchStatusText = function() {
+  // Gender selection handlers
+  const handleGenderSelect = (selected) => {
+    onSetGender(selected);
+  };
+
+  const getSearchStatusText = function() {
     if (matchStage === 'gender') {
-      return 'Matching ' + (gender === 'male' ? 'Males' : 'Females') + ' · ' + matchTimer + 's';
+      const target = gender === 'male' ? 'Females' : 'Males';
+      return `Matching ${target} · ${matchTimer}s`;
     }
     return 'Matching Anyone';
   };
 
-  var getSliderHint = function() {
+  const getSliderHint = function() {
     if (permState === PERM.GRANTED) return 'Slide to Find a Match';
     if (permState === PERM.REQUESTING) return 'Waiting...';
-    // For IDLE or DENIED, prompt to request permission again
     return 'Slide to Allow Camera & Mic';
   };
 
@@ -236,6 +237,33 @@ export default function Lobby({
             {unreadCount > 0 && <span className="bellBadge" />}
           </button>
         </header>
+
+        {/* ── Gender Selector (only when not searching) ── */}
+        {!searching && (
+          <div className="genderSelector">
+            <button
+              onClick={() => handleGenderSelect('male')}
+              className={`genderBtn ${gender === 'male' ? 'genderBtnActiveMale' : ''}`}
+            >
+              <User size={16} />
+              <span>Male</span>
+            </button>
+            <button
+              onClick={() => handleGenderSelect('female')}
+              className={`genderBtn ${gender === 'female' ? 'genderBtnActiveFemale' : ''}`}
+            >
+              <User size={16} />
+              <span>Female</span>
+            </button>
+            <button
+              onClick={() => handleGenderSelect(null)}
+              className={`genderBtn ${gender === null ? 'genderBtnActiveAny' : ''}`}
+            >
+              <Users size={16} />
+              <span>Any</span>
+            </button>
+          </div>
+        )}
 
         {/* ── Main ── */}
         <main className="main">
