@@ -104,7 +104,7 @@ export default function Lobby({
     }
   }, []);
 
-  // Triggers native dialog — ONLY from slider swipe
+  // Triggers native dialog — works even if previously denied (system decides if dialog appears)
   var requestPermissions = useCallback(function() {
     setPermState(PERM.REQUESTING);
 
@@ -119,7 +119,7 @@ export default function Lobby({
     }
   }, []);
 
-  // Opens app settings — uses policy-safe ACTION_APPLICATION_DETAILS_SETTINGS
+  // Opens app settings — kept as a fallback, but slider no longer calls it automatically
   var openSettings = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
       try {
@@ -131,20 +131,17 @@ export default function Lobby({
   }, []);
 
   /**
-   * Slider release handler — the ONLY place permissions are requested
-   *
-   * GRANTED    → discover
-   * DENIED     → open Settings (permanent denial can't re-prompt)
-   * IDLE       → request in-context (first swipe)
-   * REQUESTING → dialog already open, do nothing
+   * Slider release handler — ALWAYS requests permissions if not already granted.
+   * No longer redirects to settings. If the user permanently denied the permission,
+   * the system will simply not show a dialog and the state will remain DENIED.
    */
   var handleDragEnd = useCallback(function() {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
-      } else if (permState === PERM.DENIED) {
-        openSettings();
-      } else if (permState === PERM.IDLE) {
+      } else {
+        // For IDLE, REQUESTING, or DENIED → always attempt to request
+        // This gives the user a chance to grant permission without leaving the app.
         requestPermissions();
       }
     }
@@ -152,7 +149,7 @@ export default function Lobby({
       x: 0, 
       transition: { type: 'spring', stiffness: 300, damping: 25 } 
     });
-  }, [x, maxDrag, permState, onDiscover, openSettings, requestPermissions, controls]);
+  }, [x, maxDrag, permState, onDiscover, requestPermissions, controls]);
 
   var copyId = useCallback(function() {
     if (!oreyId || oreyId.indexOf('·') !== -1) return;
@@ -180,9 +177,10 @@ export default function Lobby({
   };
 
   var getSliderHint = function() {
-    if (permState === PERM.DENIED) return 'Swipe to Open Settings';
+    if (permState === PERM.GRANTED) return 'Slide to Find a Match';
     if (permState === PERM.REQUESTING) return 'Waiting...';
-    return 'Slide to Connect';
+    // For IDLE or DENIED, prompt to request permission again
+    return 'Slide to Allow Camera & Mic';
   };
 
   return (
