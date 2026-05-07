@@ -35,7 +35,7 @@ export default function Lobby({
   onDiscover = function() { console.log('Discover triggered'); },
   onCancelSearch = function() { console.log('Search cancelled'); },
   onConnectById = function(id) { console.log('Connecting to', id); },
-  gender = null,               // 'male', 'female', or null
+  gender = null,
   onSetGender = function(g) { console.log('Gender set to', g); },
   notifications = [],
   unreadCount = 2,
@@ -54,7 +54,6 @@ export default function Lobby({
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
 
-  // Mount: check permissions + wire native callback
   useEffect(function() {
     checkPermissions();
 
@@ -74,7 +73,6 @@ export default function Lobby({
     };
   }, []);
 
-  // Reset slider when search stops
   useEffect(function() {
     if (!searching) {
       x.set(0);
@@ -82,7 +80,6 @@ export default function Lobby({
     }
   }, [searching]);
 
-  // Rotate pickup lines
   useEffect(function() {
     var id = setInterval(function() {
       setLineIndex(function(prev) { return (prev + 1) % LOVE_PICKUP_LINES.length; });
@@ -90,7 +87,6 @@ export default function Lobby({
     return function() { clearInterval(id); };
   }, []);
 
-  // Read-only permission check — never triggers dialog
   var checkPermissions = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
       try {
@@ -104,7 +100,6 @@ export default function Lobby({
     }
   }, []);
 
-  // Triggers native dialog — works even if previously denied
   var requestPermissions = useCallback(function() {
     setPermState(PERM.REQUESTING);
 
@@ -119,7 +114,6 @@ export default function Lobby({
     }
   }, []);
 
-  // Opens app settings — manual fallback
   var openSettings = useCallback(function() {
     if (typeof window !== 'undefined' && window.OreyNative) {
       try {
@@ -130,9 +124,6 @@ export default function Lobby({
     }
   }, []);
 
-  /**
-   * Slider release handler — ALWAYS requests permissions if not already granted.
-   */
   var handleDragEnd = useCallback(function() {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
@@ -165,7 +156,6 @@ export default function Lobby({
     }
   }, [targetId, onConnectById]);
 
-  // Gender selection handlers
   const handleGenderSelect = (selected) => {
     onSetGender(selected);
   };
@@ -192,7 +182,6 @@ export default function Lobby({
       </div>
 
       <div className="container">
-        {/* ── Header ── */}
         <header className="header">
           <div className="flex flex-col">
             <h1 className="logo">
@@ -238,7 +227,6 @@ export default function Lobby({
           </button>
         </header>
 
-        {/* ── Gender Selector (only when not searching) ── */}
         {!searching && (
           <div className="genderSelector">
             <button
@@ -265,7 +253,6 @@ export default function Lobby({
           </div>
         )}
 
-        {/* ── Main ── */}
         <main className="main">
           <AnimatePresence mode="wait">
             {!searching ? (
@@ -277,23 +264,14 @@ export default function Lobby({
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center"
               >
-                {/* ── Slider ── */}
                 <div
                   className="sliderTrack"
-                  style={{
-                    borderColor: permState === PERM.DENIED
-                      ? 'rgba(244,63,94,0.25)'
-                      : 'rgba(255,255,255,0.05)',
-                  }}
                 >
                   <motion.div style={{ opacity }} className="sliderHint">
                     <motion.span
                       animate={{ opacity: [0.6, 1, 0.6] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       className="sliderHintText"
-                      style={{
-                        color: permState === PERM.DENIED ? '#fb7185' : '#64748b',
-                      }}
                     >
                       {getSliderHint()}
                     </motion.span>
@@ -316,7 +294,6 @@ export default function Lobby({
                   </motion.div>
                 </div>
 
-                {/* ── Permission status indicators ── */}
                 <AnimatePresence mode="wait">
                   {permState === PERM.IDLE && (
                     <motion.p
@@ -363,7 +340,6 @@ export default function Lobby({
                 </AnimatePresence>
               </motion.div>
             ) : (
-              /* ── Searching state ── */
               <motion.div
                 key="searching"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -439,7 +415,6 @@ export default function Lobby({
           </AnimatePresence>
         </main>
 
-        {/* ── Footer ── */}
         <footer className="footer">
           <div className="idRow">
             <div onClick={copyId} className="idBlock">
@@ -447,13 +422,13 @@ export default function Lobby({
               <div className="idDisplay">
                 <span className="idCode">{oreyId}</span>
                 {copied
-                  ? <Check size={18} style={{ color: '#34d399' }} />
-                  : <Copy size={16} style={{ color: '#334155' }} />
+                  ? <Check size={18} style={{ color: '#ef4444' }} />
+                  : <Copy size={16} style={{ color: '#94a3b8' }} />
                 }
               </div>
             </div>
             <div className="privateBadge">
-              <ShieldCheck size={18} style={{ color: '#64748b' }} />
+              <ShieldCheck size={18} style={{ color: '#94a3b8' }} />
               <span className="privateText">Private</span>
             </div>
           </div>
@@ -475,10 +450,6 @@ export default function Lobby({
               onClick={handleConnect}
               disabled={targetId.length !== 5}
               className="connectBtn"
-              style={{
-                backgroundColor: targetId.length === 5 ? '#2563eb' : 'rgba(255,255,255,0.05)',
-                color: targetId.length === 5 ? '#ffffff' : '#334155',
-              }}
               aria-label="Connect to partner"
             >
               <ArrowRight size={20} />
@@ -487,7 +458,6 @@ export default function Lobby({
         </footer>
       </div>
 
-      {/* ── Notifications Sheet ── */}
       <AnimatePresence>
         {showNotifSheet && (
           <motion.div
@@ -530,8 +500,8 @@ export default function Lobby({
                         key={n.id}
                         className="notifItem"
                         style={{
-                          backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(59,130,246,0.05)',
-                          borderColor: n.isRead ? 'transparent' : 'rgba(59,130,246,0.2)',
+                          backgroundColor: n.isRead ? 'rgba(255,255,255,0.02)' : 'rgba(239,68,68,0.05)',
+                          borderColor: n.isRead ? 'transparent' : 'rgba(239,68,68,0.2)',
                         }}
                       >
                         <div className="notifIcon">{n.icon || '✨'}</div>
