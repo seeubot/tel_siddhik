@@ -900,3 +900,96 @@
   -webkit-box-shadow: 0 0 0px 1000px transparent inset;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* ============================================ */
+/* GLOBE SEARCHING STATE                         */
+/* ============================================ */
+
+.globeContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.globeContainer > div:first-child {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 280px;
+  filter: drop-shadow(0 25px 50px rgba(239, 68, 68, 0.2));
+}
+
+.searchTimer {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.searchStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #ef4444;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+
+/* Keep existing searchingContent but adjust for globe */
+.searchingContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 1.25rem;
+  padding-top: 1rem;
+}
+
+/* Canvas specific styles for mobile */
+.globeContainer canvas {
+  touch-action: none;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Responsive globe sizing */
+@media (max-width: 360px) {
+  .globeContainer {
+    max-width: 240px;
+  }
+  
+  .globeContainer > div:first-child {
+    max-width: 240px;
+  }
+}
+
+@media (min-width: 768px) {
+  .globeContainer {
+    max-width: 320px;
+  }
+  
+  .globeContainer > div:first-child {
+    max-width: 320px;
+  }
+}
+
+/* Reduced motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .globeContainer canvas {
+    animation: none;
+  }
+  
+  .searchStatus .statusDot {
+    animation: none;
+  }
+}
