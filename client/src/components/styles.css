@@ -916,6 +916,13 @@
   margin: 0 auto;
   gap: 1rem;
 }
+/* Add somewhere in the GLOBE SEARCHING STATE section */
+.globePulseWrapper {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  user-select: none;
+}
 
 .globeContainer > div:first-child {
   width: 100%;
