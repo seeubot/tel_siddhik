@@ -4,6 +4,7 @@ import {
   Copy, Check, X,
   ArrowRight, Bell, ShieldCheck, Settings, User, Users
 } from 'lucide-react';
+import { GlobePulse } from '@/components/ui/globe-pulse';
 import './styles.css';
 
 const LOVE_PICKUP_LINES = [
@@ -53,6 +54,16 @@ export default function Lobby({
   const thumbSize = 56;
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
+
+  // Globe markers with worldwide locations for realistic searching feel
+  const globeMarkers = [
+    { id: "pulse-1", location: [40.7128, -74.0060], delay: 0 },    // New York
+    { id: "pulse-2", location: [51.5074, -0.1278], delay: 0.4 },   // London
+    { id: "pulse-3", location: [35.6762, 139.6503], delay: 0.8 },  // Tokyo
+    { id: "pulse-4", location: [-33.8688, 151.2093], delay: 1.2 }, // Sydney
+    { id: "pulse-5", location: [55.7558, 37.6173], delay: 1.6 },   // Moscow
+    { id: "pulse-6", location: [-1.2921, 36.8219], delay: 2.0 },   // Nairobi
+  ];
 
   useEffect(function() {
     checkPermissions();
@@ -165,7 +176,7 @@ export default function Lobby({
       const target = gender === 'male' ? 'Females' : 'Males';
       return `Matching ${target} · ${matchTimer}s`;
     }
-    return 'Matching Anyone';
+    return 'Matching Anyone · Worldwide';
   };
 
   const getSliderHint = function() {
@@ -264,9 +275,7 @@ export default function Lobby({
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center"
               >
-                <div
-                  className="sliderTrack"
-                >
+                <div className="sliderTrack">
                   <motion.div style={{ opacity }} className="sliderHint">
                     <motion.span
                       animate={{ opacity: [0.6, 1, 0.6] }}
@@ -348,46 +357,24 @@ export default function Lobby({
                 transition={{ duration: 0.3 }}
                 className="searchingContent"
               >
-                <div className="pulseContainer">
-                  <motion.div
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0.1, 0.4] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    className="pulseRing"
-                    style={{ width: 160, height: 160 }}
+                <div className="globeContainer">
+                  <GlobePulse
+                    markers={globeMarkers}
+                    speed={0.004}
+                    globeColor={[0.85, 0.15, 0.15]}
+                    markerColor={[0.94, 0.27, 0.27]}
                   />
-                  <motion.div
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.05, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    className="pulseRing"
-                    style={{ width: 200, height: 200 }}
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.08, 1], rotate: [0, 5, -5, 0] }}
-                    transition={{
-                      scale: { duration: 2, repeat: Infinity },
-                      rotate: { duration: 3, repeat: Infinity },
-                    }}
-                    className="searchIcon"
-                  >
-                    <motion.span
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="searchIconText"
-                    >
-                      O
-                    </motion.span>
-                  </motion.div>
 
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="timer"
+                    className="searchTimer"
                   >
-                    {matchStage === 'gender' ? 'Finding Match' : 'Searching...'}
+                    {matchStage === 'gender' ? 'Finding Match' : 'Searching Worldwide'}
                   </motion.div>
 
-                  <div className="statusLabel">
+                  <div className="searchStatus">
                     <span className="statusDot" />
                     <motion.span
                       key={matchStage + matchTimer}
