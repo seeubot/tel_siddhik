@@ -24,8 +24,31 @@ const PERM = {
   GRANTED: 'granted' 
 };
 
-function resolvePermState(granted) {
+function resolvePermState(granted: boolean) {
   return granted ? PERM.GRANTED : PERM.DENIED;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  isRead?: boolean;
+  icon?: string;
+}
+
+interface LobbyProps {
+  oreyId?: string;
+  searching?: boolean;
+  matchStage?: string | null;
+  matchTimer?: number;
+  onDiscover?: () => void;
+  onCancelSearch?: () => void;
+  onConnectById?: (id: string) => void;
+  gender?: string | null;
+  onSetGender?: (g: string | null) => void;
+  notifications?: Notification[];
+  unreadCount?: number;
+  onViewNotifications?: () => void;
 }
 
 export default function Lobby({
@@ -33,15 +56,15 @@ export default function Lobby({
   searching = false,
   matchStage = null,
   matchTimer = 3,
-  onDiscover = function() { console.log('Discover triggered'); },
-  onCancelSearch = function() { console.log('Search cancelled'); },
-  onConnectById = function(id) { console.log('Connecting to', id); },
+  onDiscover = () => { console.log('Discover triggered'); },
+  onCancelSearch = () => { console.log('Search cancelled'); },
+  onConnectById = (id: string) => { console.log('Connecting to', id); },
   gender = null,
-  onSetGender = function(g) { console.log('Gender set to', g); },
+  onSetGender = (g: string | null) => { console.log('Gender set to', g); },
   notifications = [],
   unreadCount = 2,
-  onViewNotifications = function() {},
-}) {
+  onViewNotifications = () => {},
+}: LobbyProps) {
   const [copied, setCopied] = useState(false);
   const [targetId, setTargetId] = useState('');
   const [showNotifSheet, setShowNotifSheet] = useState(false);
@@ -57,19 +80,19 @@ export default function Lobby({
 
   // Globe markers with worldwide locations for realistic searching feel
   const globeMarkers = [
-    { id: "pulse-1", location: [40.7128, -74.0060], delay: 0 },    // New York
-    { id: "pulse-2", location: [51.5074, -0.1278], delay: 0.4 },   // London
-    { id: "pulse-3", location: [35.6762, 139.6503], delay: 0.8 },  // Tokyo
-    { id: "pulse-4", location: [-33.8688, 151.2093], delay: 1.2 }, // Sydney
-    { id: "pulse-5", location: [55.7558, 37.6173], delay: 1.6 },   // Moscow
-    { id: "pulse-6", location: [-1.2921, 36.8219], delay: 2.0 },   // Nairobi
+    { id: "pulse-1", location: [40.7128, -74.0060] as [number, number], delay: 0 },    // New York
+    { id: "pulse-2", location: [51.5074, -0.1278] as [number, number], delay: 0.4 },   // London
+    { id: "pulse-3", location: [35.6762, 139.6503] as [number, number], delay: 0.8 },  // Tokyo
+    { id: "pulse-4", location: [-33.8688, 151.2093] as [number, number], delay: 1.2 }, // Sydney
+    { id: "pulse-5", location: [55.7558, 37.6173] as [number, number], delay: 1.6 },   // Moscow
+    { id: "pulse-6", location: [-1.2921, 36.8219] as [number, number], delay: 2.0 },   // Nairobi
   ];
 
-  useEffect(function() {
+  useEffect(() => {
     checkPermissions();
 
     if (typeof window !== 'undefined') {
-      window.onPermissionResult = function(granted) {
+      (window as any).onPermissionResult = (granted: boolean) => {
         setPermState(resolvePermState(granted));
         if (granted) {
           onDiscover();
@@ -77,31 +100,31 @@ export default function Lobby({
       };
     }
 
-    return function() {
+    return () => {
       if (typeof window !== 'undefined') {
-        delete window.onPermissionResult;
+        delete (window as any).onPermissionResult;
       }
     };
   }, []);
 
-  useEffect(function() {
+  useEffect(() => {
     if (!searching) {
       x.set(0);
       controls.start({ x: 0 });
     }
   }, [searching]);
 
-  useEffect(function() {
-    var id = setInterval(function() {
-      setLineIndex(function(prev) { return (prev + 1) % LOVE_PICKUP_LINES.length; });
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLineIndex((prev) => (prev + 1) % LOVE_PICKUP_LINES.length);
     }, 4500);
-    return function() { clearInterval(id); };
+    return () => { clearInterval(id); };
   }, []);
 
-  var checkPermissions = useCallback(function() {
-    if (typeof window !== 'undefined' && window.OreyNative) {
+  const checkPermissions = useCallback(() => {
+    if (typeof window !== 'undefined' && (window as any).OreyNative) {
       try {
-        var granted = window.OreyNative.hasPermissions();
+        const granted = (window as any).OreyNative.hasPermissions();
         setPermState(resolvePermState(granted));
       } catch (e) {
         setPermState(PERM.IDLE);
@@ -111,12 +134,12 @@ export default function Lobby({
     }
   }, []);
 
-  var requestPermissions = useCallback(function() {
+  const requestPermissions = useCallback(() => {
     setPermState(PERM.REQUESTING);
 
-    if (typeof window !== 'undefined' && window.OreyNative) {
+    if (typeof window !== 'undefined' && (window as any).OreyNative) {
       try {
-        window.OreyNative.requestPermissions();
+        (window as any).OreyNative.requestPermissions();
       } catch (e) {
         setPermState(PERM.DENIED);
       }
@@ -125,17 +148,17 @@ export default function Lobby({
     }
   }, []);
 
-  var openSettings = useCallback(function() {
-    if (typeof window !== 'undefined' && window.OreyNative) {
+  const openSettings = useCallback(() => {
+    if (typeof window !== 'undefined' && (window as any).OreyNative) {
       try {
-        window.OreyNative.openAppSettings();
+        (window as any).OreyNative.openAppSettings();
       } catch (e) {
         console.log('Error opening settings:', e);
       }
     }
   }, []);
 
-  var handleDragEnd = useCallback(function() {
+  const handleDragEnd = useCallback(() => {
     if (x.get() > maxDrag * 0.8) {
       if (permState === PERM.GRANTED) {
         onDiscover();
@@ -149,29 +172,29 @@ export default function Lobby({
     });
   }, [x, maxDrag, permState, onDiscover, requestPermissions, controls]);
 
-  var copyId = useCallback(function() {
+  const copyId = useCallback(() => {
     if (!oreyId || oreyId.indexOf('·') !== -1) return;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(oreyId).then(function() {
+      navigator.clipboard.writeText(oreyId).then(() => {
         setCopied(true);
-        setTimeout(function() { setCopied(false); }, 2000);
+        setTimeout(() => { setCopied(false); }, 2000);
       });
     }
   }, [oreyId]);
 
-  var handleConnect = useCallback(function() {
-    var trimmed = targetId.trim().toUpperCase();
+  const handleConnect = useCallback(() => {
+    const trimmed = targetId.trim().toUpperCase();
     if (trimmed.length === 5) {
       onConnectById('OREY-' + trimmed);
       setTargetId('');
     }
   }, [targetId, onConnectById]);
 
-  const handleGenderSelect = (selected) => {
+  const handleGenderSelect = (selected: string | null) => {
     onSetGender(selected);
   };
 
-  const getSearchStatusText = function() {
+  const getSearchStatusText = () => {
     if (matchStage === 'gender') {
       const target = gender === 'male' ? 'Females' : 'Males';
       return `Matching ${target} · ${matchTimer}s`;
@@ -179,7 +202,7 @@ export default function Lobby({
     return 'Matching Anyone · Worldwide';
   };
 
-  const getSliderHint = function() {
+  const getSliderHint = () => {
     if (permState === PERM.GRANTED) return 'Slide to Find a Match';
     if (permState === PERM.REQUESTING) return 'Waiting...';
     return 'Slide to Allow Camera & Mic';
@@ -226,7 +249,7 @@ export default function Lobby({
           </div>
 
           <button
-            onClick={function() { 
+            onClick={() => { 
               setShowNotifSheet(true); 
               onViewNotifications(); 
             }}
@@ -427,7 +450,7 @@ export default function Lobby({
               placeholder="ENTER PARTNER ID"
               maxLength={5}
               value={targetId}
-              onChange={function(e) { setTargetId(e.target.value.toUpperCase().slice(0, 5)); }}
+              onChange={(e) => { setTargetId(e.target.value.toUpperCase().slice(0, 5)); }}
               className="connectInput"
               autoComplete="off"
               autoCorrect="off"
@@ -453,7 +476,7 @@ export default function Lobby({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overlay"
-            onClick={function() { setShowNotifSheet(false); }}
+            onClick={() => { setShowNotifSheet(false); }}
           >
             <motion.div
               initial={{ y: '100%' }}
@@ -461,13 +484,13 @@ export default function Lobby({
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="sheet"
-              onClick={function(e) { e.stopPropagation(); }}
+              onClick={(e) => { e.stopPropagation(); }}
             >
               <div className="handle" />
               <div className="sheetHeader">
                 <h3 className="sheetTitle">Notifications</h3>
                 <button
-                  onClick={function() { setShowNotifSheet(false); }}
+                  onClick={() => { setShowNotifSheet(false); }}
                   className="sheetCloseBtn"
                   aria-label="Close notifications"
                 >
@@ -481,7 +504,7 @@ export default function Lobby({
                     <p className="emptyStateText">No activity yet</p>
                   </div>
                 ) : (
-                  notifications.map(function(n) {
+                  notifications.map((n) => {
                     return (
                       <div
                         key={n.id}
