@@ -186,7 +186,7 @@ export function GlobePulse({
             style={{
               position: "absolute",
               inset: 0,
-              border: "2px solid #33ccdd",
+              border: "2px solid #ef4444",
               borderRadius: "50%",
               opacity: 0,
               animation: `pulse-expand 2s ease-out infinite ${m.delay}s`,
@@ -196,7 +196,7 @@ export function GlobePulse({
             style={{
               position: "absolute",
               inset: 0,
-              border: "2px solid #33ccdd",
+              border: "2px solid #ef4444",
               borderRadius: "50%",
               opacity: 0,
               animation: `pulse-expand 2s ease-out infinite ${m.delay + 0.5}s`,
@@ -206,9 +206,9 @@ export function GlobePulse({
             style={{
               width: 10,
               height: 10,
-              background: "#33ccdd",
+              background: "#ef4444",
               borderRadius: "50%",
-              boxShadow: "0 0 0 3px #111, 0 0 0 5px #33ccdd",
+              boxShadow: "0 0 0 3px #ffffff, 0 0 0 5px #ef4444",
             }}
           />
         </div>
