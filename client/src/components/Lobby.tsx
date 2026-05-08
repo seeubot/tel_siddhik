@@ -4,7 +4,7 @@ import {
   Copy, Check, X,
   ArrowRight, Bell, ShieldCheck, Settings, User, Users
 } from 'lucide-react';
-import { GlobePulse } from '@/components/ui/globe-pulse';
+import { GlobePulse } from './ui/globe-pulse';
 import './styles.css';
 
 const LOVE_PICKUP_LINES = [
@@ -80,12 +80,12 @@ export default function Lobby({
 
   // Globe markers with worldwide locations for realistic searching feel
   const globeMarkers = [
-    { id: "pulse-1", location: [40.7128, -74.0060] as [number, number], delay: 0 },    // New York
-    { id: "pulse-2", location: [51.5074, -0.1278] as [number, number], delay: 0.4 },   // London
-    { id: "pulse-3", location: [35.6762, 139.6503] as [number, number], delay: 0.8 },  // Tokyo
-    { id: "pulse-4", location: [-33.8688, 151.2093] as [number, number], delay: 1.2 }, // Sydney
-    { id: "pulse-5", location: [55.7558, 37.6173] as [number, number], delay: 1.6 },   // Moscow
-    { id: "pulse-6", location: [-1.2921, 36.8219] as [number, number], delay: 2.0 },   // Nairobi
+    { id: "pulse-1", location: [40.7128, -74.0060] as [number, number], delay: 0 },
+    { id: "pulse-2", location: [51.5074, -0.1278] as [number, number], delay: 0.4 },
+    { id: "pulse-3", location: [35.6762, 139.6503] as [number, number], delay: 0.8 },
+    { id: "pulse-4", location: [-33.8688, 151.2093] as [number, number], delay: 1.2 },
+    { id: "pulse-5", location: [55.7558, 37.6173] as [number, number], delay: 1.6 },
+    { id: "pulse-6", location: [-1.2921, 36.8219] as [number, number], delay: 2.0 },
   ];
 
   useEffect(() => {
