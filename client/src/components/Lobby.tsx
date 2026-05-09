@@ -4,7 +4,6 @@ import {
   Copy, Check, X,
   ArrowRight, Bell, ShieldCheck, Settings, User, Users
 } from 'lucide-react';
-import createGlobe from 'cobe';
 import './styles.css';
 
 const LOVE_PICKUP_LINES = [
@@ -51,207 +50,250 @@ interface LobbyProps {
   onViewNotifications?: () => void;
 }
 
-// ── GlobePulse Sub-Component ────────────────────────────────────────────────
+// ── Globe Component (Pure Canvas) ───────────────────────────────────────────
 
-interface PulseMarker {
-  id: string;
-  location: [number, number];
-  delay: number;
-}
+const GLOBE_MARKERS = [
+  { lat: 40.7128, lng: -74.006 },
+  { lat: 51.5074, lng: -0.1278 },
+  { lat: 35.6762, lng: 139.6503 },
+  { lat: -33.8688, lng: 151.2093 },
+  { lat: 55.7558, lng: 37.6173 },
+  { lat: -1.2921, lng: 36.8219 },
+];
 
-function GlobePulse({ 
-  markers = [], 
-  speed = 0.004,
-  globeColor = [0.85, 0.15, 0.15],
-  markerColor = [0.94, 0.27, 0.27],
-}: {
-  markers?: PulseMarker[];
-  speed?: number;
-  globeColor?: [number, number, number];
-  markerColor?: [number, number, number];
-}) {
+function Globe({ size = 260 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pointerInteracting = useRef<{ x: number; y: number } | null>(null);
-  const dragOffset = useRef({ phi: 0, theta: 0 });
+  const phiRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastXRef = useRef(0);
   const phiOffsetRef = useRef(0);
-  const thetaOffsetRef = useRef(0);
-  const isPausedRef = useRef(false);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    pointerInteracting.current = { x: e.clientX, y: e.clientY };
-    if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
-    isPausedRef.current = true;
-  }, []);
-
-  const handlePointerUp = useCallback(() => {
-    if (pointerInteracting.current !== null) {
-      phiOffsetRef.current += dragOffset.current.phi;
-      thetaOffsetRef.current += dragOffset.current.theta;
-      dragOffset.current = { phi: 0, theta: 0 };
-    }
-    pointerInteracting.current = null;
-    if (canvasRef.current) canvasRef.current.style.cursor = "grab";
-    isPausedRef.current = false;
-  }, []);
+  const animRef = useRef<number | null>(null);
+  const pulseTimesRef = useRef(GLOBE_MARKERS.map((_, i) => i * 0.4));
 
   useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      if (pointerInteracting.current !== null) {
-        dragOffset.current = {
-          phi: (e.clientX - pointerInteracting.current.x) / 300,
-          theta: (e.clientY - pointerInteracting.current.y) / 1000,
-        };
-      }
-    };
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    window.addEventListener("pointerup", handlePointerUp, { passive: true });
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [handlePointerUp]);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-    let globe: ReturnType<typeof createGlobe> | null = null;
-    let animationId: number;
-    let phi = 0;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    ctx.scale(dpr, dpr);
 
-    function init() {
-      const width = canvas.offsetWidth;
-      if (width === 0 || globe) return;
+    const cx = size / 2;
+    const cy = size / 2;
+    const R = size / 2 - 8;
 
-      globe = createGlobe(canvas, {
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-        width,
-        height: width,
-        phi: 0,
-        theta: 0.2,
-        dark: 0.9,
-        diffuse: 1.2,
-        mapSamples: 16000,
-        mapBrightness: 6,
-        baseColor: globeColor,
-        markerColor: markerColor,
-        glowColor: [0.1, 0.1, 0.1],
-        markerElevation: 0,
-        markers: markers.map((m) => ({
-          location: m.location,
-          size: 0.025,
-          id: m.id,
-        })),
-        arcs: [],
-        arcColor: markerColor,
-        arcWidth: 0.5,
-        arcHeight: 0.25,
-        opacity: 0.8,
-      });
+    function latLngToXYZ(lat: number, lng: number, phi: number) {
+      const latR = (lat * Math.PI) / 180;
+      const lngR = ((lng + phi * (180 / Math.PI)) * Math.PI) / 180;
+      const x = Math.cos(latR) * Math.sin(lngR);
+      const y = -Math.sin(latR);
+      const z = Math.cos(latR) * Math.cos(lngR);
+      return { x, y, z };
+    }
 
-      function animate() {
-        if (!isPausedRef.current) phi += speed;
-        globe!.update({
-          phi: phi + phiOffsetRef.current + dragOffset.current.phi,
-          theta: 0.2 + thetaOffsetRef.current + dragOffset.current.theta,
-        });
-        animationId = requestAnimationFrame(animate);
+    function projectToCanvas(xyz: { x: number; y: number; z: number }) {
+      return {
+        sx: cx + xyz.x * R,
+        sy: cy + xyz.y * R,
+        visible: xyz.z > 0,
+      };
+    }
+
+    // Pre-generate random dots for land simulation
+    const dots: { lat: number; lng: number }[] = [];
+    for (let i = 0; i < 2200; i++) {
+      const phi_rand = Math.random() * Math.PI * 2;
+      const theta_rand = Math.acos(2 * Math.random() - 1);
+      const lat = 90 - (theta_rand * 180) / Math.PI;
+      const lng = (phi_rand * 180) / Math.PI - 180;
+      if (isLand(lat, lng)) {
+        dots.push({ lat, lng });
+      }
+    }
+
+    function isLand(lat: number, lng: number) {
+      // North America
+      if (lat > 15 && lat < 75 && lng > -170 && lng < -52) return Math.random() < 0.65;
+      // South America
+      if (lat > -60 && lat < 15 && lng > -82 && lng < -34) return Math.random() < 0.6;
+      // Europe
+      if (lat > 35 && lat < 72 && lng > -12 && lng < 45) return Math.random() < 0.72;
+      // Africa
+      if (lat > -40 && lat < 38 && lng > -18 && lng < 52) return Math.random() < 0.65;
+      // Asia
+      if (lat > 0 && lat < 78 && lng > 45 && lng < 150) return Math.random() < 0.6;
+      // Southeast Asia / Indonesia
+      if (lat > -12 && lat < 25 && lng > 95 && lng < 145) return Math.random() < 0.45;
+      // Australia
+      if (lat > -45 && lat < -10 && lng > 112 && lng < 155) return Math.random() < 0.6;
+      return false;
+    }
+
+    let t = 0;
+
+    function draw() {
+      const phi = phiRef.current + phiOffsetRef.current;
+
+      ctx.clearRect(0, 0, size, size);
+
+      // Globe base
+      const grad = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
+      grad.addColorStop(0, "rgba(200, 30, 30, 0.18)");
+      grad.addColorStop(0.5, "rgba(180, 20, 20, 0.10)");
+      grad.addColorStop(1, "rgba(100, 10, 10, 0.06)");
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Subtle globe edge
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.15)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Latitude lines
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const y0 = cy + (Math.sin((lat * Math.PI) / 180) * R);
+        const rx = Math.cos((lat * Math.PI) / 180) * R;
+        if (rx > 0) {
+          ctx.beginPath();
+          ctx.ellipse(cx, y0, rx, rx * 0.15, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(239, 68, 68, 0.07)";
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
       }
 
-      animate();
-      setTimeout(() => canvas && (canvas.style.opacity = "1"));
-    }
+      // Longitude lines
+      for (let lng = 0; lng < 360; lng += 30) {
+        const lngR = ((lng + phi * (180 / Math.PI)) * Math.PI) / 180;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, Math.abs(Math.sin(lngR)) * R, R, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.05)";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
 
-    if (canvas.offsetWidth > 0) {
-      init();
-    } else {
-      const ro = new ResizeObserver((entries) => {
-        if (entries[0]?.contentRect.width > 0) {
-          ro.disconnect();
-          init();
+      // Land dots
+      for (const d of dots) {
+        const xyz = latLngToXYZ(d.lat, d.lng, phi);
+        if (xyz.z < 0.05) continue;
+        const { sx, sy } = projectToCanvas(xyz);
+        const fade = Math.min(1, (xyz.z - 0.05) / 0.3);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(239, 68, 68, ${0.35 * fade})`;
+        ctx.fill();
+      }
+
+      // Markers + pulse rings
+      GLOBE_MARKERS.forEach((m, i) => {
+        const xyz = latLngToXYZ(m.lat, m.lng, phi);
+        if (xyz.z < 0.1) return;
+        const { sx, sy } = projectToCanvas(xyz);
+        const fade = Math.min(1, (xyz.z - 0.1) / 0.4);
+
+        // Pulse ring
+        const pt = pulseTimesRef.current[i];
+        const cycle = (t * 0.8 - pt + i * 0.7) % 2;
+        if (cycle >= 0 && cycle < 1.8) {
+          const progress = cycle / 1.8;
+          const ringR = progress * 22;
+          const alpha = (1 - progress) * 0.6 * fade;
+          ctx.beginPath();
+          ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Second ring
+          const ringR2 = progress * 14;
+          const alpha2 = (1 - progress) * 0.4 * fade;
+          ctx.beginPath();
+          ctx.arc(sx, sy, ringR2, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(239, 68, 68, ${alpha2})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
         }
+
+        // Dot
+        ctx.beginPath();
+        ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * fade})`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5.5, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(239, 68, 68, ${0.8 * fade})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       });
-      ro.observe(canvas);
+
+      // Specular highlight
+      const spec = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.35, 0, cx - R * 0.2, cy - R * 0.2, R * 0.55);
+      spec.addColorStop(0, "rgba(255,255,255,0.08)");
+      spec.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fillStyle = spec;
+      ctx.fill();
+
+      if (!isDraggingRef.current) {
+        phiRef.current += 0.004;
+      }
+      t += 0.016;
+
+      animRef.current = requestAnimationFrame(draw);
     }
 
+    animRef.current = requestAnimationFrame(draw);
     return () => {
-      if (animationId) cancelAnimationFrame(animationId);
-      if (globe) globe.destroy();
+      if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [markers, speed, globeColor, markerColor]);
+  }, [size]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    lastXRef.current = e.clientX;
+    if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - lastXRef.current;
+    phiOffsetRef.current += dx / 150;
+    lastXRef.current = e.clientX;
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    phiRef.current += phiOffsetRef.current;
+    phiOffsetRef.current = 0;
+    if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+  }, []);
 
   return (
-    <div className="globePulseWrapper">
-      <style>{`
-        @keyframes pulse-expand {
-          0% { transform: scaleX(0.3) scaleY(0.3); opacity: 0.8; }
-          100% { transform: scaleX(1.5) scaleY(1.5); opacity: 0; }
-        }
-      `}</style>
-      <canvas
-        ref={canvasRef}
-        onPointerDown={handlePointerDown}
-        style={{
-          width: "100%",
-          height: "100%",
-          cursor: "grab",
-          opacity: 0,
-          transition: "opacity 1.2s ease",
-          borderRadius: "50%",
-          touchAction: "none",
-        }}
-      />
-      {markers.map((m) => (
-        <div
-          key={m.id}
-          style={{
-            position: "absolute",
-            positionAnchor: `--cobe-${m.id}` as any,
-            bottom: "anchor(center)" as any,
-            left: "anchor(center)" as any,
-            translate: "-50% 50%",
-            width: 40,
-            height: 40,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none" as const,
-            opacity: `var(--cobe-visible-${m.id}, 0)`,
-            filter: `blur(calc((1 - var(--cobe-visible-${m.id}, 0)) * 8px))`,
-            transition: "opacity 0.4s, filter 0.4s",
-          }}
-        >
-          <span
-            style={{
-              position: "absolute",
-              inset: 0,
-              border: "2px solid #ef4444",
-              borderRadius: "50%",
-              opacity: 0,
-              animation: `pulse-expand 2s ease-out infinite ${m.delay}s`,
-            }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              inset: 0,
-              border: "2px solid #ef4444",
-              borderRadius: "50%",
-              opacity: 0,
-              animation: `pulse-expand 2s ease-out infinite ${m.delay + 0.5}s`,
-            }}
-          />
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              background: "#ef4444",
-              borderRadius: "50%",
-              boxShadow: "0 0 0 3px #ffffff, 0 0 0 5px #ef4444",
-            }}
-          />
-        </div>
-      ))}
-    </div>
+    <canvas
+      ref={canvasRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
+      style={{
+        cursor: "grab",
+        borderRadius: "50%",
+        touchAction: "none",
+        display: "block",
+        filter: "drop-shadow(0 20px 40px rgba(239,68,68,0.25))",
+      }}
+    />
   );
 }
 
@@ -283,16 +325,6 @@ export default function Lobby({
   const thumbSize = 56;
   const maxDrag = trackWidth - thumbSize - 8;
   const opacity = useTransform(x, [0, maxDrag * 0.6], [1, 0]);
-
-  // Globe markers with worldwide locations
-  const globeMarkers: PulseMarker[] = [
-    { id: "pulse-1", location: [40.7128, -74.0060], delay: 0 },
-    { id: "pulse-2", location: [51.5074, -0.1278], delay: 0.4 },
-    { id: "pulse-3", location: [35.6762, 139.6503], delay: 0.8 },
-    { id: "pulse-4", location: [-33.8688, 151.2093], delay: 1.2 },
-    { id: "pulse-5", location: [55.7558, 37.6173], delay: 1.6 },
-    { id: "pulse-6", location: [-1.2921, 36.8219], delay: 2.0 },
-  ];
 
   useEffect(() => {
     checkPermissions();
@@ -587,12 +619,7 @@ export default function Lobby({
                 className="searchingContent"
               >
                 <div className="globeContainer">
-                  <GlobePulse
-                    markers={globeMarkers}
-                    speed={0.004}
-                    globeColor={[0.85, 0.15, 0.15]}
-                    markerColor={[0.94, 0.27, 0.27]}
-                  />
+                  <Globe size={260} />
 
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
