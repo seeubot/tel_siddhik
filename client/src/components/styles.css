@@ -1,31 +1,22 @@
-/* ============================================ */
-/* Orey Lobby — Framework7-Compatible Stylesheet */
-/* White Primary, Light Red Secondary Theme      */
-/* ============================================ */
+/* ================================================ */
+/* Orey Lobby — styles.css                          */
+/* Stack: React + cobe + framer-motion + lucide     */
+/* ================================================ */
 
-/* Framework7 theme token overrides */
-:root {
-  --f7-theme-color: #ef4444;
-  --f7-theme-color-rgb: 239, 68, 68;
-  --f7-theme-color-shade: #dc2626;
-  --f7-theme-color-tint: #f87171;
-  --f7-safe-area-top: env(safe-area-inset-top, 0px);
-  --f7-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --f7-page-bg-color: #f8f9fa;
-  --f7-navbar-bg-color: #f8f9fa;
-  --f7-navbar-border-color: transparent;
-  --f7-sheet-border-radius: 28px;
-  --f7-sheet-bg-color: #ffffff;
+/* ── Reset / Root ─────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
-
-/* ============================================ */
-/* ROOT & BACKGROUNDS                            */
-/* ============================================ */
 
 .root {
   position: fixed;
   inset: 0;
-  background-color: #f8f9fa;
+  background: #f8f9fa;
   color: #1e293b;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -34,38 +25,38 @@
   flex-direction: column;
 }
 
-.bgGradient {
+/* ── Background glows ─────────────────────────── */
+
+.bg {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
 }
 
-.bgGlowTop {
+.bgTop {
   position: absolute;
   top: -10%;
   right: -5%;
   width: 70%;
   height: 40%;
-  background-color: rgba(239, 68, 68, 0.08);
+  background: rgba(239, 68, 68, 0.08);
   filter: blur(120px);
   border-radius: 9999px;
 }
 
-.bgGlowBottom {
+.bgBot {
   position: absolute;
   bottom: -10%;
   left: -5%;
   width: 60%;
   height: 40%;
-  background-color: rgba(239, 68, 68, 0.04);
+  background: rgba(239, 68, 68, 0.04);
   filter: blur(100px);
   border-radius: 9999px;
 }
 
-/* ============================================ */
-/* LAYOUT CONTAINER                              */
-/* ============================================ */
+/* ── Layout container ─────────────────────────── */
 
 .container {
   position: relative;
@@ -75,23 +66,25 @@
   height: 100%;
   width: 100%;
   max-width: 28rem;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
-/* ============================================ */
-/* HEADER                                        */
-/* ============================================ */
+/* ── Header ───────────────────────────────────── */
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding-top: calc(2.5rem + var(--f7-safe-area-top));
+  padding-top: calc(2.5rem + env(safe-area-inset-top, 0px));
   padding-bottom: 1.5rem;
   flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .logo {
@@ -107,55 +100,17 @@
   font-style: italic;
 }
 
-/* ============================================ */
-/* BELL BUTTON                                   */
-/* ============================================ */
+/* ── Daily Spark ──────────────────────────────── */
 
-.bellBtn {
-  position: relative;
-  padding: 0.5rem;
-  color: #64748b;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: color 0.2s, background-color 0.2s;
-  margin-top: -0.25rem;
-  cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bellBtn:hover {
-  color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.08);
-}
-
-.bellBadge {
-  position: absolute;
-  top: 0.375rem;
-  right: 0.375rem;
-  width: 0.375rem;
-  height: 0.375rem;
-  background-color: #ef4444;
-  border-radius: 9999px;
-  border: 2px solid #f8f9fa;
-}
-
-/* ============================================ */
-/* DAILY SPARK                                   */
-/* ============================================ */
-
-.styleContainer {
+.spark {
+  margin-top: 1rem;
   display: flex;
   flex-direction: column;
-  margin-top: 1rem;
-  gap: 0.25rem;
+  gap: 3px;
+  overflow: hidden;
 }
 
-.styleLabel {
+.sparkLabel {
   font-size: 9px;
   font-weight: 900;
   text-transform: uppercase;
@@ -163,160 +118,177 @@
   color: #94a3b8;
 }
 
-.styleValue {
-  font-size: 0.875rem;
+.sparkWindow {
+  height: 2.5rem;
+  overflow: hidden;
+}
+
+.sparkText {
+  font-size: 0.85rem;
   font-weight: 500;
   color: #ef4444;
   font-style: italic;
-  line-height: 1.25;
+  line-height: 1.3;
   max-width: 240px;
 }
 
-.sparkAnim {
-  animation: sparkFadeIn 0.3s ease forwards;
-}
+/* ── Bell button ──────────────────────────────── */
 
-@keyframes sparkFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ============================================ */
-/* GENDER SELECTOR                               */
-/* ============================================ */
-
-.genderSelector {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.genderBtn {
+.bellBtn {
+  position: relative;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 2rem;
-  background-color: rgba(0, 0, 0, 0.03);
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 9999px;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.bellBtn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.bellDot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 9999px;
+  border: 2px solid #f8f9fa;
+}
+
+/* ── Gender selector ──────────────────────────── */
+
+.genderRow {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  overflow: hidden;
+}
+
+.gBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 44px;
+  min-height: 40px;
 }
 
-.genderBtnActiveMale,
-.genderBtnActiveFemale {
-  background-color: rgba(239, 68, 68, 0.1);
+.gBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.gBtnRed {
+  background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
   color: #ef4444;
 }
 
-.genderBtnActiveAny {
-  background-color: rgba(0, 0, 0, 0.08);
+.gBtnAny {
+  background: rgba(0, 0, 0, 0.08);
   border-color: rgba(0, 0, 0, 0.15);
   color: #1e293b;
 }
 
-.genderBtn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
-}
-
-/* ============================================ */
-/* MAIN AREA                                     */
-/* ============================================ */
+/* ── Main area ────────────────────────────────── */
 
 .main {
-  flex: 1 1 0%;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 0;
 }
 
-/* ============================================ */
-/* SLIDER                                        */
-/* ============================================ */
+/* ── Idle / slider ────────────────────────────── */
 
-.sliderTrack {
+.idleWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.track {
   position: relative;
   width: 100%;
   max-width: 280px;
-  margin-left: auto;
-  margin-right: auto;
-  height: 4rem;
-  background-color: rgba(0, 0, 0, 0.03);
+  height: 64px;
+  background: rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 1rem;
-  padding: 0.25rem;
+  padding: 4px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
-.sliderHint {
+.trackHint {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  transition: opacity 0.1s;
 }
 
-.sliderHintText {
-  font-size: 10px;
+.trackHintText {
+  font-size: 9px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.28em;
   color: #94a3b8;
-  animation: hintPulse 2s ease-in-out infinite;
 }
 
-@keyframes hintPulse {
-  0%, 100% { opacity: 0.6; }
-  50%       { opacity: 1; }
-}
-
-.sliderThumb {
+.thumb {
   z-index: 10;
-  width: 3.5rem;
-  height: 3.5rem;
-  background-color: #ef4444;
-  border-radius: 0.75rem;
+  width: 56px;
+  height: 56px;
+  background: #ef4444;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.32);
   touch-action: none;
+  flex-shrink: 0;
 }
 
-.sliderThumb:active {
+.thumb:active {
   cursor: grabbing;
 }
 
-.thumbLogo {
+.thumbLetter {
   font-size: 1.5rem;
   font-weight: 900;
-  color: #ffffff;
+  color: #fff;
   pointer-events: none;
 }
 
-/* ============================================ */
-/* PERMISSION HINTS                              */
-/* ============================================ */
-
-.permHintIdle {
-  margin-top: 0.5rem;
+.permHint {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -325,67 +297,58 @@
   text-align: center;
 }
 
-/* ============================================ */
-/* SEARCHING STATE                               */
-/* ============================================ */
+/* ── Searching / globe ────────────────────────── */
 
-.searchingContent {
+.searchWrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  gap: 1.25rem;
-  padding-top: 1rem;
+  gap: 20px;
 }
 
-.globeContainer {
-  position: relative;
+.globeGroup {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 14px;
   width: 100%;
   max-width: 280px;
-  margin: 0 auto;
-  gap: 1rem;
 }
 
-.searchTimer {
-  font-size: 1.25rem;
+.searchLabel {
+  font-size: 1.2rem;
   font-weight: 700;
   color: #1e293b;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-align: center;
 }
 
 .searchStatus {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: #ef4444;
-  font-size: 10px;
+  gap: 8px;
+  font-size: 9px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.28em;
+  color: #ef4444;
 }
 
 .statusDot {
-  width: 0.375rem;
-  height: 0.375rem;
+  width: 6px;
+  height: 6px;
   border-radius: 9999px;
-  background-color: #ef4444;
-  animation: statusPulse 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  background: #ef4444;
+  animation: dotPulse 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-@keyframes statusPulse {
+@keyframes dotPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50%       { transform: scale(2.5); opacity: 0; }
+  50%       { transform: scale(2.4); opacity: 0; }
 }
 
-.cancelSearchBtn {
-  padding: 0.625rem 1.5rem;
+.cancelBtn {
+  padding: 10px 24px;
   border-radius: 9999px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   font-size: 10px;
@@ -400,32 +363,30 @@
   min-height: 44px;
 }
 
-.cancelSearchBtn:hover {
+.cancelBtn:hover {
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.3);
   background: rgba(239, 68, 68, 0.05);
 }
 
-/* ============================================ */
-/* FOOTER                                        */
-/* ============================================ */
+/* ── Footer ───────────────────────────────────── */
 
 .footer {
   margin-top: auto;
   padding-top: 1.5rem;
-  padding-bottom: calc(2rem + var(--f7-safe-area-bottom));
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 14px;
   flex-shrink: 0;
 }
 
+/* Identity row */
 .idRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  padding: 0 4px;
 }
 
 .idBlock {
@@ -445,17 +406,17 @@
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
 }
 
 .idDisplay {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .idCode {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   color: #1e293b;
@@ -465,28 +426,26 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 2px;
 }
 
 .privateText {
   font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   color: #94a3b8;
 }
 
-/* ============================================ */
-/* CONNECT CARD                                  */
-/* ============================================ */
-
+/* Connect card */
 .connectCard {
   display: flex;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 1rem;
-  padding: 0.375rem;
-  transition: all 0.2s ease;
+  padding: 5px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .connectCard:focus-within {
@@ -494,19 +453,18 @@
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
 }
 
-.connectPrefix {
+.connectPfx {
   font-size: 10px;
   font-weight: 900;
   color: #94a3b8;
-  padding-left: 0.75rem;
-  padding-right: 0.25rem;
+  padding: 0 4px 0 10px;
 }
 
 .connectInput {
-  flex: 1 1 0%;
+  flex: 1;
   background: transparent;
   border: none;
-  padding: 0.5rem;
+  padding: 8px;
   font-size: 0.875rem;
   font-weight: 900;
   letter-spacing: 0.2em;
@@ -517,31 +475,32 @@
 
 .connectInput::placeholder {
   color: #cbd5e1;
+  font-weight: 700;
 }
 
 .connectBtn {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.75rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
   border: none;
   cursor: pointer;
   flex-shrink: 0;
-  background-color: rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  background: rgba(0, 0, 0, 0.05);
   color: #94a3b8;
 }
 
 .connectBtn:not(:disabled) {
-  background-color: #ef4444;
-  color: #ffffff;
+  background: #ef4444;
+  color: #fff;
 }
 
 .connectBtn:not(:disabled):hover {
+  background: #dc2626;
   transform: scale(1.05);
-  background-color: #dc2626;
 }
 
 .connectBtn:not(:disabled):active {
@@ -549,60 +508,42 @@
 }
 
 .connectBtn:disabled {
+  opacity: 0.38;
   cursor: not-allowed;
-  opacity: 0.4;
 }
 
-/* ============================================ */
-/* NOTIFICATION SHEET (F7-style bottom sheet)   */
-/* ============================================ */
+/* ── Notification overlay + sheet ─────────────── */
 
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 150;
-  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  animation: overlayIn 0.2s ease;
-}
-
-@keyframes overlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 .sheet {
   position: absolute;
   inset-x: 0;
   bottom: 0;
-  background-color: #ffffff;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  border-top-left-radius: 28px;
-  border-top-right-radius: 28px;
-  padding: 2rem;
-  max-height: 85vh;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  padding: 1.75rem 1.75rem calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  max-height: 85dvh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -25px 50px -12px rgba(0, 0, 0, 0.15);
-  overflow-y: auto;
-  padding-bottom: calc(2rem + var(--f7-safe-area-bottom));
-  animation: sheetUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 -20px 50px -10px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
-@keyframes sheetUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-.handle {
-  width: 3rem;
-  height: 0.375rem;
-  background-color: rgba(0, 0, 0, 0.1);
+.sheetHandle {
+  width: 40px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 9999px;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 2rem;
+  margin: 0 auto 1.75rem;
   flex-shrink: 0;
 }
 
@@ -610,146 +551,121 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-shrink: 0;
 }
 
 .sheetTitle {
-  font-size: 1.125rem;
+  font-size: 1.1rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   color: #1e293b;
 }
 
-.sheetCloseBtn {
-  padding: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 9999px;
-  color: #94a3b8;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 44px;
-  min-width: 44px;
+.sheetClose {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 9999px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.sheetCloseBtn:hover {
+.sheetClose:hover {
   color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.08);
+  background: rgba(239, 68, 68, 0.08);
 }
 
-.sheetContent {
+.sheetBody {
   overflow-y: auto;
-  padding-right: 0.5rem;
+  flex: 1;
+  padding-right: 2px;
 }
 
+.sheetBody::-webkit-scrollbar { width: 4px; }
+.sheetBody::-webkit-scrollbar-track { background: transparent; }
+.sheetBody::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+
+/* Empty state */
 .emptyState {
   padding: 3rem 0;
   text-align: center;
   opacity: 0.3;
 }
 
-.emptyStateIcon {
-  margin: 0 auto 0.5rem;
-  display: block;
-  color: #94a3b8;
-}
-
-.emptyStateText {
-  font-size: 0.75rem;
+.emptyText {
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #94a3b8;
 }
 
+/* Notification item */
 .notifItem {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 0.75rem;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
   border: 1px solid transparent;
-  margin-bottom: 0.5rem;
-  transition: background-color 0.2s;
+  margin-bottom: 8px;
+  transition: background 0.15s;
 }
 
 .notifItem:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.018) !important;
 }
 
-.notifIcon {
-  font-size: 1.25rem;
+.notifEmoji {
+  font-size: 1.2rem;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
-.notifContent {
-  flex: 1 1 0%;
+.notifBody {
+  flex: 1;
   min-width: 0;
 }
 
 .notifTitle {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 700;
   color: #1e293b;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.notifMessage {
+.notifMsg {
   font-size: 10px;
   color: #94a3b8;
-  margin-top: 0.25rem;
-  line-height: 1.625;
+  margin-top: 3px;
+  line-height: 1.6;
 }
 
 .unreadDot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 8px;
+  height: 8px;
   border-radius: 9999px;
-  background-color: #ef4444;
-  margin-top: 0.25rem;
+  background: #ef4444;
+  margin-top: 4px;
   flex-shrink: 0;
 }
 
-/* ============================================ */
-/* UTILITY CLASSES                               */
-/* ============================================ */
+/* ── Accessibility ────────────────────────────── */
 
-.flex        { display: flex; }
-.flex-col    { flex-direction: column; }
-.items-center { align-items: center; }
-.h-10        { height: 2.5rem; }
-.overflow-hidden { overflow: hidden; }
-
-/* ============================================ */
-/* RESPONSIVE                                    */
-/* ============================================ */
-
-@media (max-width: 360px) {
-  .container { padding-left: 1rem; padding-right: 1rem; }
-  .logo      { font-size: 2.5rem; }
-  .sliderTrack { max-width: 260px; }
-  .idCode    { font-size: 1.25rem; }
-}
-
-@media (min-width: 768px) {
-  .container     { max-width: 32rem; }
-  .globeContainer { max-width: 320px; }
-}
-
-/* ============================================ */
-/* ACCESSIBILITY                                 */
-/* ============================================ */
-
-.connectBtn:focus-visible,
 .bellBtn:focus-visible,
-.cancelSearchBtn:focus-visible,
-.sheetCloseBtn:focus-visible {
+.cancelBtn:focus-visible,
+.connectBtn:focus-visible,
+.sheetClose:focus-visible,
+.gBtn:focus-visible {
   outline: 2px solid #ef4444;
   outline-offset: 2px;
 }
@@ -758,31 +674,31 @@
   outline: none;
 }
 
+/* ── Responsive ───────────────────────────────── */
+
+@media (max-width: 360px) {
+  .container { padding: 0 1rem; }
+  .logo      { font-size: 2.5rem; }
+  .track     { max-width: 260px; }
+  .idCode    { font-size: 1.2rem; }
+}
+
+@media (min-width: 768px) {
+  .container  { max-width: 32rem; }
+  .globeGroup { max-width: 320px; }
+}
+
+/* ── Reduced motion ───────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
-  .statusDot, .sliderHintText, .sparkAnim {
-    animation: none;
-  }
+  .statusDot { animation: none; }
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
 }
 
-/* ============================================ */
-/* SCROLLBARS                                    */
-/* ============================================ */
-
-.sheet::-webkit-scrollbar        { width: 4px; }
-.sheet::-webkit-scrollbar-track  { background: transparent; }
-.sheet::-webkit-scrollbar-thumb  { background: rgba(0,0,0,0.1); border-radius: 2px; }
-
-.sheetContent::-webkit-scrollbar       { width: 4px; }
-.sheetContent::-webkit-scrollbar-track { background: transparent; }
-.sheetContent::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
-
-/* ============================================ */
-/* MISC                                          */
-/* ============================================ */
+/* ── Misc ─────────────────────────────────────── */
 
 ::selection {
   background: rgba(239, 68, 68, 0.2);
