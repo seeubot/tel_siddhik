@@ -1,17 +1,12 @@
 'use strict';
 
 /**
- * ─────────────────────────────────────────────────────────────────────────────
- * gender.js — Orey! Gender-Aware Matchmaking Module (v3 - Fixed)
- *
- * Fix summary:
- *   1. findMatch no longer removes the caller from its queue before confirming
- *      a partner exists — prevents "lost from queue" bug.
- *   2. Timer expiry now fires a callback so the server can push the socket
- *      into the random fallback queue automatically.
- *   3. findMatch returns a structured result { matched, partner, fallback }
- *      so the server knows exactly what happened.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Gender-Aware Matchmaking Module for Orey!
+ * 
+ * Features:
+ * - 3-second priority window for opposite gender matching
+ * - Falls back to same gender after timer expires
+ * - Random queue fallback for non-gender users
  */
 
 const VALID_GENDERS   = new Set(['male', 'female']);
@@ -46,8 +41,12 @@ function createGenderMatcher(io) {
   }
 
   function _cleanQueues() {
-    for (let i = maleQueue.length - 1;   i >= 0; i--) { if (!_isSocketAlive(maleQueue[i].socketId))   maleQueue.splice(i, 1); }
-    for (let i = femaleQueue.length - 1; i >= 0; i--) { if (!_isSocketAlive(femaleQueue[i].socketId)) femaleQueue.splice(i, 1); }
+    for (let i = maleQueue.length - 1;   i >= 0; i--) { 
+      if (!_isSocketAlive(maleQueue[i].socketId)) maleQueue.splice(i, 1); 
+    }
+    for (let i = femaleQueue.length - 1; i >= 0; i--) { 
+      if (!_isSocketAlive(femaleQueue[i].socketId)) femaleQueue.splice(i, 1); 
+    }
   }
 
   function _queueFor(gender) {
@@ -74,7 +73,6 @@ function createGenderMatcher(io) {
   /**
    * Register a callback fired when a socket's gender timer expires.
    * Signature: (socketId: string, gender: string) => void
-   * The server uses this to push the socket into the random fallback queue.
    */
   function onTimerExpire(cb) {
     expireCallbacks.push(cb);
@@ -82,7 +80,6 @@ function createGenderMatcher(io) {
 
   /**
    * Start the 3-second gender-priority timer for a socket.
-   * When it expires, all registered onTimerExpire callbacks are invoked.
    */
   function startTimer(socketId, gender) {
     // Cancel any existing timer first
@@ -93,9 +90,12 @@ function createGenderMatcher(io) {
       const entry = timerMap.get(socketId);
       if (!entry) return;
       entry.expired = true;
-      // Only fire callback if socket is still alive and still in gender queue
+      // Only fire callback if socket is still alive
       if (_isSocketAlive(socketId)) {
-        expireCallbacks.forEach(cb => { try { cb(socketId, gender); } catch (e) { console.error('onTimerExpire error', e); } });
+        expireCallbacks.forEach(cb => { 
+          try { cb(socketId, gender); } 
+          catch (e) { console.error('onTimerExpire error', e); } 
+        });
       }
     }, GENDER_TIMEOUT_MS);
 
@@ -144,12 +144,7 @@ function createGenderMatcher(io) {
    *   • Timer still active  → opposite gender only
    *   • Timer expired       → opposite gender, then same gender
    *
-   * IMPORTANT: We do NOT remove socketId from its own queue here.
-   * The caller (server) must call dequeue(socketId) after a successful match
-   * to keep queue state consistent.
-   *
-   * @returns {{ matched: true, partner: { socketId, gender } }
-   *          |{ matched: false }}
+   * @returns {{ matched: true, partner: { socketId, gender } } | { matched: false }}
    */
   function findMatch(socketId, gender) {
     _cleanQueues();
@@ -160,7 +155,6 @@ function createGenderMatcher(io) {
     // ── Priority 1: Opposite gender ──────────────────────────────────────────
     if (opposite) {
       const oppQ = _queueFor(opposite);
-      // Scan without modifying until we find a live, non-self candidate
       for (let i = 0; i < oppQ.length; i++) {
         const candidate = oppQ[i];
         if (candidate.socketId === socketId) continue;
@@ -168,7 +162,6 @@ function createGenderMatcher(io) {
 
         // Found valid opposite-gender partner — remove them from queue now
         oppQ.splice(i, 1);
-        // Caller is responsible for dequeuing socketId
         timerMap.delete(socketId);
         timerMap.delete(candidate.socketId);
         return { matched: true, partner: candidate };
@@ -222,7 +215,7 @@ function createGenderMatcher(io) {
     startTimer,
     isTimerExpired,
     getTimerRemaining,
-    onTimerExpire,      // NEW – lets server register fallback callback
+    onTimerExpire,
   };
 }
 
