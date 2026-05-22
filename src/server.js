@@ -119,6 +119,7 @@ const REPORT_REASONS = [
   'Fake Profile',
   'Impersonation',
   'Privacy Violation',
+  'Inappropriate Content',
   'Other'
 ];
 
@@ -169,11 +170,31 @@ const UserSchema = new mongoose.Schema({
     enum: ['manual', 'auto', 'hybrid'],
     default: 'hybrid'
   },
+  isInCall: { type: Boolean, default: false },
+  currentRoomId: { type: String, default: null },
+  totalCalls: { type: Number, default: 0 },
+  totalCallDuration: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date,
+  lastActive: Date,
   isActive: { type: Boolean, default: true }
 });
 const User = mongoose.model('User', UserSchema);
+
+const CallHistorySchema = new mongoose.Schema({
+  roomId: { type: String, required: true, index: true },
+  callerFirebaseUid: String,
+  receiverFirebaseUid: String,
+  callerDeviceId: String,
+  receiverDeviceId: String,
+  startTime: { type: Date, default: Date.now },
+  endTime: Date,
+  duration: { type: Number, default: 0 },
+  endedBy: String,
+  callQuality: String,
+  wasReported: { type: Boolean, default: false },
+});
+const CallHistory = mongoose.model('CallHistory', CallHistorySchema);
 
 const ReportSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
@@ -182,6 +203,7 @@ const ReportSchema = new mongoose.Schema({
   reportedDeviceId: { type: String, index: true },
   reportedFirebaseUid: { type: String, index: true },
   reportedUserId: String,
+  roomId: String,
   reason: String,
   description: String,
   timestamp: { type: Date, default: Date.now },
@@ -241,7 +263,7 @@ const OreyIdModel = mongoose.model('OreyId', OreyIdSchema);
 const oreyIds = new Map();
 const rooms = new Map();
 const randomQueue = [];
-const autoSearchTimers = new Map();
+const activeCalls = new Map();
 
 let appConfig = null;
 
@@ -327,8 +349,6 @@ function estimateNetworkQuality(socket) {
 }
 
 function getAdaptiveQuality(networkQuality, userPreference) {
-  const thresholds = appConfig.videoQuality.networkThresholds;
-  
   const qualityMap = {
     'excellent': 'hd',
     'good': 'high',
@@ -418,8 +438,17 @@ async function isDeviceBanned(deviceId, firebaseUid) {
   return ban;
 }
 
+async function isUserVerified(firebaseUid) {
+  if (!firebaseUid) return false;
+  const user = await User.findOne({ firebaseUid });
+  if (!user) return false;
+  return user.termsAccepted && user.ageVerified;
+}
+
 function _createRoom(selfSocket, partnerSocket) {
   const roomId = generateRoomId();
+  const startTime = Date.now();
+  
   rooms.set(roomId, new Map());
   selfSocket.join(roomId);
   partnerSocket.join(roomId);
@@ -441,8 +470,34 @@ function _createRoom(selfSocket, partnerSocket) {
     videoQuality: partnerSocket.data.videoQuality || 'medium',
   };
 
-  rooms.get(roomId).set(selfSocket.id, selfData);
-  rooms.get(roomId).set(partnerSocket.id, partnerData);
+  rooms.get(roomId).set(selfSocket.id, { ...selfData, joinedAt: startTime });
+  rooms.get(roomId).set(partnerSocket.id, { ...partnerData, joinedAt: startTime });
+
+  // Track active call
+  activeCalls.set(roomId, {
+    roomId,
+    startTime,
+    participants: [selfSocket.id, partnerSocket.id],
+    callerUid: selfSocket.data.firebaseUid,
+    receiverUid: partnerSocket.data.firebaseUid
+  });
+
+  // Update user status
+  if (selfSocket.data.firebaseUid) {
+    User.findOneAndUpdate(
+      { firebaseUid: selfSocket.data.firebaseUid },
+      { isInCall: true, currentRoomId: roomId, lastActive: new Date() }
+    ).catch(err => console.error('Failed to update call status:', err));
+  }
+  if (partnerSocket.data.firebaseUid) {
+    User.findOneAndUpdate(
+      { firebaseUid: partnerSocket.data.firebaseUid },
+      { isInCall: true, currentRoomId: roomId, lastActive: new Date() }
+    ).catch(err => console.error('Failed to update call status:', err));
+  }
+
+  selfSocket.data.currentRoomId = roomId;
+  partnerSocket.data.currentRoomId = roomId;
 
   const selfQuality = selfSocket.data.videoQuality || appConfig.videoQuality.default;
   const partnerQuality = partnerSocket.data.videoQuality || appConfig.videoQuality.default;
@@ -479,9 +534,57 @@ function _createRoom(selfSocket, partnerSocket) {
   console.log(`🤝 Room: ${roomId} (Quality: ${roomQuality})`);
 }
 
+// ✅ End call and record history
+async function endCall(roomId, endedBySocketId) {
+  const activeCall = activeCalls.get(roomId);
+  if (!activeCall) return;
+
+  const endTime = Date.now();
+  const duration = Math.floor((endTime - activeCall.startTime) / 1000);
+
+  // Save call history
+  try {
+    await CallHistory.create({
+      roomId,
+      callerFirebaseUid: activeCall.callerUid,
+      receiverFirebaseUid: activeCall.receiverUid,
+      startTime: new Date(activeCall.startTime),
+      endTime: new Date(endTime),
+      duration,
+      endedBy: endedBySocketId,
+      callQuality: 'medium'
+    });
+  } catch (err) {
+    console.error('Failed to save call history:', err);
+  }
+
+  // Update user call counts
+  for (const uid of [activeCall.callerUid, activeCall.receiverUid]) {
+    if (uid) {
+      User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { 
+          $inc: { totalCalls: 1, totalCallDuration: duration },
+          isInCall: false,
+          currentRoomId: null,
+          lastActive: new Date()
+        }
+      ).catch(err => console.error('Failed to update call stats:', err));
+    }
+  }
+
+  activeCalls.delete(roomId);
+}
+
 function attemptMatch(newSocketId) {
   const socket = io.sockets.sockets.get(newSocketId);
   if (!socket) return;
+
+  // Check if user is already in a call
+  if (socket.data.currentRoomId) {
+    socket.emit('error', { message: 'You are already in a call' });
+    return;
+  }
 
   if (!randomQueue.includes(newSocketId)) {
     randomQueue.push(newSocketId);
@@ -496,7 +599,7 @@ function attemptMatch(newSocketId) {
   for (let i = 0; i < randomQueue.length; i++) {
     if (i === idxSelf) continue;
     const candidateSocket = io.sockets.sockets.get(randomQueue[i]);
-    if (candidateSocket) {
+    if (candidateSocket && !candidateSocket.data.currentRoomId) {
       partnerIdx = i;
       break;
     }
@@ -509,7 +612,7 @@ function attemptMatch(newSocketId) {
 
   const partnerId = randomQueue[partnerIdx];
   const partnerSocket = io.sockets.sockets.get(partnerId);
-  if (!partnerSocket) {
+  if (!partnerSocket || partnerSocket.data.currentRoomId) {
     removeFromQueue(partnerId);
     attemptMatch(newSocketId);
     return;
@@ -538,6 +641,8 @@ app.get('/health', (_req, res) => res.json({
   timestamp: new Date().toISOString(),
   uptime: process.uptime(),
   activeConnections: io?.engine?.clientsCount || 0,
+  activeCalls: activeCalls.size,
+  queueLength: randomQueue.length,
   serviceName: SERVICE_NAME,
   firebaseConfigured: !!firebaseApp,
   videoQualitySupported: Object.keys(VIDEO_QUALITY),
@@ -561,11 +666,13 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
     let user = await User.findOne({ firebaseUid: uid });
     
     if (!user) {
+      // Check if email already used
       const existingEmail = await User.findOne({ email });
       if (existingEmail) {
         return res.status(409).json({ error: 'Email already registered' });
       }
       
+      // Generate unique Orey ID
       let displayId, attempts = 0;
       do {
         displayId = generateOreyDisplayId();
@@ -579,10 +686,12 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
         photoURL: picture || '',
         oreyId: displayId,
         lastLogin: new Date(),
+        lastActive: new Date(),
         videoQualityPreference: 'medium',
         qualitySwitchMode: 'hybrid'
       });
       
+      // Create Orey ID entry
       const hashId = crypto.createHash('sha256').update(displayId + uid).digest('hex').substring(0, 16);
       const expiresAt = Date.now() + OREY_ID_TTL_MS;
       
@@ -605,6 +714,7 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
       }).catch(err => console.error('OreyId creation error:', err));
     } else {
       user.lastLogin = new Date();
+      user.lastActive = new Date();
     }
     
     await user.save();
@@ -615,6 +725,7 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
         firebaseUid: user.firebaseUid,
         email: user.email,
         displayName: user.displayName,
+        photoURL: user.photoURL,
         oreyId: user.oreyId,
         ageVerified: user.ageVerified,
         gender: user.gender,
@@ -622,15 +733,123 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
         termsAccepted: user.termsAccepted,
         videoQualityPreference: user.videoQualityPreference,
         qualitySwitchMode: user.qualitySwitchMode,
+        totalCalls: user.totalCalls,
         createdAt: user.createdAt
       },
       requiresAgeVerification: !user.ageVerified,
-      requiresTermsAcceptance: !user.termsAccepted
+      requiresTermsAcceptance: !user.termsAccepted,
+      isFullyVerified: user.termsAccepted && user.ageVerified
     });
   } catch (error) {
     console.error('Auth error:', error);
     res.status(401).json({ error: 'Authentication failed' });
   }
+});
+
+// ✅ Check user verification status
+app.get('/api/user/verification-status', verifyApiKey, async (req, res) => {
+  const { firebaseUid } = req.query;
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  const user = await User.findOne({ firebaseUid });
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  res.json({
+    firebaseUid: user.firebaseUid,
+    termsAccepted: user.termsAccepted,
+    ageVerified: user.ageVerified,
+    genderVerified: user.genderVerified,
+    isFullyVerified: user.termsAccepted && user.ageVerified,
+    oreyId: user.oreyId,
+    isBanned: !!(await isDeviceBanned(user.deviceId, user.firebaseUid))
+  });
+});
+
+// ✅ Logout/Disconnect
+app.post('/api/auth/logout', verifyApiKey, async (req, res) => {
+  const { firebaseUid } = req.body;
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  // Disconnect any active sockets
+  for (const [, socket] of io.sockets.sockets) {
+    if (socket.data.firebaseUid === firebaseUid) {
+      // End active call if in one
+      if (socket.data.currentRoomId) {
+        await endCall(socket.data.currentRoomId, socket.id);
+        io.to(socket.data.currentRoomId).emit('call-ended', { reason: 'User logged out' });
+      }
+      socket.disconnect(true);
+    }
+  }
+  
+  // Clear device ID and call status
+  await User.findOneAndUpdate(
+    { firebaseUid }, 
+    { deviceId: null, isInCall: false, currentRoomId: null, lastActive: new Date() }
+  );
+  
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// ✅ Delete account
+app.delete('/api/user/account', verifyApiKey, async (req, res) => {
+  const { firebaseUid } = req.body;
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  // End any active calls
+  for (const [, socket] of io.sockets.sockets) {
+    if (socket.data.firebaseUid === firebaseUid && socket.data.currentRoomId) {
+      await endCall(socket.data.currentRoomId, socket.id);
+      io.to(socket.data.currentRoomId).emit('call-ended', { reason: 'User deleted account' });
+      socket.disconnect(true);
+    }
+  }
+  
+  await User.deleteOne({ firebaseUid });
+  await OreyIdModel.deleteMany({ firebaseUid });
+  await Report.deleteMany({ 
+    $or: [{ reporterFirebaseUid: firebaseUid }, { reportedFirebaseUid: firebaseUid }] 
+  });
+  await Warning.deleteMany({ firebaseUid });
+  await Ban.deleteMany({ firebaseUid });
+  await CallHistory.deleteMany({
+    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
+  });
+  
+  res.json({ success: true, message: 'Account deleted successfully' });
+});
+
+// ✅ Update profile
+app.put('/api/user/profile', verifyApiKey, async (req, res) => {
+  const { firebaseUid, displayName, photoURL } = req.body;
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  const updateData = {};
+  if (displayName) updateData.displayName = displayName;
+  if (photoURL !== undefined) updateData.photoURL = photoURL;
+  updateData.lastActive = new Date();
+  
+  const user = await User.findOneAndUpdate(
+    { firebaseUid },
+    updateData,
+    { new: true }
+  ).select('-__v');
+  
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  res.json({ success: true, user });
 });
 
 // ✅ Verify user age
@@ -645,6 +864,7 @@ app.post('/api/user/verify-age', verifyApiKey, async (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
   
+  // Check if user is 18+
   const birth = new Date(birthDate);
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
@@ -655,19 +875,22 @@ app.post('/api/user/verify-age', verifyApiKey, async (req, res) => {
   
   if (age < 18) {
     return res.status(403).json({ 
-      error: 'Must be 18 or older',
-      ageVerified: false 
+      error: 'Must be 18 or older to use this service',
+      ageVerified: false,
+      age: age
     });
   }
   
   user.birthDate = birth;
   user.ageVerified = true;
+  user.lastActive = new Date();
   await user.save();
   
   res.json({ 
     success: true, 
     ageVerified: true,
-    age: age 
+    age: age,
+    isFullyVerified: user.termsAccepted && user.ageVerified
   });
 });
 
@@ -689,6 +912,7 @@ app.post('/api/user/set-gender', verifyApiKey, async (req, res) => {
   
   user.gender = gender;
   user.genderVerified = true;
+  user.lastActive = new Date();
   await user.save();
   
   res.json({ 
@@ -706,16 +930,29 @@ app.post('/api/accept-terms', verifyApiKey, async (req, res) => {
   }
   
   if (firebaseUid) {
-    const user = await User.findOne({ firebaseUid });
-    if (user) {
-      user.termsAccepted = true;
-      user.termsVersion = termsVersion || appConfig.termsVersion;
-      if (deviceId) user.deviceId = deviceId;
-      await user.save();
+    const user = await User.findOneAndUpdate(
+      { firebaseUid },
+      { 
+        termsAccepted: true, 
+        termsVersion: termsVersion || appConfig.termsVersion,
+        deviceId: deviceId || undefined,
+        lastActive: new Date()
+      },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+    
+    res.json({ 
+      success: true, 
+      message: 'Terms accepted',
+      isFullyVerified: user.ageVerified
+    });
+  } else {
+    res.json({ success: true, message: 'Terms accepted (device only)' });
   }
-  
-  res.json({ success: true, message: 'Terms accepted' });
 });
 
 // ✅ Device registration
@@ -723,6 +960,7 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
   
+  // Check if device/user is banned
   const ban = await isDeviceBanned(deviceId, firebaseUid);
   if (ban) {
     return res.status(403).json({
@@ -734,18 +972,24 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
     });
   }
   
+  // Link device to user if authenticated
   if (firebaseUid) {
-    const user = await User.findOne({ firebaseUid });
-    if (user) {
-      user.deviceId = deviceId;
-      await user.save();
-    }
+    await User.findOneAndUpdate(
+      { firebaseUid },
+      { deviceId, lastActive: new Date() }
+    );
   }
   
+  // Check verification status
   let termsAccepted = false;
+  let ageVerified = false;
+  let isFullyVerified = false;
+  
   if (firebaseUid) {
     const user = await User.findOne({ firebaseUid });
     termsAccepted = user?.termsAccepted || false;
+    ageVerified = user?.ageVerified || false;
+    isFullyVerified = termsAccepted && ageVerified;
   }
   
   console.log('📱 Device registered:', deviceId.substring(0, 12) + '...');
@@ -754,6 +998,8 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
     deviceId,
     registered: true,
     termsAccepted,
+    ageVerified,
+    isFullyVerified,
     termsVersion: appConfig.termsVersion,
     timestamp: new Date().toISOString()
   });
@@ -792,7 +1038,7 @@ app.post('/api/appeal-ban', verifyApiKey, async (req, res) => {
 
 // ✅ Report
 app.post('/api/report', verifyApiKey, async (req, res) => {
-  const { reporterDeviceId, reporterFirebaseUid, reportedDeviceId, reportedFirebaseUid, reason, description } = req.body;
+  const { reporterDeviceId, reporterFirebaseUid, reportedDeviceId, reportedFirebaseUid, reason, description, roomId } = req.body;
   
   if ((!reportedDeviceId && !reportedFirebaseUid) || !reason) {
     return res.status(400).json({ error: 'reportedDeviceId/reportedFirebaseUid and reason required' });
@@ -801,6 +1047,7 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     return res.status(400).json({ error: 'Invalid report reason' });
   }
   
+  // Check for duplicate reports
   const query = {
     reason,
     timestamp: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
@@ -823,12 +1070,14 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     reporterFirebaseUid,
     reportedDeviceId,
     reportedFirebaseUid,
+    roomId: roomId || null,
     reason,
     description: description || '',
     timestamp: new Date(),
     status: 'pending'
   });
   
+  // Count reports against this user
   const reportQuery = reportedFirebaseUid 
     ? { $or: [{ reportedFirebaseUid }, { reportedDeviceId }] }
     : { reportedDeviceId };
@@ -850,7 +1099,7 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     warningIssued = warning.warningIssued;
     warningCount = warning.warningCount;
   } else if (reportCount >= 5) {
-    console.log(`⚠️ User has ${reportCount} reports, needs review`);
+    console.log(`⚠️ User has ${reportCount} reports, needs admin review`);
   }
   
   res.json({
@@ -878,6 +1127,25 @@ app.get('/api/user/profile', verifyApiKey, async (req, res) => {
   res.json({ user });
 });
 
+// ✅ Call history
+app.get('/api/user/call-history', verifyApiKey, async (req, res) => {
+  const { firebaseUid, limit = 20 } = req.query;
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  const history = await CallHistory.find({
+    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
+  })
+  .sort({ startTime: -1 })
+  .limit(parseInt(limit))
+  .lean();
+  
+  res.json({ calls: history, total: await CallHistory.countDocuments({
+    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
+  })});
+});
+
 // ✅ Video quality preference
 app.post('/api/user/video-quality', verifyApiKey, async (req, res) => {
   const { firebaseUid, quality, switchMode } = req.body;
@@ -900,6 +1168,7 @@ app.post('/api/user/video-quality', verifyApiKey, async (req, res) => {
   
   if (quality) user.videoQualityPreference = quality;
   if (switchMode) user.qualitySwitchMode = switchMode;
+  user.lastActive = new Date();
   
   await user.save();
   
@@ -922,6 +1191,7 @@ app.get('/api/config', (req, res) => {
       videoQualityControl: true,
       adaptiveBitrate: appConfig.videoQuality.adaptiveBitrate,
       googleAuth: !!firebaseApp,
+      callHistory: true,
     },
     videoQuality: {
       ...appConfig.videoQuality,
@@ -997,8 +1267,8 @@ app.get('/api/version', (req, res) => {
   res.json({
     currentVersion: '2.0.0',
     updateAvailable: false,
-    message: 'You are using the latest version with video quality control',
-    features: ['google-auth', 'video-quality-switching', 'adaptive-bitrate']
+    message: 'You are using the latest version',
+    features: ['google-auth', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates']
   });
 });
 
@@ -1032,13 +1302,14 @@ io.on('connection', (socket) => {
     serviceName: SERVICE_NAME
   });
 
-  // Register device
+  // ✅ Register device with verification check
   socket.on('register-device', async ({ deviceId, firebaseUid, videoQuality, qualitySwitchMode }) => {
     if (!deviceId) {
       socket.emit('error', { message: 'Device ID required' });
       return;
     }
     
+    // Check ban status
     const ban = await isDeviceBanned(deviceId, firebaseUid);
     if (ban) {
       socket.emit('banned', {
@@ -1055,6 +1326,7 @@ io.on('connection', (socket) => {
     socket.data.videoQuality = videoQuality || 'medium';
     socket.data.qualitySwitchMode = qualitySwitchMode || 'hybrid';
     
+    // Load user data and check verification
     if (firebaseUid) {
       const user = await User.findOne({ firebaseUid });
       if (user) {
@@ -1063,13 +1335,21 @@ io.on('connection', (socket) => {
         socket.data.gender = user.gender;
         socket.data.videoQuality = user.videoQualityPreference;
         socket.data.qualitySwitchMode = user.qualitySwitchMode;
+        socket.data.isFullyVerified = user.termsAccepted && user.ageVerified;
+        
+        // Update user status
+        await User.findOneAndUpdate(
+          { firebaseUid },
+          { lastActive: new Date() }
+        );
       }
     }
     
     socket.emit('registered', { 
       deviceId,
       videoQuality: socket.data.videoQuality,
-      qualitySwitchMode: socket.data.qualitySwitchMode
+      qualitySwitchMode: socket.data.qualitySwitchMode,
+      isFullyVerified: socket.data.isFullyVerified || false
     });
   });
 
@@ -1095,6 +1375,99 @@ io.on('connection', (socket) => {
     socket.emit('orey-id-registered', { oreyId, expiresAt: entry.expiresAt });
   });
 
+  // ✅ Join random matchmaking with verification check
+  socket.on('join-random', async () => {
+    // Check verification status before allowing match
+    if (socket.data.firebaseUid) {
+      const user = await User.findOne({ firebaseUid: socket.data.firebaseUid });
+      if (!user) {
+        socket.emit('error', { message: 'User account not found' });
+        return;
+      }
+      if (!user.termsAccepted) {
+        socket.emit('verification-required', { 
+          type: 'terms',
+          message: 'You must accept Terms & Conditions to start matching' 
+        });
+        return;
+      }
+      if (!user.ageVerified) {
+        socket.emit('verification-required', { 
+          type: 'age',
+          message: 'Age verification required before matching' 
+        });
+        return;
+      }
+      if (user.isInCall) {
+        socket.emit('error', { message: 'You are already in a call' });
+        return;
+      }
+    }
+    
+    removeFromQueue(socket.id);
+    randomQueue.push(socket.id);
+    socket.emit('waiting');
+    attemptMatch(socket.id);
+  });
+
+  // Cancel
+  socket.on('cancel-random', () => {
+    removeFromQueue(socket.id);
+    socket.emit('cancelled');
+  });
+
+  // Skip
+  socket.on('skip', async ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (room) {
+      // End current call
+      await endCall(roomId, socket.id);
+      
+      [...room.keys()].forEach(pid => {
+        if (pid !== socket.id) {
+          const ps = io.sockets.sockets.get(pid);
+          if (ps) {
+            ps.emit('partner-left', { reason: 'skip' });
+            ps.data.currentRoomId = null;
+          }
+        }
+      });
+      room.delete(socket.id);
+      socket.leave(roomId);
+      if (room.size === 0) rooms.delete(roomId);
+      
+      socket.data.currentRoomId = null;
+    }
+    socket.emit('skipped');
+    randomQueue.push(socket.id);
+    attemptMatch(socket.id);
+  });
+
+  // ✅ Leave chat / End call
+  socket.on('leave-chat', async ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (room) {
+      // End call and save history
+      await endCall(roomId, socket.id);
+      
+      [...room.keys()].forEach(pid => {
+        if (pid !== socket.id) {
+          const ps = io.sockets.sockets.get(pid);
+          if (ps) {
+            ps.emit('partner-left', { reason: 'left' });
+            ps.data.currentRoomId = null;
+          }
+        }
+      });
+      room.delete(socket.id);
+      socket.leave(roomId);
+      if (room.size === 0) rooms.delete(roomId);
+      
+      socket.data.currentRoomId = null;
+    }
+    socket.emit('left');
+  });
+
   // Change video quality during call
   socket.on('change-video-quality', ({ roomId, quality }) => {
     if (!roomId || !quality) return;
@@ -1114,7 +1487,7 @@ io.on('connection', (socket) => {
     if (socket.data.firebaseUid) {
       User.findOneAndUpdate(
         { firebaseUid: socket.data.firebaseUid },
-        { videoQualityPreference: quality }
+        { videoQualityPreference: quality, lastActive: new Date() }
       ).catch(err => console.error('Failed to update quality preference:', err));
     }
     
@@ -1151,63 +1524,9 @@ io.on('connection', (socket) => {
     if (socket.data.firebaseUid) {
       User.findOneAndUpdate(
         { firebaseUid: socket.data.firebaseUid },
-        { qualitySwitchMode: socket.data.qualitySwitchMode }
+        { qualitySwitchMode: socket.data.qualitySwitchMode, lastActive: new Date() }
       ).catch(err => console.error('Failed to update quality mode:', err));
     }
-  });
-
-  // Join random
-  socket.on('join-random', () => {
-    removeFromQueue(socket.id);
-    randomQueue.push(socket.id);
-    socket.emit('waiting');
-    attemptMatch(socket.id);
-  });
-
-  // Cancel
-  socket.on('cancel-random', () => {
-    removeFromQueue(socket.id);
-    socket.emit('cancelled');
-  });
-
-  // Skip
-  socket.on('skip', ({ roomId }) => {
-    const room = rooms.get(roomId);
-    if (room) {
-      [...room.keys()].forEach(pid => {
-        if (pid !== socket.id) {
-          const ps = io.sockets.sockets.get(pid);
-          if (ps) {
-            ps.emit('partner-left', { reason: 'skip' });
-          }
-        }
-      });
-      room.delete(socket.id);
-      socket.leave(roomId);
-      if (room.size === 0) rooms.delete(roomId);
-    }
-    socket.emit('skipped');
-    randomQueue.push(socket.id);
-    attemptMatch(socket.id);
-  });
-
-  // Leave chat
-  socket.on('leave-chat', ({ roomId }) => {
-    const room = rooms.get(roomId);
-    if (room) {
-      [...room.keys()].forEach(pid => {
-        if (pid !== socket.id) {
-          const ps = io.sockets.sockets.get(pid);
-          if (ps) {
-            ps.emit('partner-left', { reason: 'left' });
-          }
-        }
-      });
-      room.delete(socket.id);
-      socket.leave(roomId);
-      if (room.size === 0) rooms.delete(roomId);
-    }
-    socket.emit('left');
   });
 
   // Chat message
@@ -1240,14 +1559,19 @@ io.on('connection', (socket) => {
     io.to(targetId).emit('ice-candidate', { candidate, fromId: socket.id });
   });
 
-  // Disconnect
-  socket.on('disconnect', () => {
+  // ✅ Disconnect with cleanup
+  socket.on('disconnect', async () => {
     console.log(`[-] ${socket.id}`);
     removeFromQueue(socket.id);
     
     if (socket.data.oreyId) {
       const entry = oreyIds.get(socket.data.oreyId);
       if (entry && entry.socketId === socket.id) entry.socketId = null;
+    }
+    
+    // End active call if in one
+    if (socket.data.currentRoomId) {
+      await endCall(socket.data.currentRoomId, socket.id);
     }
     
     const result = removeSocketFromRooms(socket.id);
@@ -1257,9 +1581,18 @@ io.on('connection', (socket) => {
         const ps = io.sockets.sockets.get(pid);
         if (ps) {
           ps.emit('partner-left', { reason: 'disconnected' });
+          ps.data.currentRoomId = null;
         }
       }
       if (peers.size === 0) rooms.delete(roomId);
+    }
+    
+    // Update user status
+    if (socket.data.firebaseUid) {
+      User.findOneAndUpdate(
+        { firebaseUid: socket.data.firebaseUid },
+        { isInCall: false, currentRoomId: null, lastActive: new Date() }
+      ).catch(err => console.error('Failed to update user status on disconnect:', err));
     }
   });
 });
@@ -1275,8 +1608,10 @@ async function start() {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🚀 ${SERVICE_NAME} running on port ${PORT}`);
       console.log(`✅ Google Play Store compliant`);
-      console.log(`✅ Video quality switching enabled`);
       console.log(`✅ Firebase Auth: ${firebaseApp ? 'Configured' : 'Not configured'}`);
+      console.log(`✅ Video quality switching enabled`);
+      console.log(`✅ Verification gates enabled`);
+      console.log(`✅ Call history tracking enabled`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     });
   } catch (err) {
