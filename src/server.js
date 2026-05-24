@@ -13,6 +13,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const mongoose = require('mongoose');
 const admin = require('firebase-admin');
+const { OAuth2Client } = require('google-auth-library');
 
 const createGenderMatcher = require('./gender');
 
@@ -34,6 +35,17 @@ const AUTO_SEARCH_DELAY_MS = 5000;
 const API_KEY = process.env.API_KEY || 'maya@1660440';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
 const SERVICE_NAME = 'Orey! - Connect Safely';
+
+// ✅ Google OAuth2 Client (for redirect flow)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/auth/google/callback';
+
+const googleOAuth2Client = new OAuth2Client(
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI
+);
 
 // ✅ Firebase Admin Initialization from Environment Variables
 let firebaseApp = null;
@@ -445,6 +457,55 @@ async function isUserVerified(firebaseUid) {
   return user.termsAccepted && user.ageVerified;
 }
 
+// ✅ Shared user upsert logic (used by both auth flows)
+async function upsertUserFromGoogle({ uid, email, name, picture }) {
+  let user = await User.findOne({ firebaseUid: uid });
+
+  if (!user) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) return { user: null, conflict: true };
+
+    let displayId, attempts = 0;
+    do {
+      displayId = generateOreyDisplayId();
+      attempts++;
+    } while (await User.findOne({ oreyId: displayId }) && attempts < 20);
+
+    user = new User({
+      firebaseUid: uid,
+      email,
+      displayName: name || email.split('@')[0],
+      photoURL: picture || '',
+      oreyId: displayId,
+      lastLogin: new Date(),
+      lastActive: new Date(),
+      videoQualityPreference: 'medium',
+      qualitySwitchMode: 'hybrid'
+    });
+
+    const hashId = crypto.createHash('sha256').update(displayId + uid).digest('hex').substring(0, 16);
+    const expiresAt = Date.now() + OREY_ID_TTL_MS;
+
+    oreyIds.set(displayId, {
+      hashId, displayId, expiresAt, socketId: null,
+      userName: user.displayName, firebaseUid: uid
+    });
+
+    await OreyIdModel.create({
+      hashId, displayId, socketId: null,
+      userName: user.displayName,
+      expiresAt: new Date(expiresAt),
+      firebaseUid: uid
+    }).catch(err => console.error('OreyId creation error:', err));
+  } else {
+    user.lastLogin = new Date();
+    user.lastActive = new Date();
+  }
+
+  await user.save();
+  return { user, conflict: false };
+}
+
 function _createRoom(selfSocket, partnerSocket) {
   const roomId = generateRoomId();
   const startTime = Date.now();
@@ -473,7 +534,6 @@ function _createRoom(selfSocket, partnerSocket) {
   rooms.get(roomId).set(selfSocket.id, { ...selfData, joinedAt: startTime });
   rooms.get(roomId).set(partnerSocket.id, { ...partnerData, joinedAt: startTime });
 
-  // Track active call
   activeCalls.set(roomId, {
     roomId,
     startTime,
@@ -482,7 +542,6 @@ function _createRoom(selfSocket, partnerSocket) {
     receiverUid: partnerSocket.data.firebaseUid
   });
 
-  // Update user status
   if (selfSocket.data.firebaseUid) {
     User.findOneAndUpdate(
       { firebaseUid: selfSocket.data.firebaseUid },
@@ -542,7 +601,6 @@ async function endCall(roomId, endedBySocketId) {
   const endTime = Date.now();
   const duration = Math.floor((endTime - activeCall.startTime) / 1000);
 
-  // Save call history
   try {
     await CallHistory.create({
       roomId,
@@ -558,7 +616,6 @@ async function endCall(roomId, endedBySocketId) {
     console.error('Failed to save call history:', err);
   }
 
-  // Update user call counts
   for (const uid of [activeCall.callerUid, activeCall.receiverUid]) {
     if (uid) {
       User.findOneAndUpdate(
@@ -580,7 +637,6 @@ function attemptMatch(newSocketId) {
   const socket = io.sockets.sockets.get(newSocketId);
   if (!socket) return;
 
-  // Check if user is already in a call
   if (socket.data.currentRoomId) {
     socket.emit('error', { message: 'You are already in a call' });
     return;
@@ -648,7 +704,143 @@ app.get('/health', (_req, res) => res.json({
   videoQualitySupported: Object.keys(VIDEO_QUALITY),
 }));
 
-// ✅ Google Authentication (ID Token)
+// ============================================================
+// ✅ Google OAuth2 Redirect Flow
+// ============================================================
+
+/**
+ * GET /auth/google
+ * Redirects the user to Google's OAuth consent screen.
+ * 
+ * Optional query params:
+ *   ?redirect=<deep_link>   — passed back via state so callback knows where to send the user
+ *
+ * Set env vars:
+ *   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+ *   GOOGLE_REDIRECT_URI=https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/auth/google/callback
+ */
+app.get('/auth/google', (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.status(503).send('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.');
+  }
+
+  // Encode any post-login redirect destination into the state param
+  const state = req.query.redirect
+    ? Buffer.from(JSON.stringify({ redirect: req.query.redirect })).toString('base64')
+    : undefined;
+
+  const authUrl = googleOAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['openid', 'profile', 'email'],
+    ...(state ? { state } : {}),
+  });
+
+  res.redirect(authUrl);
+});
+
+/**
+ * GET /auth/google/callback
+ * Google redirects here after the user grants/denies consent.
+ * Exchanges the code for tokens, upserts the user, then redirects
+ * the client app with a token or session indicator.
+ *
+ * Redirects to:
+ *   - GOOGLE_SUCCESS_REDIRECT env var (if set), with ?uid=... appended
+ *   - Otherwise sends a JSON response (useful for API clients / testing)
+ */
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  // User denied access
+  if (error) {
+    console.warn('Google OAuth denied:', error);
+    const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
+    if (failUrl) return res.redirect(`${failUrl}?error=${encodeURIComponent(error)}`);
+    return res.status(400).json({ success: false, error: 'Google sign-in was cancelled or denied.' });
+  }
+
+  if (!code) {
+    return res.status(400).json({ success: false, error: 'Missing authorization code.' });
+  }
+
+  try {
+    // Exchange code for tokens
+    const { tokens } = await googleOAuth2Client.getToken(code);
+    googleOAuth2Client.setCredentials(tokens);
+
+    // Verify the ID token
+    const ticket = await googleOAuth2Client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Use "google_<sub>" as the stable uid (mirrors the access-token flow)
+    const uid = `google_${googleId}`;
+
+    // Upsert user in MongoDB
+    const { user, conflict } = await upsertUserFromGoogle({ uid, email, name, picture });
+
+    if (conflict) {
+      const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
+      if (failUrl) return res.redirect(`${failUrl}?error=email_conflict`);
+      return res.status(409).json({ success: false, error: 'Email already registered with a different account.' });
+    }
+
+    console.log(`✅ OAuth callback: ${email} (${uid})`);
+
+    // Decode state for optional post-login deep link
+    let postLoginRedirect = process.env.GOOGLE_SUCCESS_REDIRECT || null;
+    if (state) {
+      try {
+        const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+        if (decoded.redirect) postLoginRedirect = decoded.redirect;
+      } catch (_) { /* ignore malformed state */ }
+    }
+
+    const responsePayload = {
+      success: true,
+      user: {
+        firebaseUid: user.firebaseUid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        oreyId: user.oreyId,
+        ageVerified: user.ageVerified,
+        gender: user.gender,
+        termsAccepted: user.termsAccepted,
+        totalCalls: user.totalCalls,
+        createdAt: user.createdAt,
+      },
+      requiresAgeVerification: !user.ageVerified,
+      requiresTermsAcceptance: !user.termsAccepted,
+      isFullyVerified: user.termsAccepted && user.ageVerified,
+    };
+
+    if (postLoginRedirect) {
+      // Append uid so the client app can identify the session
+      const separator = postLoginRedirect.includes('?') ? '&' : '?';
+      return res.redirect(`${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}`);
+    }
+
+    // No redirect configured — return JSON (handy for API/testing)
+    return res.json(responsePayload);
+
+  } catch (err) {
+    console.error('❌ OAuth callback error:', err.message);
+    const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
+    if (failUrl) return res.redirect(`${failUrl}?error=server_error`);
+    return res.status(500).json({ success: false, error: 'Authentication failed. Please try again.' });
+  }
+});
+
+// ============================================================
+// ✅ Existing Token-Based Auth Endpoints (unchanged)
+// ============================================================
+
 app.post('/api/auth/google', verifyApiKey, async (req, res) => {
   if (!firebaseApp) {
     return res.status(503).json({ error: 'Authentication service not configured' });
@@ -663,61 +855,8 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const { uid, email, name, picture } = decodedToken;
     
-    let user = await User.findOne({ firebaseUid: uid });
-    
-    if (!user) {
-      // Check if email already used
-      const existingEmail = await User.findOne({ email });
-      if (existingEmail) {
-        return res.status(409).json({ error: 'Email already registered' });
-      }
-      
-      // Generate unique Orey ID
-      let displayId, attempts = 0;
-      do {
-        displayId = generateOreyDisplayId();
-        attempts++;
-      } while (await User.findOne({ oreyId: displayId }) && attempts < 20);
-      
-      user = new User({
-        firebaseUid: uid,
-        email,
-        displayName: name || email.split('@')[0],
-        photoURL: picture || '',
-        oreyId: displayId,
-        lastLogin: new Date(),
-        lastActive: new Date(),
-        videoQualityPreference: 'medium',
-        qualitySwitchMode: 'hybrid'
-      });
-      
-      // Create Orey ID entry
-      const hashId = crypto.createHash('sha256').update(displayId + uid).digest('hex').substring(0, 16);
-      const expiresAt = Date.now() + OREY_ID_TTL_MS;
-      
-      oreyIds.set(displayId, {
-        hashId,
-        displayId,
-        expiresAt,
-        socketId: null,
-        userName: user.displayName,
-        firebaseUid: uid
-      });
-      
-      await OreyIdModel.create({
-        hashId,
-        displayId,
-        socketId: null,
-        userName: user.displayName,
-        expiresAt: new Date(expiresAt),
-        firebaseUid: uid
-      }).catch(err => console.error('OreyId creation error:', err));
-    } else {
-      user.lastLogin = new Date();
-      user.lastActive = new Date();
-    }
-    
-    await user.save();
+    const { user, conflict } = await upsertUserFromGoogle({ uid, email, name, picture });
+    if (conflict) return res.status(409).json({ error: 'Email already registered' });
     
     res.json({
       success: true,
@@ -746,7 +885,6 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
   }
 });
 
-// ✅ NEW: Google Auth via Access Token (for Expo Go) - ADDED
 app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
   if (!firebaseApp) {
     return res.status(503).json({ error: 'Authentication service not configured' });
@@ -767,40 +905,10 @@ app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
     }
 
     const { sub: googleId, email, name, picture } = googleUser;
-    const firebaseUid = `google_${googleId}`;
+    const uid = `google_${googleId}`;
     
-    let user = await User.findOne({ $or: [{ firebaseUid }, { email }] });
-
-    if (!user) {
-      let displayId, attempts = 0;
-      do {
-        displayId = generateOreyDisplayId();
-        attempts++;
-      } while (await User.findOne({ oreyId: displayId }) && attempts < 20);
-
-      user = new User({
-        firebaseUid,
-        email,
-        displayName: name || email.split('@')[0],
-        photoURL: picture || '',
-        oreyId: displayId,
-        lastLogin: new Date(),
-        lastActive: new Date(),
-        videoQualityPreference: 'medium',
-        qualitySwitchMode: 'hybrid'
-      });
-
-      const hashId = crypto.createHash('sha256').update(displayId + firebaseUid).digest('hex').substring(0, 16);
-      const expiresAt = Date.now() + OREY_ID_TTL_MS;
-
-      oreyIds.set(displayId, { hashId, displayId, expiresAt, socketId: null, userName: user.displayName, firebaseUid });
-      await OreyIdModel.create({ hashId, displayId, socketId: null, userName: user.displayName, expiresAt: new Date(expiresAt), firebaseUid }).catch(() => {});
-    } else {
-      user.lastLogin = new Date();
-      user.lastActive = new Date();
-    }
-
-    await user.save();
+    const { user, conflict } = await upsertUserFromGoogle({ uid, email, name, picture });
+    if (conflict) return res.status(409).json({ error: 'Email already registered' });
 
     res.json({
       success: true,
@@ -856,10 +964,8 @@ app.post('/api/auth/logout', verifyApiKey, async (req, res) => {
     return res.status(400).json({ error: 'firebaseUid required' });
   }
   
-  // Disconnect any active sockets
   for (const [, socket] of io.sockets.sockets) {
     if (socket.data.firebaseUid === firebaseUid) {
-      // End active call if in one
       if (socket.data.currentRoomId) {
         await endCall(socket.data.currentRoomId, socket.id);
         io.to(socket.data.currentRoomId).emit('call-ended', { reason: 'User logged out' });
@@ -868,7 +974,6 @@ app.post('/api/auth/logout', verifyApiKey, async (req, res) => {
     }
   }
   
-  // Clear device ID and call status
   await User.findOneAndUpdate(
     { firebaseUid }, 
     { deviceId: null, isInCall: false, currentRoomId: null, lastActive: new Date() }
@@ -884,7 +989,6 @@ app.delete('/api/user/account', verifyApiKey, async (req, res) => {
     return res.status(400).json({ error: 'firebaseUid required' });
   }
   
-  // End any active calls
   for (const [, socket] of io.sockets.sockets) {
     if (socket.data.firebaseUid === firebaseUid && socket.data.currentRoomId) {
       await endCall(socket.data.currentRoomId, socket.id);
@@ -944,7 +1048,6 @@ app.post('/api/user/verify-age', verifyApiKey, async (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
   
-  // Check if user is 18+
   const birth = new Date(birthDate);
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
@@ -1040,7 +1143,6 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
   
-  // Check if device/user is banned
   const ban = await isDeviceBanned(deviceId, firebaseUid);
   if (ban) {
     return res.status(403).json({
@@ -1052,7 +1154,6 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
     });
   }
   
-  // Link device to user if authenticated
   if (firebaseUid) {
     await User.findOneAndUpdate(
       { firebaseUid },
@@ -1060,7 +1161,6 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
     );
   }
   
-  // Check verification status
   let termsAccepted = false;
   let ageVerified = false;
   let isFullyVerified = false;
@@ -1127,7 +1227,6 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     return res.status(400).json({ error: 'Invalid report reason' });
   }
   
-  // Check for duplicate reports
   const query = {
     reason,
     timestamp: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
@@ -1157,7 +1256,6 @@ app.post('/api/report', verifyApiKey, async (req, res) => {
     status: 'pending'
   });
   
-  // Count reports against this user
   const reportQuery = reportedFirebaseUid 
     ? { $or: [{ reportedFirebaseUid }, { reportedDeviceId }] }
     : { reportedDeviceId };
@@ -1348,7 +1446,7 @@ app.get('/api/version', (req, res) => {
     currentVersion: '2.0.0',
     updateAvailable: false,
     message: 'You are using the latest version',
-    features: ['google-auth', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates']
+    features: ['google-auth', 'google-oauth-redirect', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates']
   });
 });
 
@@ -1389,7 +1487,6 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Check ban status
     const ban = await isDeviceBanned(deviceId, firebaseUid);
     if (ban) {
       socket.emit('banned', {
@@ -1406,7 +1503,6 @@ io.on('connection', (socket) => {
     socket.data.videoQuality = videoQuality || 'medium';
     socket.data.qualitySwitchMode = qualitySwitchMode || 'hybrid';
     
-    // Load user data and check verification
     if (firebaseUid) {
       const user = await User.findOne({ firebaseUid });
       if (user) {
@@ -1417,7 +1513,6 @@ io.on('connection', (socket) => {
         socket.data.qualitySwitchMode = user.qualitySwitchMode;
         socket.data.isFullyVerified = user.termsAccepted && user.ageVerified;
         
-        // Update user status
         await User.findOneAndUpdate(
           { firebaseUid },
           { lastActive: new Date() }
@@ -1457,7 +1552,6 @@ io.on('connection', (socket) => {
 
   // ✅ Join random matchmaking with verification check
   socket.on('join-random', async () => {
-    // Check verification status before allowing match
     if (socket.data.firebaseUid) {
       const user = await User.findOne({ firebaseUid: socket.data.firebaseUid });
       if (!user) {
@@ -1500,7 +1594,6 @@ io.on('connection', (socket) => {
   socket.on('skip', async ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
-      // End current call
       await endCall(roomId, socket.id);
       
       [...room.keys()].forEach(pid => {
@@ -1527,7 +1620,6 @@ io.on('connection', (socket) => {
   socket.on('leave-chat', async ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
-      // End call and save history
       await endCall(roomId, socket.id);
       
       [...room.keys()].forEach(pid => {
@@ -1649,7 +1741,6 @@ io.on('connection', (socket) => {
       if (entry && entry.socketId === socket.id) entry.socketId = null;
     }
     
-    // End active call if in one
     if (socket.data.currentRoomId) {
       await endCall(socket.data.currentRoomId, socket.id);
     }
@@ -1667,7 +1758,6 @@ io.on('connection', (socket) => {
       if (peers.size === 0) rooms.delete(roomId);
     }
     
-    // Update user status
     if (socket.data.firebaseUid) {
       User.findOneAndUpdate(
         { firebaseUid: socket.data.firebaseUid },
@@ -1688,6 +1778,7 @@ async function start() {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🚀 ${SERVICE_NAME} running on port ${PORT}`);
       console.log(`✅ Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
+      console.log(`✅ Google OAuth redirect: GET /auth/google → /auth/google/callback`);
       console.log(`✅ Endpoints: /api/auth/google | /api/auth/google-access-token`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     });
