@@ -648,7 +648,7 @@ app.get('/health', (_req, res) => res.json({
   videoQualitySupported: Object.keys(VIDEO_QUALITY),
 }));
 
-// ✅ Google Authentication
+// ✅ Google Authentication (ID Token)
 app.post('/api/auth/google', verifyApiKey, async (req, res) => {
   if (!firebaseApp) {
     return res.status(503).json({ error: 'Authentication service not configured' });
@@ -742,6 +742,86 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
     });
   } catch (error) {
     console.error('Auth error:', error);
+    res.status(401).json({ error: 'Authentication failed' });
+  }
+});
+
+// ✅ NEW: Google Auth via Access Token (for Expo Go) - ADDED
+app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
+  if (!firebaseApp) {
+    return res.status(503).json({ error: 'Authentication service not configured' });
+  }
+
+  const { accessToken, profile } = req.body;
+  
+  if (!accessToken || !profile) {
+    return res.status(400).json({ error: 'accessToken and profile required' });
+  }
+
+  try {
+    const googleRes = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+    const googleUser = await googleRes.json();
+
+    if (!googleUser.email) {
+      return res.status(401).json({ error: 'Invalid access token' });
+    }
+
+    const { sub: googleId, email, name, picture } = googleUser;
+    const firebaseUid = `google_${googleId}`;
+    
+    let user = await User.findOne({ $or: [{ firebaseUid }, { email }] });
+
+    if (!user) {
+      let displayId, attempts = 0;
+      do {
+        displayId = generateOreyDisplayId();
+        attempts++;
+      } while (await User.findOne({ oreyId: displayId }) && attempts < 20);
+
+      user = new User({
+        firebaseUid,
+        email,
+        displayName: name || email.split('@')[0],
+        photoURL: picture || '',
+        oreyId: displayId,
+        lastLogin: new Date(),
+        lastActive: new Date(),
+        videoQualityPreference: 'medium',
+        qualitySwitchMode: 'hybrid'
+      });
+
+      const hashId = crypto.createHash('sha256').update(displayId + firebaseUid).digest('hex').substring(0, 16);
+      const expiresAt = Date.now() + OREY_ID_TTL_MS;
+
+      oreyIds.set(displayId, { hashId, displayId, expiresAt, socketId: null, userName: user.displayName, firebaseUid });
+      await OreyIdModel.create({ hashId, displayId, socketId: null, userName: user.displayName, expiresAt: new Date(expiresAt), firebaseUid }).catch(() => {});
+    } else {
+      user.lastLogin = new Date();
+      user.lastActive = new Date();
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      user: {
+        firebaseUid: user.firebaseUid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        oreyId: user.oreyId,
+        ageVerified: user.ageVerified,
+        gender: user.gender,
+        termsAccepted: user.termsAccepted,
+        totalCalls: user.totalCalls,
+        createdAt: user.createdAt
+      },
+      requiresAgeVerification: !user.ageVerified,
+      requiresTermsAcceptance: !user.termsAccepted,
+      isFullyVerified: user.termsAccepted && user.ageVerified
+    });
+  } catch (error) {
+    console.error('Access token auth error:', error);
     res.status(401).json({ error: 'Authentication failed' });
   }
 });
@@ -1607,11 +1687,8 @@ async function start() {
     server.listen(PORT, () => {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🚀 ${SERVICE_NAME} running on port ${PORT}`);
-      console.log(`✅ Google Play Store compliant`);
-      console.log(`✅ Firebase Auth: ${firebaseApp ? 'Configured' : 'Not configured'}`);
-      console.log(`✅ Video quality switching enabled`);
-      console.log(`✅ Verification gates enabled`);
-      console.log(`✅ Call history tracking enabled`);
+      console.log(`✅ Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
+      console.log(`✅ Endpoints: /api/auth/google | /api/auth/google-access-token`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     });
   } catch (err) {
