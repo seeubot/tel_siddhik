@@ -28,14 +28,6 @@ app.use(helmet({
 }));
 app.use(express.json());
 
-// Optional rate limiting (uncomment if needed)
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 100,
-//   message: { error: 'Too many requests, please try again later.' }
-// });
-// app.use('/api/', limiter);
-
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://naya:naya@naya.fk9em5f.mongodb.net/?appName=naya';
 const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
@@ -44,7 +36,7 @@ const API_KEY = process.env.API_KEY || 'maya@1660440';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'maya@1660440';
 const SERVICE_NAME = 'Orey! - Connect Safely';
 
-// ✅ Google OAuth2 Client
+// Google OAuth2 Client
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/auth/google/callback';
@@ -55,7 +47,7 @@ const googleOAuth2Client = new OAuth2Client(
   GOOGLE_REDIRECT_URI
 );
 
-// ✅ Firebase Admin Initialization
+// Firebase Admin Initialization
 let firebaseApp = null;
 try {
   if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
@@ -77,12 +69,12 @@ try {
       credential: admin.credential.cert(serviceAccount),
       databaseURL: process.env.FIREBASE_DATABASE_URL || `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
     });
-    console.log('✅ Firebase Admin initialized');
+    console.log('Firebase Admin initialized');
   } else {
-    console.log('⚠️ Firebase not configured');
+    console.log('Firebase not configured');
   }
 } catch (error) {
-  console.error('❌ Firebase Admin initialization failed:', error.message);
+  console.error('Firebase Admin initialization failed:', error.message);
 }
 
 // Video quality configuration
@@ -177,6 +169,11 @@ const UserSchema = new mongoose.Schema({
     default: 'prefer_not_to_say'
   },
   genderVerified: { type: Boolean, default: false },
+  genderPreference: { 
+    type: String, 
+    enum: ['male', 'female', 'both'],
+    default: 'both'
+  },
   termsAccepted: { type: Boolean, default: false },
   termsVersion: String,
   videoQualityPreference: { 
@@ -380,7 +377,7 @@ async function banDevice(deviceId, firebaseUid, banInfo) {
       socket.disconnect(true);
     }
   }
-  console.log(`🚫 Banned: ${firebaseUid || deviceId?.substring(0, 12)}...`);
+  console.log(`Banned: ${firebaseUid || deviceId?.substring(0, 12)}...`);
   return true;
 }
 
@@ -395,7 +392,7 @@ async function handleAppeal(deviceId, firebaseUid, appealReason) {
   ban.appealReason = appealReason;
   await ban.save();
   
-  console.log(`📝 Appeal submitted: ${appealReason}`);
+  console.log(`Appeal submitted: ${appealReason}`);
   return { success: true, message: 'Appeal submitted. Review within 7 days.' };
 }
 
@@ -441,7 +438,9 @@ async function upsertUserFromGoogle({ uid, email, name, picture }) {
       lastLogin: new Date(),
       lastActive: new Date(),
       videoQualityPreference: 'medium',
-      qualitySwitchMode: 'hybrid'
+      qualitySwitchMode: 'hybrid',
+      gender: 'prefer_not_to_say',
+      genderPreference: 'both'
     });
 
     const hashId = crypto.createHash('sha256').update(displayId + uid).digest('hex').substring(0, 16);
@@ -546,7 +545,7 @@ function _createRoom(selfSocket, partnerSocket) {
   selfSocket.emit('room-joined', { ...roomData, peers: [{ socketId: partnerSocket.id, ...partnerData }] });
   partnerSocket.emit('room-joined', { ...roomData, peers: [{ socketId: selfSocket.id, ...selfData }] });
 
-  console.log(`🤝 Room: ${roomId} (Quality: ${roomQuality})`);
+  console.log(`Room: ${roomId} (Quality: ${roomQuality})`);
 }
 
 async function endCall(roomId, endedBySocketId) {
@@ -648,7 +647,7 @@ const verifyApiKey = (req, res, next) => {
 // Database initialization
 async function initDB() {
   await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 });
-  console.log('✅ MongoDB connected');
+  console.log('MongoDB connected');
 
   let cfg = await AppConfigModel.findById('main').lean();
   if (!cfg) {
@@ -695,7 +694,6 @@ app.get('/health', (_req, res) => res.json({
 
 // ==================== GOOGLE OAUTH ENDPOINTS ====================
 
-// Mobile-friendly endpoint - returns auth URL as JSON
 app.get('/auth/google/mobile', verifyApiKey, async (req, res) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return res.status(503).json({ error: 'Google OAuth not configured.' });
@@ -720,7 +718,6 @@ app.get('/auth/google/mobile', verifyApiKey, async (req, res) => {
   });
 });
 
-// Web redirect endpoint
 app.get('/auth/google', (req, res) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     return res.status(503).send('Google OAuth not configured.');
@@ -740,11 +737,9 @@ app.get('/auth/google', (req, res) => {
   res.redirect(authUrl);
 });
 
-// OAuth callback handler - UPDATED with direct 302 redirect (no HTML page)
 app.get('/auth/google/callback', async (req, res) => {
   const { code, error, state } = req.query;
 
-  // User denied access
   if (error) {
     console.warn('Google OAuth denied:', error);
     
@@ -768,7 +763,6 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 
   try {
-    // Exchange code for tokens
     const { tokens } = await googleOAuth2Client.getToken(code);
     googleOAuth2Client.setCredentials(tokens);
 
@@ -798,7 +792,7 @@ app.get('/auth/google/callback', async (req, res) => {
       return res.status(409).json({ success: false, error: 'Email already registered with a different account.' });
     }
 
-    console.log(`✅ OAuth callback: ${email} (${uid})`);
+    console.log(`OAuth callback: ${email} (${uid})`);
 
     let postLoginRedirect = process.env.GOOGLE_SUCCESS_REDIRECT || null;
     if (state) {
@@ -808,14 +802,12 @@ app.get('/auth/google/callback', async (req, res) => {
       } catch (_) {}
     }
 
-    // Check if this is a mobile request
     const isMobile = req.query.mobile === 'true' || (postLoginRedirect && postLoginRedirect.startsWith('oreyapp://'));
     
-    // ✅ DIRECT 302 REDIRECT (no HTML page)
     if (isMobile && postLoginRedirect) {
       const separator = postLoginRedirect.includes('?') ? '&' : '?';
       const redirectUrl = `${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.displayName || '')}`;
-      console.log('📱 Mobile redirect to:', redirectUrl);
+      console.log('Mobile redirect to:', redirectUrl);
       return res.redirect(redirectUrl);
     }
 
@@ -829,6 +821,7 @@ app.get('/auth/google/callback', async (req, res) => {
         oreyId: user.oreyId,
         ageVerified: user.ageVerified,
         gender: user.gender,
+        genderPreference: user.genderPreference,
         termsAccepted: user.termsAccepted,
         totalCalls: user.totalCalls,
         createdAt: user.createdAt,
@@ -846,7 +839,7 @@ app.get('/auth/google/callback', async (req, res) => {
     return res.json(responsePayload);
 
   } catch (err) {
-    console.error('❌ OAuth callback error:', err.message);
+    console.error('OAuth callback error:', err.message);
     
     let errorRedirect = process.env.GOOGLE_FAILURE_REDIRECT || null;
     if (state) {
@@ -920,6 +913,7 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
         ageVerified: user.ageVerified,
         gender: user.gender,
         genderVerified: user.genderVerified,
+        genderPreference: user.genderPreference,
         termsAccepted: user.termsAccepted,
         videoQualityPreference: user.videoQualityPreference,
         qualitySwitchMode: user.qualitySwitchMode,
@@ -971,6 +965,7 @@ app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
         oreyId: user.oreyId,
         ageVerified: user.ageVerified,
         gender: user.gender,
+        genderPreference: user.genderPreference,
         termsAccepted: user.termsAccepted,
         totalCalls: user.totalCalls,
         createdAt: user.createdAt
@@ -1071,6 +1066,66 @@ app.post('/api/accept-terms', verifyApiKey, async (req, res) => {
   }
 });
 
+// Update user's own gender
+app.post('/api/user/update-gender', verifyApiKey, async (req, res) => {
+  const { firebaseUid, gender } = req.body;
+  
+  if (!firebaseUid || !gender) {
+    return res.status(400).json({ error: 'firebaseUid and gender required' });
+  }
+  
+  if (!['male', 'female', 'other', 'prefer_not_to_say'].includes(gender)) {
+    return res.status(400).json({ error: 'Invalid gender value' });
+  }
+  
+  try {
+    const user = await User.findOneAndUpdate(
+      { firebaseUid },
+      { gender, lastActive: new Date() },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, gender: user.gender });
+  } catch (error) {
+    console.error('Update gender error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update gender preference for matching
+app.post('/api/user/update-gender-preference', verifyApiKey, async (req, res) => {
+  const { firebaseUid, genderPreference } = req.body;
+  
+  if (!firebaseUid || !genderPreference) {
+    return res.status(400).json({ error: 'firebaseUid and genderPreference required' });
+  }
+  
+  if (!['male', 'female', 'both'].includes(genderPreference)) {
+    return res.status(400).json({ error: 'Invalid genderPreference value' });
+  }
+  
+  try {
+    const user = await User.findOneAndUpdate(
+      { firebaseUid },
+      { genderPreference, lastActive: new Date() },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, genderPreference: user.genderPreference });
+  } catch (error) {
+    console.error('Update gender preference error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/device/register', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
@@ -1104,7 +1159,7 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
     isFullyVerified = termsAccepted && ageVerified;
   }
   
-  console.log('📱 Device registered:', deviceId.substring(0, 12) + '...');
+  console.log('Device registered:', deviceId.substring(0, 12) + '...');
   res.json({
     success: true,
     deviceId,
@@ -1151,7 +1206,7 @@ app.get('/api/version', (req, res) => {
     currentVersion: '2.0.0',
     updateAvailable: false,
     message: 'You are using the latest version',
-    features: ['google-auth', 'google-oauth-redirect', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates']
+    features: ['google-auth', 'google-oauth-redirect', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates', 'gender-preference']
   });
 });
 
@@ -1213,6 +1268,7 @@ io.on('connection', (socket) => {
         socket.data.userName = user.displayName;
         socket.data.oreyId = user.oreyId;
         socket.data.gender = user.gender;
+        socket.data.genderPreference = user.genderPreference;
         socket.data.videoQuality = user.videoQualityPreference;
         socket.data.qualitySwitchMode = user.qualitySwitchMode;
         socket.data.isFullyVerified = user.termsAccepted && user.ageVerified;
@@ -1394,15 +1450,17 @@ async function start() {
   try {
     await initDB();
     server.listen(PORT, () => {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🚀 ${SERVICE_NAME} running on port ${PORT}`);
-      console.log(`✅ Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
-      console.log(`✅ Google OAuth redirect: GET /auth/google → /auth/google/callback`);
-      console.log(`✅ Google OAuth mobile: GET /auth/google/mobile (for Snack/Expo)`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log('================================================');
+      console.log(`${SERVICE_NAME} running on port ${PORT}`);
+      console.log(`Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
+      console.log(`Google OAuth redirect: GET /auth/google -> /auth/google/callback`);
+      console.log(`Google OAuth mobile: GET /auth/google/mobile`);
+      console.log(`Gender endpoints: POST /api/user/update-gender`);
+      console.log(`Gender preference: POST /api/user/update-gender-preference`);
+      console.log('================================================');
     });
   } catch (err) {
-    console.error('❌ Startup failed:', err.message);
+    console.error('Startup failed:', err.message);
     process.exit(1);
   }
 }
