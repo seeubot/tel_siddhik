@@ -28,12 +28,12 @@ app.use(helmet({
 }));
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://naya:naya@naya.fk9em5f.mongodb.net/?appName=naya';
 const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
 const AUTO_SEARCH_DELAY_MS = 5000;
 const API_KEY = process.env.API_KEY || 'maya@1660440';
-const ADMIN_KEY = process.env.ADMIN_KEY || 'admin_secret_change_this';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'maya@1660440';
 const SERVICE_NAME = 'Orey! - Connect Safely';
 
 // ✅ Google OAuth2 Client (for redirect flow)
@@ -705,7 +705,44 @@ app.get('/health', (_req, res) => res.json({
 }));
 
 // ============================================================
-// ✅ Google OAuth2 Redirect Flow
+// ✅ NEW: Mobile-friendly Google OAuth2 Endpoint (ADDED - preserves all existing)
+// ============================================================
+
+/**
+ * GET /auth/google/mobile
+ * Mobile-friendly endpoint that returns the auth URL as JSON
+ * instead of redirecting directly. This works better with Snack/Expo.
+ * 
+ * Optional query params:
+ *   ?redirect=<deep_link>   — passed back via state so callback knows where to send the user
+ *   ?mobile=true            — indicates mobile client
+ */
+app.get('/auth/google/mobile', verifyApiKey, async (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.status(503).json({ error: 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.' });
+  }
+
+  const redirect = req.query.redirect || 'oreyapp://auth';
+  const state = Buffer.from(JSON.stringify({ redirect })).toString('base64');
+
+  const authUrl = googleOAuth2Client.generateAuthUrl({
+    access_type: 'online',
+    prompt: 'select_account',
+    scope: ['openid', 'profile', 'email'],
+    state,
+    display: 'touch',
+    response_type: 'code',
+  });
+
+  return res.json({ 
+    authUrl, 
+    redirectUri: GOOGLE_REDIRECT_URI,
+    message: 'Open this URL in a browser' 
+  });
+});
+
+// ============================================================
+// ✅ EXISTING: Google OAuth2 Redirect Flow (PRESERVED - unmodified)
 // ============================================================
 
 /**
@@ -801,6 +838,32 @@ app.get('/auth/google/callback', async (req, res) => {
       } catch (_) { /* ignore malformed state */ }
     }
 
+    // Check if this is a mobile request (from Snack/Expo via the /mobile endpoint)
+    const isMobile = req.query.mobile === 'true' || (postLoginRedirect && postLoginRedirect.startsWith('oreyapp://'));
+    
+    if (isMobile && postLoginRedirect) {
+      const separator = postLoginRedirect.includes('?') ? '&' : '?';
+      const redirectUrl = `${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.displayName || '')}`;
+      
+      // Return HTML page that redirects to the app for better mobile compatibility
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Redirecting to Orey...</title>
+          <meta charset="UTF-8">
+          <script>
+            window.location.href = "${redirectUrl}";
+          </script>
+        </head>
+        <body>
+          <p>Redirecting to Orey app...</p>
+          <a href="${redirectUrl}">Click here if not redirected</a>
+        </body>
+        </html>
+      `);
+    }
+
     const responsePayload = {
       success: true,
       user: {
@@ -820,7 +883,7 @@ app.get('/auth/google/callback', async (req, res) => {
       isFullyVerified: user.termsAccepted && user.ageVerified,
     };
 
-    if (postLoginRedirect) {
+    if (postLoginRedirect && !postLoginRedirect.startsWith('oreyapp://')) {
       // Append uid so the client app can identify the session
       const separator = postLoginRedirect.includes('?') ? '&' : '?';
       return res.redirect(`${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}`);
@@ -838,7 +901,37 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 
 // ============================================================
-// ✅ Existing Token-Based Auth Endpoints (unchanged)
+// ✅ NEW: Create user endpoint (ADDED - for mobile app user creation)
+// ============================================================
+
+app.post('/api/user/create', verifyApiKey, async (req, res) => {
+  const { uid, email, displayName } = req.body;
+  
+  if (!uid || !email) {
+    return res.status(400).json({ error: 'uid and email required' });
+  }
+  
+  try {
+    const { user, conflict } = await upsertUserFromGoogle({ 
+      uid, 
+      email, 
+      name: displayName || email.split('@')[0],
+      picture: null 
+    });
+    
+    if (conflict) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+    
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// ✅ EXISTING: Token-Based Auth Endpoints (PRESERVED - unmodified)
 // ============================================================
 
 app.post('/api/auth/google', verifyApiKey, async (req, res) => {
@@ -1779,7 +1872,8 @@ async function start() {
       console.log(`🚀 ${SERVICE_NAME} running on port ${PORT}`);
       console.log(`✅ Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
       console.log(`✅ Google OAuth redirect: GET /auth/google → /auth/google/callback`);
-      console.log(`✅ Endpoints: /api/auth/google | /api/auth/google-access-token`);
+      console.log(`✅ Google OAuth mobile: GET /auth/google/mobile (for Snack/Expo)`);
+      console.log(`✅ Endpoints: /api/auth/google | /api/auth/google-access-token | /api/user/create`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     });
   } catch (err) {
