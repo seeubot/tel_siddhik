@@ -28,6 +28,14 @@ app.use(helmet({
 }));
 app.use(express.json());
 
+// Optional rate limiting (uncomment if needed)
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 100,
+//   message: { error: 'Too many requests, please try again later.' }
+// });
+// app.use('/api/', limiter);
+
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://naya:naya@naya.fk9em5f.mongodb.net/?appName=naya';
 const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
@@ -36,7 +44,7 @@ const API_KEY = process.env.API_KEY || 'maya@1660440';
 const ADMIN_KEY = process.env.ADMIN_KEY || 'maya@1660440';
 const SERVICE_NAME = 'Orey! - Connect Safely';
 
-// ✅ Google OAuth2 Client (for redirect flow)
+// ✅ Google OAuth2 Client
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/auth/google/callback';
@@ -47,7 +55,7 @@ const googleOAuth2Client = new OAuth2Client(
   GOOGLE_REDIRECT_URI
 );
 
-// ✅ Firebase Admin Initialization from Environment Variables
+// ✅ Firebase Admin Initialization
 let firebaseApp = null;
 try {
   if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
@@ -69,16 +77,15 @@ try {
       credential: admin.credential.cert(serviceAccount),
       databaseURL: process.env.FIREBASE_DATABASE_URL || `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
     });
-    console.log('✅ Firebase Admin initialized from environment variables');
+    console.log('✅ Firebase Admin initialized');
   } else {
-    console.log('⚠️ Firebase environment variables not set - auth endpoints will not work');
-    console.log('Required: FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL');
+    console.log('⚠️ Firebase not configured');
   }
 } catch (error) {
   console.error('❌ Firebase Admin initialization failed:', error.message);
 }
 
-// ✅ Video quality with dynamic switching
+// Video quality configuration
 const VIDEO_QUALITY = {
   low: { 
     maxBitrate: 150000, 
@@ -135,7 +142,7 @@ const REPORT_REASONS = [
   'Other'
 ];
 
-// ✅ MongoDB Schemas
+// MongoDB Schemas
 const BanSchema = new mongoose.Schema({
   deviceId: { type: String, index: true },
   firebaseUid: { type: String, index: true },
@@ -279,41 +286,7 @@ const activeCalls = new Map();
 
 let appConfig = null;
 
-// ✅ Database initialization
-async function initDB() {
-  await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 });
-  console.log('✅ MongoDB connected');
-
-  let cfg = await AppConfigModel.findById('main').lean();
-  if (!cfg) {
-    cfg = {
-      _id: 'main',
-      videoQuality: {
-        default: 'medium',
-        autoAdjust: true,
-        maxBitrate: 1500000,
-        allowedQualities: ['low', 'medium', 'high', 'hd'],
-        adaptiveBitrate: true,
-        networkThresholds: {
-          excellent: 5000,
-          good: 2000,
-          fair: 800,
-          poor: 300
-        }
-      },
-      safety: {
-        reportingEnabled: true,
-        contentModeration: true,
-        maxReportsBeforeReview: 5,
-      },
-      termsVersion: '1.0.0',
-    };
-    await AppConfigModel.create(cfg);
-  }
-  appConfig = cfg;
-}
-
-// ✅ Helper Functions
+// Helper Functions
 function generateOreyDisplayId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let suffix = '';
@@ -369,7 +342,6 @@ function getAdaptiveQuality(networkQuality, userPreference) {
   };
   
   const recommendedQuality = qualityMap[networkQuality] || 'medium';
-  
   const qualityOrder = ['low', 'medium', 'high', 'hd'];
   const recommendedIndex = qualityOrder.indexOf(recommendedQuality);
   const preferredIndex = qualityOrder.indexOf(userPreference || 'medium');
@@ -387,10 +359,7 @@ async function issueWarning(deviceId, firebaseUid, reason) {
   await warning.save();
   
   const recentWarnings = await Warning.countDocuments({
-    $or: [
-      { firebaseUid },
-      { deviceId }
-    ],
+    $or: [{ firebaseUid }, { deviceId }],
     issuedAt: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
   });
   
@@ -398,11 +367,7 @@ async function issueWarning(deviceId, firebaseUid, reason) {
 }
 
 async function banDevice(deviceId, firebaseUid, banInfo) {
-  const ban = new Ban({
-    ...banInfo,
-    deviceId,
-    firebaseUid
-  });
+  const ban = new Ban({ ...banInfo, deviceId, firebaseUid });
   await ban.save();
   
   for (const [, socket] of io.sockets.sockets) {
@@ -431,15 +396,11 @@ async function handleAppeal(deviceId, firebaseUid, appealReason) {
   await ban.save();
   
   console.log(`📝 Appeal submitted: ${appealReason}`);
-  
   return { success: true, message: 'Appeal submitted. Review within 7 days.' };
 }
 
 async function isDeviceBanned(deviceId, firebaseUid) {
-  const query = firebaseUid 
-    ? { $or: [{ firebaseUid }, { deviceId }] }
-    : { deviceId };
-    
+  const query = firebaseUid ? { $or: [{ firebaseUid }, { deviceId }] } : { deviceId };
   const ban = await Ban.findOne(query);
   if (!ban) return null;
   
@@ -457,7 +418,7 @@ async function isUserVerified(firebaseUid) {
   return user.termsAccepted && user.ageVerified;
 }
 
-// ✅ Shared user upsert logic (used by both auth flows)
+// Shared user upsert logic
 async function upsertUserFromGoogle({ uid, email, name, picture }) {
   let user = await User.findOne({ firebaseUid: uid });
 
@@ -562,12 +523,7 @@ function _createRoom(selfSocket, partnerSocket) {
   const partnerQuality = partnerSocket.data.videoQuality || appConfig.videoQuality.default;
   
   const qualityOrder = ['low', 'medium', 'high', 'hd'];
-  const roomQuality = qualityOrder[
-    Math.min(
-      qualityOrder.indexOf(selfQuality),
-      qualityOrder.indexOf(partnerQuality)
-    )
-  ];
+  const roomQuality = qualityOrder[Math.min(qualityOrder.indexOf(selfQuality), qualityOrder.indexOf(partnerQuality))];
 
   const roomData = {
     roomId,
@@ -593,7 +549,6 @@ function _createRoom(selfSocket, partnerSocket) {
   console.log(`🤝 Room: ${roomId} (Quality: ${roomQuality})`);
 }
 
-// ✅ End call and record history
 async function endCall(roomId, endedBySocketId) {
   const activeCall = activeCalls.get(roomId);
   if (!activeCall) return;
@@ -682,7 +637,7 @@ function attemptMatch(newSocketId) {
   _createRoom(socket, partnerSocket);
 }
 
-// ✅ Middleware
+// Middleware
 const verifyApiKey = (req, res, next) => {
   const key = req.headers['x-api-key'];
   if (!key) return res.status(401).json({ error: 'API key required' });
@@ -690,13 +645,47 @@ const verifyApiKey = (req, res, next) => {
   next();
 };
 
+// Database initialization
+async function initDB() {
+  await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 });
+  console.log('✅ MongoDB connected');
+
+  let cfg = await AppConfigModel.findById('main').lean();
+  if (!cfg) {
+    cfg = {
+      _id: 'main',
+      videoQuality: {
+        default: 'medium',
+        autoAdjust: true,
+        maxBitrate: 1500000,
+        allowedQualities: ['low', 'medium', 'high', 'hd'],
+        adaptiveBitrate: true,
+        networkThresholds: {
+          excellent: 5000,
+          good: 2000,
+          fair: 800,
+          poor: 300
+        }
+      },
+      safety: {
+        reportingEnabled: true,
+        contentModeration: true,
+        maxReportsBeforeReview: 5,
+      },
+      termsVersion: '1.0.0',
+    };
+    await AppConfigModel.create(cfg);
+  }
+  appConfig = cfg;
+}
+
 // ==================== ROUTES ====================
 
 app.get('/health', (_req, res) => res.json({
   status: 'ok',
   timestamp: new Date().toISOString(),
   uptime: process.uptime(),
-  activeConnections: io?.engine?.clientsCount || 0,
+  activeConnections: 0,
   activeCalls: activeCalls.size,
   queueLength: randomQueue.length,
   serviceName: SERVICE_NAME,
@@ -704,22 +693,12 @@ app.get('/health', (_req, res) => res.json({
   videoQualitySupported: Object.keys(VIDEO_QUALITY),
 }));
 
-// ============================================================
-// ✅ NEW: Mobile-friendly Google OAuth2 Endpoint (ADDED - preserves all existing)
-// ============================================================
+// ==================== GOOGLE OAUTH ENDPOINTS ====================
 
-/**
- * GET /auth/google/mobile
- * Mobile-friendly endpoint that returns the auth URL as JSON
- * instead of redirecting directly. This works better with Snack/Expo.
- * 
- * Optional query params:
- *   ?redirect=<deep_link>   — passed back via state so callback knows where to send the user
- *   ?mobile=true            — indicates mobile client
- */
+// Mobile-friendly endpoint - returns auth URL as JSON
 app.get('/auth/google/mobile', verifyApiKey, async (req, res) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return res.status(503).json({ error: 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.' });
+    return res.status(503).json({ error: 'Google OAuth not configured.' });
   }
 
   const redirect = req.query.redirect || 'oreyapp://auth';
@@ -741,27 +720,12 @@ app.get('/auth/google/mobile', verifyApiKey, async (req, res) => {
   });
 });
 
-// ============================================================
-// ✅ EXISTING: Google OAuth2 Redirect Flow (PRESERVED - unmodified)
-// ============================================================
-
-/**
- * GET /auth/google
- * Redirects the user to Google's OAuth consent screen.
- * 
- * Optional query params:
- *   ?redirect=<deep_link>   — passed back via state so callback knows where to send the user
- *
- * Set env vars:
- *   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
- *   GOOGLE_REDIRECT_URI=https://parallel-elsi-seeutech-50a3ab2e.koyeb.app/auth/google/callback
- */
+// Web redirect endpoint
 app.get('/auth/google', (req, res) => {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return res.status(503).send('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars.');
+    return res.status(503).send('Google OAuth not configured.');
   }
 
-  // Encode any post-login redirect destination into the state param
   const state = req.query.redirect
     ? Buffer.from(JSON.stringify({ redirect: req.query.redirect })).toString('base64')
     : undefined;
@@ -776,24 +740,26 @@ app.get('/auth/google', (req, res) => {
   res.redirect(authUrl);
 });
 
-/**
- * GET /auth/google/callback
- * Google redirects here after the user grants/denies consent.
- * Exchanges the code for tokens, upserts the user, then redirects
- * the client app with a token or session indicator.
- *
- * Redirects to:
- *   - GOOGLE_SUCCESS_REDIRECT env var (if set), with ?uid=... appended
- *   - Otherwise sends a JSON response (useful for API clients / testing)
- */
+// OAuth callback handler - UPDATED with direct 302 redirect (no HTML page)
 app.get('/auth/google/callback', async (req, res) => {
   const { code, error, state } = req.query;
 
   // User denied access
   if (error) {
     console.warn('Google OAuth denied:', error);
-    const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
-    if (failUrl) return res.redirect(`${failUrl}?error=${encodeURIComponent(error)}`);
+    
+    let errorRedirect = process.env.GOOGLE_FAILURE_REDIRECT || null;
+    if (state) {
+      try {
+        const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+        if (decoded.redirect) errorRedirect = decoded.redirect;
+      } catch (_) {}
+    }
+
+    if (errorRedirect) {
+      const sep = errorRedirect.includes('?') ? '&' : '?';
+      return res.redirect(`${errorRedirect}${sep}error=${encodeURIComponent(error)}`);
+    }
     return res.status(400).json({ success: false, error: 'Google sign-in was cancelled or denied.' });
   }
 
@@ -806,7 +772,6 @@ app.get('/auth/google/callback', async (req, res) => {
     const { tokens } = await googleOAuth2Client.getToken(code);
     googleOAuth2Client.setCredentials(tokens);
 
-    // Verify the ID token
     const ticket = await googleOAuth2Client.verifyIdToken({
       idToken: tokens.id_token,
       audience: GOOGLE_CLIENT_ID,
@@ -814,54 +779,44 @@ app.get('/auth/google/callback', async (req, res) => {
     const payload = ticket.getPayload();
 
     const { sub: googleId, email, name, picture } = payload;
-
-    // Use "google_<sub>" as the stable uid (mirrors the access-token flow)
     const uid = `google_${googleId}`;
 
-    // Upsert user in MongoDB
     const { user, conflict } = await upsertUserFromGoogle({ uid, email, name, picture });
 
     if (conflict) {
-      const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
-      if (failUrl) return res.redirect(`${failUrl}?error=email_conflict`);
+      let errorRedirect = process.env.GOOGLE_FAILURE_REDIRECT || null;
+      if (state) {
+        try {
+          const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+          if (decoded.redirect) errorRedirect = decoded.redirect;
+        } catch (_) {}
+      }
+      if (errorRedirect) {
+        const sep = errorRedirect.includes('?') ? '&' : '?';
+        return res.redirect(`${errorRedirect}${sep}error=email_conflict&email=${encodeURIComponent(email)}`);
+      }
       return res.status(409).json({ success: false, error: 'Email already registered with a different account.' });
     }
 
     console.log(`✅ OAuth callback: ${email} (${uid})`);
 
-    // Decode state for optional post-login deep link
     let postLoginRedirect = process.env.GOOGLE_SUCCESS_REDIRECT || null;
     if (state) {
       try {
         const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
         if (decoded.redirect) postLoginRedirect = decoded.redirect;
-      } catch (_) { /* ignore malformed state */ }
+      } catch (_) {}
     }
 
-    // Check if this is a mobile request (from Snack/Expo via the /mobile endpoint)
+    // Check if this is a mobile request
     const isMobile = req.query.mobile === 'true' || (postLoginRedirect && postLoginRedirect.startsWith('oreyapp://'));
     
+    // ✅ DIRECT 302 REDIRECT (no HTML page)
     if (isMobile && postLoginRedirect) {
       const separator = postLoginRedirect.includes('?') ? '&' : '?';
       const redirectUrl = `${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.displayName || '')}`;
-      
-      // Return HTML page that redirects to the app for better mobile compatibility
-      return res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Redirecting to Orey...</title>
-          <meta charset="UTF-8">
-          <script>
-            window.location.href = "${redirectUrl}";
-          </script>
-        </head>
-        <body>
-          <p>Redirecting to Orey app...</p>
-          <a href="${redirectUrl}">Click here if not redirected</a>
-        </body>
-        </html>
-      `);
+      console.log('📱 Mobile redirect to:', redirectUrl);
+      return res.redirect(redirectUrl);
     }
 
     const responsePayload = {
@@ -884,25 +839,32 @@ app.get('/auth/google/callback', async (req, res) => {
     };
 
     if (postLoginRedirect && !postLoginRedirect.startsWith('oreyapp://')) {
-      // Append uid so the client app can identify the session
       const separator = postLoginRedirect.includes('?') ? '&' : '?';
       return res.redirect(`${postLoginRedirect}${separator}uid=${encodeURIComponent(uid)}&oreyId=${encodeURIComponent(user.oreyId || '')}`);
     }
 
-    // No redirect configured — return JSON (handy for API/testing)
     return res.json(responsePayload);
 
   } catch (err) {
     console.error('❌ OAuth callback error:', err.message);
-    const failUrl = process.env.GOOGLE_FAILURE_REDIRECT || null;
-    if (failUrl) return res.redirect(`${failUrl}?error=server_error`);
+    
+    let errorRedirect = process.env.GOOGLE_FAILURE_REDIRECT || null;
+    if (state) {
+      try {
+        const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+        if (decoded.redirect) errorRedirect = decoded.redirect;
+      } catch (_) {}
+    }
+
+    if (errorRedirect) {
+      const sep = errorRedirect.includes('?') ? '&' : '?';
+      return res.redirect(`${errorRedirect}${sep}error=${encodeURIComponent('Authentication failed. Please try again.')}`);
+    }
     return res.status(500).json({ success: false, error: 'Authentication failed. Please try again.' });
   }
 });
 
-// ============================================================
-// ✅ NEW: Create user endpoint (ADDED - for mobile app user creation)
-// ============================================================
+// ==================== API ENDPOINTS ====================
 
 app.post('/api/user/create', verifyApiKey, async (req, res) => {
   const { uid, email, displayName } = req.body;
@@ -929,10 +891,6 @@ app.post('/api/user/create', verifyApiKey, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// ============================================================
-// ✅ EXISTING: Token-Based Auth Endpoints (PRESERVED - unmodified)
-// ============================================================
 
 app.post('/api/auth/google', verifyApiKey, async (req, res) => {
   if (!firebaseApp) {
@@ -1027,109 +985,20 @@ app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
   }
 });
 
-// ✅ Check user verification status
-app.get('/api/user/verification-status', verifyApiKey, async (req, res) => {
+app.get('/api/user/profile', verifyApiKey, async (req, res) => {
   const { firebaseUid } = req.query;
   if (!firebaseUid) {
     return res.status(400).json({ error: 'firebaseUid required' });
   }
   
-  const user = await User.findOne({ firebaseUid });
+  const user = await User.findOne({ firebaseUid }).select('-__v');
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
   
-  res.json({
-    firebaseUid: user.firebaseUid,
-    termsAccepted: user.termsAccepted,
-    ageVerified: user.ageVerified,
-    genderVerified: user.genderVerified,
-    isFullyVerified: user.termsAccepted && user.ageVerified,
-    oreyId: user.oreyId,
-    isBanned: !!(await isDeviceBanned(user.deviceId, user.firebaseUid))
-  });
+  res.json({ user });
 });
 
-// ✅ Logout/Disconnect
-app.post('/api/auth/logout', verifyApiKey, async (req, res) => {
-  const { firebaseUid } = req.body;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  for (const [, socket] of io.sockets.sockets) {
-    if (socket.data.firebaseUid === firebaseUid) {
-      if (socket.data.currentRoomId) {
-        await endCall(socket.data.currentRoomId, socket.id);
-        io.to(socket.data.currentRoomId).emit('call-ended', { reason: 'User logged out' });
-      }
-      socket.disconnect(true);
-    }
-  }
-  
-  await User.findOneAndUpdate(
-    { firebaseUid }, 
-    { deviceId: null, isInCall: false, currentRoomId: null, lastActive: new Date() }
-  );
-  
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-// ✅ Delete account
-app.delete('/api/user/account', verifyApiKey, async (req, res) => {
-  const { firebaseUid } = req.body;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  for (const [, socket] of io.sockets.sockets) {
-    if (socket.data.firebaseUid === firebaseUid && socket.data.currentRoomId) {
-      await endCall(socket.data.currentRoomId, socket.id);
-      io.to(socket.data.currentRoomId).emit('call-ended', { reason: 'User deleted account' });
-      socket.disconnect(true);
-    }
-  }
-  
-  await User.deleteOne({ firebaseUid });
-  await OreyIdModel.deleteMany({ firebaseUid });
-  await Report.deleteMany({ 
-    $or: [{ reporterFirebaseUid: firebaseUid }, { reportedFirebaseUid: firebaseUid }] 
-  });
-  await Warning.deleteMany({ firebaseUid });
-  await Ban.deleteMany({ firebaseUid });
-  await CallHistory.deleteMany({
-    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
-  });
-  
-  res.json({ success: true, message: 'Account deleted successfully' });
-});
-
-// ✅ Update profile
-app.put('/api/user/profile', verifyApiKey, async (req, res) => {
-  const { firebaseUid, displayName, photoURL } = req.body;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  const updateData = {};
-  if (displayName) updateData.displayName = displayName;
-  if (photoURL !== undefined) updateData.photoURL = photoURL;
-  updateData.lastActive = new Date();
-  
-  const user = await User.findOneAndUpdate(
-    { firebaseUid },
-    updateData,
-    { new: true }
-  ).select('-__v');
-  
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  res.json({ success: true, user });
-});
-
-// ✅ Verify user age
 app.post('/api/user/verify-age', verifyApiKey, async (req, res) => {
   const { firebaseUid, birthDate } = req.body;
   if (!firebaseUid || !birthDate) {
@@ -1170,35 +1039,6 @@ app.post('/api/user/verify-age', verifyApiKey, async (req, res) => {
   });
 });
 
-// ✅ Set gender
-app.post('/api/user/set-gender', verifyApiKey, async (req, res) => {
-  const { firebaseUid, gender } = req.body;
-  if (!firebaseUid || !gender) {
-    return res.status(400).json({ error: 'firebaseUid and gender required' });
-  }
-  
-  if (!['male', 'female', 'other', 'prefer_not_to_say'].includes(gender)) {
-    return res.status(400).json({ error: 'Invalid gender option' });
-  }
-  
-  const user = await User.findOne({ firebaseUid });
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  user.gender = gender;
-  user.genderVerified = true;
-  user.lastActive = new Date();
-  await user.save();
-  
-  res.json({ 
-    success: true, 
-    gender: user.gender,
-    genderVerified: true 
-  });
-});
-
-// ✅ Accept Terms
 app.post('/api/accept-terms', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, termsVersion } = req.body;
   if (!deviceId && !firebaseUid) {
@@ -1231,7 +1071,6 @@ app.post('/api/accept-terms', verifyApiKey, async (req, res) => {
   }
 });
 
-// ✅ Device registration
 app.post('/api/device/register', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
@@ -1278,179 +1117,6 @@ app.post('/api/device/register', verifyApiKey, async (req, res) => {
   });
 });
 
-// ✅ Check ban
-app.post('/api/device/check-ban', verifyApiKey, async (req, res) => {
-  const { deviceId, firebaseUid } = req.body;
-  if (!deviceId && !firebaseUid) {
-    return res.status(400).json({ error: 'deviceId or firebaseUid required' });
-  }
-  
-  const ban = await isDeviceBanned(deviceId, firebaseUid);
-  if (ban) {
-    return res.status(403).json({
-      banned: true,
-      reason: ban.reason,
-      canAppeal: ban.canAppeal,
-      expiresAt: ban.expiresAt || null,
-      permanent: ban.permanent
-    });
-  }
-  res.json({ banned: false });
-});
-
-// ✅ Appeal
-app.post('/api/appeal-ban', verifyApiKey, async (req, res) => {
-  const { deviceId, firebaseUid, reason } = req.body;
-  if ((!deviceId && !firebaseUid) || !reason) {
-    return res.status(400).json({ error: 'deviceId/firebaseUid and reason required' });
-  }
-  
-  const result = await handleAppeal(deviceId, firebaseUid, reason);
-  res.json(result);
-});
-
-// ✅ Report
-app.post('/api/report', verifyApiKey, async (req, res) => {
-  const { reporterDeviceId, reporterFirebaseUid, reportedDeviceId, reportedFirebaseUid, reason, description, roomId } = req.body;
-  
-  if ((!reportedDeviceId && !reportedFirebaseUid) || !reason) {
-    return res.status(400).json({ error: 'reportedDeviceId/reportedFirebaseUid and reason required' });
-  }
-  if (!REPORT_REASONS.includes(reason)) {
-    return res.status(400).json({ error: 'Invalid report reason' });
-  }
-  
-  const query = {
-    reason,
-    timestamp: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-  };
-  if (reporterFirebaseUid) {
-    query.reporterFirebaseUid = reporterFirebaseUid;
-  } else {
-    query.reporterDeviceId = reporterDeviceId;
-  }
-  
-  const existingReport = await Report.findOne(query);
-  if (existingReport) {
-    return res.status(400).json({ error: 'Already reported within 24 hours' });
-  }
-  
-  const reportId = uuidv4().substring(0, 8);
-  await Report.create({
-    id: reportId,
-    reporterDeviceId,
-    reporterFirebaseUid,
-    reportedDeviceId,
-    reportedFirebaseUid,
-    roomId: roomId || null,
-    reason,
-    description: description || '',
-    timestamp: new Date(),
-    status: 'pending'
-  });
-  
-  const reportQuery = reportedFirebaseUid 
-    ? { $or: [{ reportedFirebaseUid }, { reportedDeviceId }] }
-    : { reportedDeviceId };
-    
-  const reportCount = await Report.countDocuments({
-    ...reportQuery,
-    timestamp: { $gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-  });
-  
-  let warningIssued = false;
-  let warningCount = 0;
-  
-  if (reportCount >= 3 && reportCount < 5) {
-    const warning = await issueWarning(
-      reportedDeviceId, 
-      reportedFirebaseUid, 
-      `Multiple reports (${reportCount}) received`
-    );
-    warningIssued = warning.warningIssued;
-    warningCount = warning.warningCount;
-  } else if (reportCount >= 5) {
-    console.log(`⚠️ User has ${reportCount} reports, needs admin review`);
-  }
-  
-  res.json({
-    success: true,
-    reportId,
-    reportCount,
-    warningIssued,
-    warningCount,
-    message: warningIssued ? 'Warning issued to user' : 'Report submitted for review'
-  });
-});
-
-// ✅ User profile
-app.get('/api/user/profile', verifyApiKey, async (req, res) => {
-  const { firebaseUid } = req.query;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  const user = await User.findOne({ firebaseUid }).select('-__v');
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  res.json({ user });
-});
-
-// ✅ Call history
-app.get('/api/user/call-history', verifyApiKey, async (req, res) => {
-  const { firebaseUid, limit = 20 } = req.query;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  const history = await CallHistory.find({
-    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
-  })
-  .sort({ startTime: -1 })
-  .limit(parseInt(limit))
-  .lean();
-  
-  res.json({ calls: history, total: await CallHistory.countDocuments({
-    $or: [{ callerFirebaseUid: firebaseUid }, { receiverFirebaseUid: firebaseUid }]
-  })});
-});
-
-// ✅ Video quality preference
-app.post('/api/user/video-quality', verifyApiKey, async (req, res) => {
-  const { firebaseUid, quality, switchMode } = req.body;
-  if (!firebaseUid) {
-    return res.status(400).json({ error: 'firebaseUid required' });
-  }
-  
-  const user = await User.findOne({ firebaseUid });
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  if (quality && !['low', 'medium', 'high', 'hd'].includes(quality)) {
-    return res.status(400).json({ error: 'Invalid quality option' });
-  }
-  
-  if (switchMode && !['manual', 'auto', 'hybrid'].includes(switchMode)) {
-    return res.status(400).json({ error: 'Invalid switch mode' });
-  }
-  
-  if (quality) user.videoQualityPreference = quality;
-  if (switchMode) user.qualitySwitchMode = switchMode;
-  user.lastActive = new Date();
-  
-  await user.save();
-  
-  res.json({ 
-    success: true,
-    videoQualityPreference: user.videoQualityPreference,
-    qualitySwitchMode: user.qualitySwitchMode
-  });
-});
-
-// ✅ App config
 app.get('/api/config', (req, res) => {
   res.json({
     features: {
@@ -1480,60 +1146,6 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// ✅ Generate Orey ID
-app.get('/generate-orey-id', verifyApiKey, async (req, res) => {
-  const { firebaseUid } = req.query;
-  
-  cleanExpiredOreyIds();
-  
-  if (firebaseUid) {
-    const existingUser = await User.findOne({ firebaseUid });
-    if (existingUser?.oreyId) {
-      return res.json({ 
-        oreyId: existingUser.oreyId, 
-        expiresAt: Date.now() + OREY_ID_TTL_MS,
-        validDuration: '24 hours',
-        existing: true
-      });
-    }
-  }
-  
-  let displayId, attempts = 0;
-  do {
-    displayId = generateOreyDisplayId();
-    attempts++;
-  } while (oreyIds.has(displayId) && attempts < 20);
-  
-  const hashId = crypto.createHash('sha256').update(displayId + Date.now().toString()).digest('hex').substring(0, 16);
-  const expiresAt = Date.now() + OREY_ID_TTL_MS;
-  
-  oreyIds.set(displayId, {
-    hashId,
-    displayId,
-    expiresAt,
-    socketId: null,
-    userName: '',
-    firebaseUid: firebaseUid || null
-  });
-  
-  OreyIdModel.create({
-    hashId,
-    displayId,
-    socketId: null,
-    userName: '',
-    expiresAt: new Date(expiresAt),
-    firebaseUid: firebaseUid || null
-  }).catch(() => { });
-  
-  res.json({ 
-    oreyId: displayId, 
-    expiresAt, 
-    validDuration: '24 hours',
-    firebaseUid: firebaseUid || null
-  });
-});
-
-// ✅ Version
 app.get('/api/version', (req, res) => {
   res.json({
     currentVersion: '2.0.0',
@@ -1573,7 +1185,6 @@ io.on('connection', (socket) => {
     serviceName: SERVICE_NAME
   });
 
-  // ✅ Register device with verification check
   socket.on('register-device', async ({ deviceId, firebaseUid, videoQuality, qualitySwitchMode }) => {
     if (!deviceId) {
       socket.emit('error', { message: 'Device ID required' });
@@ -1621,7 +1232,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Register Orey ID
   socket.on('register-orey-id', ({ oreyId, userName, firebaseUid }) => {
     cleanExpiredOreyIds();
     const entry = oreyIds.get(oreyId);
@@ -1643,7 +1253,6 @@ io.on('connection', (socket) => {
     socket.emit('orey-id-registered', { oreyId, expiresAt: entry.expiresAt });
   });
 
-  // ✅ Join random matchmaking with verification check
   socket.on('join-random', async () => {
     if (socket.data.firebaseUid) {
       const user = await User.findOne({ firebaseUid: socket.data.firebaseUid });
@@ -1677,13 +1286,11 @@ io.on('connection', (socket) => {
     attemptMatch(socket.id);
   });
 
-  // Cancel
   socket.on('cancel-random', () => {
     removeFromQueue(socket.id);
     socket.emit('cancelled');
   });
 
-  // Skip
   socket.on('skip', async ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
@@ -1709,7 +1316,6 @@ io.on('connection', (socket) => {
     attemptMatch(socket.id);
   });
 
-  // ✅ Leave chat / End call
   socket.on('leave-chat', async ({ roomId }) => {
     const room = rooms.get(roomId);
     if (room) {
@@ -1733,85 +1339,6 @@ io.on('connection', (socket) => {
     socket.emit('left');
   });
 
-  // Change video quality during call
-  socket.on('change-video-quality', ({ roomId, quality }) => {
-    if (!roomId || !quality) return;
-    if (!['low', 'medium', 'high', 'hd'].includes(quality)) return;
-    
-    const room = rooms.get(roomId);
-    if (!room || !room.has(socket.id)) return;
-    
-    socket.data.videoQuality = quality;
-    
-    socket.to(roomId).emit('video-quality-changed', {
-      quality,
-      settings: VIDEO_QUALITY[quality],
-      fromId: socket.id
-    });
-    
-    if (socket.data.firebaseUid) {
-      User.findOneAndUpdate(
-        { firebaseUid: socket.data.firebaseUid },
-        { videoQualityPreference: quality, lastActive: new Date() }
-      ).catch(err => console.error('Failed to update quality preference:', err));
-    }
-    
-    console.log(`🎥 Quality changed to ${quality} in room ${roomId}`);
-  });
-
-  // Check network quality
-  socket.on('check-network-quality', () => {
-    const networkQuality = estimateNetworkQuality(socket);
-    const recommendedQuality = getAdaptiveQuality(
-      networkQuality, 
-      socket.data.videoQuality || 'medium'
-    );
-    
-    socket.emit('network-quality-update', {
-      networkQuality,
-      recommendedQuality,
-      currentQuality: socket.data.videoQuality || 'medium',
-      settings: VIDEO_QUALITY[recommendedQuality]
-    });
-  });
-
-  // Auto-adjust quality
-  socket.on('enable-auto-quality', ({ enabled, roomId }) => {
-    socket.data.qualitySwitchMode = enabled ? 'auto' : 'manual';
-    
-    if (roomId) {
-      socket.to(roomId).emit('quality-mode-changed', {
-        mode: socket.data.qualitySwitchMode,
-        fromId: socket.id
-      });
-    }
-    
-    if (socket.data.firebaseUid) {
-      User.findOneAndUpdate(
-        { firebaseUid: socket.data.firebaseUid },
-        { qualitySwitchMode: socket.data.qualitySwitchMode, lastActive: new Date() }
-      ).catch(err => console.error('Failed to update quality mode:', err));
-    }
-  });
-
-  // Chat message
-  socket.on('chat-message', ({ roomId, message }) => {
-    if (!roomId || !message || message.length > 500) return;
-    
-    const room = rooms.get(roomId);
-    if (!room || !room.has(socket.id)) return;
-    
-    const filteredMessage = message.substring(0, 500);
-    
-    socket.to(roomId).emit('chat-message', {
-      id: uuidv4().substring(0, 8),
-      senderName: socket.data.userName || 'Anonymous',
-      message: filteredMessage,
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  // WebRTC signaling
   socket.on('offer', ({ targetId, offer }) => {
     io.to(targetId).emit('offer', { offer, fromId: socket.id });
   });
@@ -1824,7 +1351,6 @@ io.on('connection', (socket) => {
     io.to(targetId).emit('ice-candidate', { candidate, fromId: socket.id });
   });
 
-  // ✅ Disconnect with cleanup
   socket.on('disconnect', async () => {
     console.log(`[-] ${socket.id}`);
     removeFromQueue(socket.id);
@@ -1860,7 +1386,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Cleanup
+// Cleanup interval
 setInterval(cleanExpiredOreyIds, 10 * 60 * 1000);
 
 // Start server
@@ -1873,7 +1399,6 @@ async function start() {
       console.log(`✅ Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
       console.log(`✅ Google OAuth redirect: GET /auth/google → /auth/google/callback`);
       console.log(`✅ Google OAuth mobile: GET /auth/google/mobile (for Snack/Expo)`);
-      console.log(`✅ Endpoints: /api/auth/google | /api/auth/google-access-token | /api/user/create`);
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     });
   } catch (err) {
