@@ -1445,6 +1445,35 @@ io.on('connection', (socket) => {
     socket.emit('orey-id-registered', { oreyId, expiresAt: entry.expiresAt });
   });
 
+    // Connect via Orey ID
+  socket.on('connect-via-orey-id', async ({ targetOreyId }) => {
+    if (!targetOreyId) {
+      socket.emit('error', { message: 'Orey ID required' });
+      return;
+    }
+
+    // Find the target socket by Orey ID
+    let targetSocket = null;
+    for (const [, s] of io.sockets.sockets) {
+      if (s.data.oreyId === targetOreyId && s.id !== socket.id && !s.data.currentRoomId) {
+        targetSocket = s;
+        break;
+      }
+    }
+
+    if (!targetSocket) {
+      socket.emit('error', { message: 'User not available or already in a call' });
+      return;
+    }
+
+    // Remove both from random queue if they're in it
+    removeFromQueue(socket.id);
+    removeFromQueue(targetSocket.id);
+
+    // Create room
+    _createRoom(socket, targetSocket);
+  });
+
   socket.on('join-random', async () => {
     if (socket.data.firebaseUid) {
       const user = await User.findOne({ firebaseUid: socket.data.firebaseUid });
