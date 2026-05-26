@@ -1410,16 +1410,16 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async () => {
     console.log(`[-] ${socket.id}`);
     removeFromQueue(socket.id);
-    
+
     if (socket.data.oreyId) {
       const entry = oreyIds.get(socket.data.oreyId);
       if (entry && entry.socketId === socket.id) entry.socketId = null;
     }
-    
+
     if (socket.data.currentRoomId) {
       await endCall(socket.data.currentRoomId, socket.id);
     }
-    
+
     const result = removeSocketFromRooms(socket.id);
     if (result) {
       const { roomId, peers } = result;
@@ -1432,8 +1432,9 @@ io.on('connection', (socket) => {
       }
       if (peers.size === 0) rooms.delete(roomId);
     }
-    
+
     if (socket.data.firebaseUid) {
+      // Always reset isInCall on disconnect, no conditions
       User.findOneAndUpdate(
         { firebaseUid: socket.data.firebaseUid },
         { isInCall: false, currentRoomId: null, lastActive: new Date() }
