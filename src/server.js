@@ -28,6 +28,14 @@ app.use(helmet({
 }));
 app.use(express.json());
 
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', limiter);
+
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://naya:naya@naya.fk9em5f.mongodb.net/?appName=naya';
 const OREY_ID_TTL_MS = 24 * 60 * 60 * 1000;
@@ -134,6 +142,15 @@ const REPORT_REASONS = [
   'Other'
 ];
 
+const INTEREST_TAGS = [
+  'Movies',
+  'Music',
+  'Cooking',
+  'Travel',
+  'Sports',
+  'Technology'
+];
+
 // MongoDB Schemas
 const BanSchema = new mongoose.Schema({
   deviceId: { type: String, index: true },
@@ -174,6 +191,10 @@ const UserSchema = new mongoose.Schema({
     enum: ['male', 'female', 'both'],
     default: 'both'
   },
+  interests: [{ 
+    type: String,
+    enum: INTEREST_TAGS,
+  }],
   termsAccepted: { type: Boolean, default: false },
   termsVersion: String,
   videoQualityPreference: { 
@@ -229,6 +250,7 @@ const ReportSchema = new mongoose.Schema({
   reviewedAt: Date,
   actionTaken: { type: String, default: 'none' },
   warningIssued: { type: Boolean, default: false },
+  isSOS: { type: Boolean, default: false },
 });
 const Report = mongoose.model('Report', ReportSchema);
 
@@ -260,6 +282,8 @@ const AppConfigSchema = new mongoose.Schema({
   },
   safety: Object,
   termsVersion: { type: String, default: '1.0.0' },
+  latestAppVersion: { type: String, default: '1.0.0' },
+  minimumAppVersion: { type: String, default: '1.0.0' },
 });
 const AppConfigModel = mongoose.model('AppConfig', AppConfigSchema);
 
@@ -440,7 +464,8 @@ async function upsertUserFromGoogle({ uid, email, name, picture }) {
       videoQualityPreference: 'medium',
       qualitySwitchMode: 'hybrid',
       gender: 'prefer_not_to_say',
-      genderPreference: 'both'
+      genderPreference: 'both',
+      interests: []
     });
 
     const hashId = crypto.createHash('sha256').update(displayId + uid).digest('hex').substring(0, 16);
@@ -672,6 +697,8 @@ async function initDB() {
         maxReportsBeforeReview: 5,
       },
       termsVersion: '1.0.0',
+      latestAppVersion: '1.0.0',
+      minimumAppVersion: '1.0.0',
     };
     await AppConfigModel.create(cfg);
   }
@@ -822,6 +849,7 @@ app.get('/auth/google/callback', async (req, res) => {
         ageVerified: user.ageVerified,
         gender: user.gender,
         genderPreference: user.genderPreference,
+        interests: user.interests || [],
         termsAccepted: user.termsAccepted,
         totalCalls: user.totalCalls,
         createdAt: user.createdAt,
@@ -914,6 +942,7 @@ app.post('/api/auth/google', verifyApiKey, async (req, res) => {
         gender: user.gender,
         genderVerified: user.genderVerified,
         genderPreference: user.genderPreference,
+        interests: user.interests || [],
         termsAccepted: user.termsAccepted,
         videoQualityPreference: user.videoQualityPreference,
         qualitySwitchMode: user.qualitySwitchMode,
@@ -966,6 +995,7 @@ app.post('/api/auth/google-access-token', verifyApiKey, async (req, res) => {
         ageVerified: user.ageVerified,
         gender: user.gender,
         genderPreference: user.genderPreference,
+        interests: user.interests || [],
         termsAccepted: user.termsAccepted,
         totalCalls: user.totalCalls,
         createdAt: user.createdAt
@@ -1126,6 +1156,105 @@ app.post('/api/user/update-gender-preference', verifyApiKey, async (req, res) =>
   }
 });
 
+// Update user interests
+app.post('/api/user/update-interests', verifyApiKey, async (req, res) => {
+  const { firebaseUid, interests } = req.body;
+  
+  if (!firebaseUid || !interests) {
+    return res.status(400).json({ error: 'firebaseUid and interests required' });
+  }
+  
+  if (!Array.isArray(interests)) {
+    return res.status(400).json({ error: 'interests must be an array' });
+  }
+  
+  const validInterests = interests.filter(tag => INTEREST_TAGS.includes(tag));
+  
+  try {
+    const user = await User.findOneAndUpdate(
+      { firebaseUid },
+      { interests: validInterests, lastActive: new Date() },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, interests: user.interests });
+  } catch (error) {
+    console.error('Update interests error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update video quality preference
+app.post('/api/user/update-video-quality', verifyApiKey, async (req, res) => {
+  const { firebaseUid, videoQuality } = req.body;
+  
+  if (!firebaseUid || !videoQuality) {
+    return res.status(400).json({ error: 'firebaseUid and videoQuality required' });
+  }
+  
+  if (!['low', 'medium', 'high', 'hd'].includes(videoQuality)) {
+    return res.status(400).json({ error: 'Invalid videoQuality value' });
+  }
+  
+  try {
+    const user = await User.findOneAndUpdate(
+      { firebaseUid },
+      { videoQualityPreference: videoQuality, lastActive: new Date() },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ success: true, videoQualityPreference: user.videoQualityPreference });
+  } catch (error) {
+    console.error('Update video quality error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get call history
+app.get('/api/call-history', verifyApiKey, async (req, res) => {
+  const { firebaseUid, limit = 20 } = req.query;
+  
+  if (!firebaseUid) {
+    return res.status(400).json({ error: 'firebaseUid required' });
+  }
+  
+  try {
+    const history = await CallHistory.find({
+      $or: [
+        { callerFirebaseUid: firebaseUid },
+        { receiverFirebaseUid: firebaseUid }
+      ]
+    })
+    .sort({ startTime: -1 })
+    .limit(parseInt(limit))
+    .lean();
+    
+    const formattedHistory = history.map(call => ({
+      id: call._id.toString(),
+      roomId: call.roomId,
+      partnerId: call.callerFirebaseUid === firebaseUid ? call.receiverFirebaseUid : call.callerFirebaseUid,
+      duration: call.duration,
+      date: new Date(call.startTime).toISOString().split('T')[0],
+      time: new Date(call.startTime).toTimeString().split(' ')[0].substring(0, 5),
+      type: call.callerFirebaseUid === firebaseUid ? 'outgoing' : 'incoming',
+      endedBy: call.endedBy,
+    }));
+    
+    res.json({ history: formattedHistory });
+  } catch (error) {
+    console.error('Call history error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/device/register', verifyApiKey, async (req, res) => {
   const { deviceId, firebaseUid, platform } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
@@ -1184,6 +1313,8 @@ app.get('/api/config', (req, res) => {
       adaptiveBitrate: appConfig.videoQuality.adaptiveBitrate,
       googleAuth: !!firebaseApp,
       callHistory: true,
+      interestTags: true,
+      sosButton: true,
     },
     videoQuality: {
       ...appConfig.videoQuality,
@@ -1193,6 +1324,7 @@ app.get('/api/config', (req, res) => {
       })),
       modes: QUALITY_SWITCH_MODES
     },
+    interestTags: INTEREST_TAGS,
     iceServers: ICE_SERVERS,
     safety: appConfig.safety,
     reportReasons: REPORT_REASONS,
@@ -1204,9 +1336,13 @@ app.get('/api/config', (req, res) => {
 app.get('/api/version', (req, res) => {
   res.json({
     currentVersion: '2.0.0',
+    latestVersion: appConfig.latestAppVersion || '1.0.0',
+    minimumVersion: appConfig.minimumAppVersion || '1.0.0',
     updateAvailable: false,
+    updateType: 'none',
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.orey.app',
     message: 'You are using the latest version',
-    features: ['google-auth', 'google-oauth-redirect', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates', 'gender-preference']
+    features: ['google-auth', 'google-oauth-redirect', 'video-quality-switching', 'adaptive-bitrate', 'call-history', 'verification-gates', 'gender-preference', 'interest-tags', 'in-call-chat', 'sos-button']
   });
 });
 
@@ -1395,6 +1531,80 @@ io.on('connection', (socket) => {
     socket.emit('left');
   });
 
+  // In-Call Chat
+  socket.on('send-message', ({ roomId, message, senderName }) => {
+    // Broadcast message to all in room except sender
+    socket.to(roomId).emit('receive-message', {
+      message,
+      senderName: senderName || 'Anonymous',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // SOS Report
+  socket.on('sos-report', async ({ roomId, reason, description }) => {
+    console.log(`SOS Report from ${socket.id} in room ${roomId}`);
+    
+    const room = rooms.get(roomId);
+    if (room) {
+      // Find the partner
+      let partnerId = null;
+      for (const [pid] of room.entries()) {
+        if (pid !== socket.id) {
+          partnerId = pid;
+          break;
+        }
+      }
+      
+      if (partnerId) {
+        const partnerSocket = io.sockets.sockets.get(partnerId);
+        if (partnerSocket) {
+          // Create report
+          const report = new Report({
+            id: 'sos_' + Date.now(),
+            reporterDeviceId: socket.data.deviceId,
+            reporterFirebaseUid: socket.data.firebaseUid,
+            reportedDeviceId: partnerSocket.data.deviceId,
+            reportedFirebaseUid: partnerSocket.data.firebaseUid,
+            roomId,
+            reason: reason || 'SOS Emergency Report',
+            description: description || 'Emergency SOS triggered',
+            status: 'urgent',
+            isSOS: true,
+            actionTaken: 'temporary_ban'
+          });
+          await report.save();
+          
+          // Temporary ban reported user
+          await banDevice(
+            partnerSocket.data.deviceId,
+            partnerSocket.data.firebaseUid,
+            {
+              reason: 'SOS Report - Temporary ban pending review',
+              durationHours: 24,
+              permanent: false,
+              source: 'sos',
+              canAppeal: true
+            }
+          );
+          
+          // Notify partner
+          partnerSocket.emit('partner-left', { reason: 'reported' });
+          partnerSocket.data.currentRoomId = null;
+        }
+      }
+      
+      // End call
+      await endCall(roomId, socket.id);
+      room.delete(socket.id);
+      socket.leave(roomId);
+      if (room.size === 0) rooms.delete(roomId);
+      socket.data.currentRoomId = null;
+    }
+    
+    socket.emit('sos-confirmed', { message: 'Report submitted. You are now safe.' });
+  });
+
   socket.on('offer', ({ targetId, offer }) => {
     io.to(targetId).emit('offer', { offer, fromId: socket.id });
   });
@@ -1434,7 +1644,6 @@ io.on('connection', (socket) => {
     }
 
     if (socket.data.firebaseUid) {
-      // Always reset isInCall on disconnect, no conditions
       User.findOneAndUpdate(
         { firebaseUid: socket.data.firebaseUid },
         { isInCall: false, currentRoomId: null, lastActive: new Date() }
@@ -1454,10 +1663,12 @@ async function start() {
       console.log('================================================');
       console.log(`${SERVICE_NAME} running on port ${PORT}`);
       console.log(`Firebase: ${firebaseApp ? 'Configured' : 'Not configured'}`);
-      console.log(`Google OAuth redirect: GET /auth/google -> /auth/google/callback`);
-      console.log(`Google OAuth mobile: GET /auth/google/mobile`);
-      console.log(`Gender endpoints: POST /api/user/update-gender`);
-      console.log(`Gender preference: POST /api/user/update-gender-preference`);
+      console.log(`Rate limiting: Enabled (100 req/15min)`);
+      console.log(`Google OAuth: Ready`);
+      console.log(`Interest tags: ${INTEREST_TAGS.join(', ')}`);
+      console.log(`In-Call Chat: Ready`);
+      console.log(`SOS Button: Ready`);
+      console.log(`Version check: Ready`);
       console.log('================================================');
     });
   } catch (err) {
