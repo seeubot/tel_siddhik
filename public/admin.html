@@ -1,780 +1,298 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orey! Admin Panel</title>
-  <style>
-    :root {
-      --bg: #0b0f17;
-      --surface: #1e293b;
-      --border: #334155;
-      --text: #e2e8f0;
-      --text-dim: #94a3b8;
-      --accent: #3b82f6;
-      --accent2: #8b5cf6;
-      --green: #10b981;
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --radius: 12px;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.5;
-    }
-
-    /* ── Login Screen ── */
-    .login-screen {
-      display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;
-    }
-    .login-box {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 40px 32px;
-      width: 100%; max-width: 400px; text-align: center;
-    }
-    .login-box h1 { font-size: 2rem; margin-bottom: 4px; color: var(--accent); }
-    .login-box .sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 24px; }
-    .login-box input {
-      width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text); font-size: 1rem; outline: none; margin-bottom: 16px;
-      transition: border-color 0.2s;
-    }
-    .login-box input:focus { border-color: var(--accent); }
-    .login-box button {
-      width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: var(--radius);
-      color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
-    }
-    .login-box button:hover { background: #2563eb; }
-    .login-box .error { color: var(--red); font-size: 0.85rem; margin-top: 8px; }
-
-    /* ── Dashboard ── */
-    .dashboard { display: none; min-height: 100vh; }
-    .dashboard.active { display: block; }
-    .login-screen.hidden { display: none; }
-
-    .topbar {
-      background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px;
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-      position: sticky; top: 0; z-index: 10;
-    }
-    .topbar h1 { font-size: 1.3rem; color: var(--accent); }
-    .topbar .badge { font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 4px 10px; border-radius: 20px; }
-    .topbar button { padding: 8px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
-    .topbar button:hover { border-color: var(--red); color: var(--red); }
-
-    .tabs {
-      display: flex; gap: 4px; padding: 12px 24px; background: rgba(30, 41, 59, 0.5);
-      border-bottom: 1px solid var(--border); overflow-x: auto; flex-wrap: wrap;
-    }
-    .tabs button {
-      padding: 8px 18px; border: 1px solid transparent; background: transparent; color: var(--text-dim);
-      border-radius: 20px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s;
-    }
-    .tabs button:hover { color: var(--text); }
-    .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .panel { display: none; }
-    .panel.active { display: block; }
-
-    /* ── Cards ── */
-    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
-    }
-    .stat-card .label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-card .value { font-size: 2rem; font-weight: 700; margin-top: 4px; }
-    .stat-card .value.green { color: var(--green); }
-    .stat-card .value.red { color: var(--red); }
-    .stat-card .value.accent { color: var(--accent); }
-
-    /* ── Tables ── */
-    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
-    th { text-align: left; padding: 12px 16px; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-    td { padding: 12px 16px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); font-size: 0.85rem; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(59, 130, 246, 0.03); }
-    .mono { font-family: 'SF Mono', 'Menlo', 'Fira Code', monospace; font-size: 0.8rem; }
-    .badge-hp { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: var(--red); }
-    .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
-    .badge-done { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-
-    /* ── Forms ── */
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit;
-    }
-    .form-group textarea { min-height: 80px; resize: vertical; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
-    .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
-    .form-row .form-group { flex: 1; min-width: 200px; }
-
-    .btn {
-      padding: 10px 20px; border: none; border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
-      cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
-    }
-    .btn-accent { background: var(--accent); color: #fff; }
-    .btn-accent:hover { background: #2563eb; }
-    .btn-red { background: var(--red); color: #fff; }
-    .btn-red:hover { background: #dc2626; }
-    .btn-yellow { background: var(--yellow); color: #000; }
-    .btn-green { background: var(--green); color: #fff; }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      display: flex; justify-content: center; align-items: center; z-index: 100; padding: 20px;
-    }
-    .modal {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px;
-      width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;
-    }
-    .modal h3 { margin-bottom: 16px; color: var(--accent); }
-
-    /* ── Toast ── */
-    .toast {
-      position: fixed; bottom: 24px; right: 24px; z-index: 200; padding: 14px 20px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      font-size: 0.85rem; animation: slideIn 0.3s ease; max-width: 400px;
-    }
-    .toast.success { border-color: var(--green); }
-    .toast.error { border-color: var(--red); }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-    .loading { text-align: center; padding: 40px; color: var(--text-dim); }
-    .empty { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.9rem; }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .topbar { padding: 12px 16px; }
-      .tabs { padding: 8px 12px; }
-      .content { padding: 16px; }
-      .stat-grid { grid-template-columns: repeat(2, 1fr); }
-      table { font-size: 0.75rem; }
-      th, td { padding: 8px 10px; }
-    }
-  </style>
+    <title>Orey! Admin Panel</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f8fa; }
+        h1 { color: #1a2b4c; margin-bottom: 4px; }
+        .subtitle { color: #5c6e8d; margin-bottom: 24px; font-size: 14px; }
+        
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #fff; border-radius: 12px; padding: 4px; border: 1px solid #e2eaf2; }
+        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; border: none; background: transparent; color: #5c6e8d; }
+        .tab.active { background: #007aff; color: #fff; }
+        
+        .panel { display: none; }
+        .panel.active { display: block; }
+        
+        label { display: block; margin-top: 14px; font-weight: 600; color: #5c6e8d; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select, textarea { width: 100%; padding: 10px 14px; margin-top: 4px; border: 1px solid #e2eaf2; border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; }
+        textarea { resize: vertical; min-height: 120px; }
+        button { margin-top: 16px; padding: 12px 24px; background: #007aff; color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; }
+        button.secondary { background: #e1efff; color: #007aff; margin-top: 8px; }
+        button.danger { background: #ea5455; }
+        .msg { padding: 10px 14px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
+        .msg.success { background: #e8f5e9; color: #28c76f; }
+        .msg.error { background: #ffebee; color: #ea5455; }
+        .msg.info { background: #e1efff; color: #007aff; }
+        
+        .stats { display: flex; gap: 12px; margin-bottom: 20px; }
+        .stat { flex: 1; background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e2eaf2; text-align: center; }
+        .stat-num { font-size: 28px; font-weight: 800; color: #1a2b4c; }
+        .stat-label { font-size: 11px; color: #5c6e8d; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .json-preview { background: #1a2b4c; color: #e2e8f0; padding: 14px; border-radius: 10px; font-size: 12px; font-family: 'Courier New', monospace; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+    </style>
 </head>
 <body>
+    <h1>Orey! Admin Panel</h1>
+    <p class="subtitle">Manage game questions for Telugu Games</p>
+    
+    <div class="stats" id="stats"></div>
 
-<!-- LOGIN SCREEN -->
-<div id="loginScreen" class="login-screen">
-  <div class="login-box">
-    <h1>🔷 Orey! Admin</h1>
-    <p class="sub">Enter your admin key to continue</p>
-    <input type="password" id="adminKeyInput" placeholder="Admin Key" onkeydown="if(event.key==='Enter')login()">
-    <button onclick="login()">Sign In</button>
-    <p id="loginError" class="error"></p>
-  </div>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard" class="dashboard">
-  <!-- Top Bar -->
-  <div class="topbar">
-    <h1>🔷 Orey! Admin</h1>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="badge" id="connBadge">🟢 Connected</span>
-      <button onclick="logout()">Logout</button>
-    </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="active" data-tab="tab-dashboard">📊 Dashboard</button>
-    <button data-tab="tab-bans">🚫 Bans</button>
-    <button data-tab="tab-reports">🚨 Reports</button>
-    <button data-tab="tab-notifications">🔔 Notifications</button>
-    <button data-tab="tab-gender">⚧ Gender Stats</button>
-    <button data-tab="tab-config">⚙️ Config</button>
-  </div>
-
-  <div class="content">
-    <!-- Dashboard Panel -->
-    <div id="tab-dashboard" class="panel active">
-      <div class="stat-grid" id="dashboardStats"></div>
-      <div id="dashboardLoading" class="loading">Loading stats...</div>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('add')">Add Single</button>
+        <button class="tab" onclick="switchTab('bulk')">Bulk Import</button>
+        <button class="tab" onclick="switchTab('demo')">Demo Data</button>
     </div>
 
-    <!-- Bans Panel -->
-    <div id="tab-bans" class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-        <h3 style="color:var(--text);">Banned Devices</h3>
-        <button class="btn btn-red" onclick="showBanModal()">+ Ban Device</button>
-      </div>
-      <div id="bansLoading" class="loading">Loading bans...</div>
-      <div id="bansTable" style="overflow-x:auto;"></div>
-    </div>
-
-    <!-- Reports Panel -->
-    <div id="tab-reports" class="panel">
-      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-        <select id="reportFilter" onchange="loadReports()" class="btn btn-outline">
-          <option value="">All Reports</option>
-          <option value="pending">Pending</option>
-          <option value="banned">Banned</option>
-          <option value="dismissed">Dismissed</option>
-          <option value="warned">Warned</option>
-          <option value="auto_banned">Auto Banned</option>
+    <!-- Add Single Panel -->
+    <div id="panel-add" class="panel active">
+        <label>Game Type</label>
+        <select id="gameType">
+            <option value="movie">Guess the Movie</option>
+            <option value="song">Song Antakshari</option>
+            <option value="food">Food Quiz</option>
         </select>
-      </div>
-      <div id="reportsLoading" class="loading">Loading reports...</div>
-      <div id="reportsTable" style="overflow-x:auto;"></div>
+
+        <label>Question</label>
+        <input id="question" placeholder="Enter question" />
+
+        <label>Clue (optional)</label>
+        <input id="clue" placeholder="Enter clue" />
+
+        <label>Option 1 *</label>
+        <input id="opt1" placeholder="Option 1" />
+
+        <label>Option 2 *</label>
+        <input id="opt2" placeholder="Option 2" />
+
+        <label>Option 3</label>
+        <input id="opt3" placeholder="Option 3" />
+
+        <label>Option 4</label>
+        <input id="opt4" placeholder="Option 4" />
+
+        <label>Correct Answer *</label>
+        <input id="correct" placeholder="Must match one option exactly" />
+
+        <button onclick="submitSingle()">Add Question</button>
+        <div id="msg-add"></div>
     </div>
 
-    <!-- Notifications Panel -->
-    <div id="tab-notifications" class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-        <h3 style="color:var(--text);">Push Notifications</h3>
-        <button class="btn btn-accent" onclick="showNotificationModal()">+ New Notification</button>
-      </div>
-      <div id="notifStats" class="stat-grid" style="margin-bottom:16px;"></div>
-      <div id="notifsLoading" class="loading">Loading notifications...</div>
-      <div id="notifsTable" style="overflow-x:auto;"></div>
+    <!-- Bulk Import Panel -->
+    <div id="panel-bulk" class="panel">
+        <label>Game Type</label>
+        <select id="bulkGameType">
+            <option value="movie">Guess the Movie</option>
+            <option value="song">Song Antakshari</option>
+            <option value="food">Food Quiz</option>
+        </select>
+
+        <label>Paste JSON Array of Questions</label>
+        <textarea id="bulkJson" placeholder='[
+  {
+    "question": "Which movie?",
+    "clue": "Hint text",
+    "options": ["Answer1", "Answer2", "Answer3", "Answer4"],
+    "correctAnswer": "Answer1"
+  }
+]'></textarea>
+
+        <button onclick="submitBulk()">Import Questions</button>
+        <div id="msg-bulk"></div>
     </div>
 
-    <!-- Gender Stats Panel -->
-    <div id="tab-gender" class="panel">
-      <h3 style="color:var(--text);margin-bottom:16px;">Gender Matchmaking Queue</h3>
-      <div class="stat-grid" id="genderStatsGrid"></div>
-      <div id="genderLoading" class="loading">Loading gender stats...</div>
+    <!-- Demo Data Panel -->
+    <div id="panel-demo" class="panel">
+        <label>Select Game Type</label>
+        <select id="demoGameType">
+            <option value="movie">Guess the Movie (8 questions)</option>
+            <option value="song">Song Antakshari (6 questions)</option>
+            <option value="food">Food Quiz (6 questions)</option>
+            <option value="all">All Games (20 questions)</option>
+        </select>
+
+        <button onclick="generateDemo()" style="margin-top:12px">Preview Demo Data</button>
+        
+        <label style="margin-top:16px">Preview</label>
+        <div id="demoPreview" class="json-preview">Select a game type and click preview...</div>
+        
+        <button onclick="importDemo()" class="secondary">Import This Data</button>
+        <div id="msg-demo"></div>
     </div>
 
-    <!-- Config Panel -->
-    <div id="tab-config" class="panel">
-      <h3 style="color:var(--text);margin-bottom:16px;">App Configuration</h3>
-      <div id="configForm"></div>
-      <div id="configLoading" class="loading">Loading config...</div>
-    </div>
-  </div>
-</div>
+    <script>
+        const API_URL = 'https://parallel-elsi-seeutech-50a3ab2e.koyeb.app';
+        const API_KEY = 'maya@1660440';
 
-<!-- Ban Modal -->
-<div id="banModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeBanModal()">
-  <div class="modal">
-    <h3>Ban Device</h3>
-    <div class="form-group"><label>Device ID</label><input type="text" id="banDeviceId" placeholder="Enter device ID..."></div>
-    <div class="form-group"><label>Reason</label><input type="text" id="banReason" placeholder="Reason for ban"></div>
-    <div class="form-group"><label>Duration (hours, 0 = permanent)</label><input type="number" id="banDuration" value="720" min="0"></div>
-    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-      <button class="btn btn-outline" onclick="closeBanModal()">Cancel</button>
-      <button class="btn btn-red" onclick="banDevice()">Ban Device</button>
-    </div>
-  </div>
-</div>
+        const DEMO_DATA = {
+            movie: [
+                { question: 'Which Tollywood movie?', clue: 'Insect + King', options: ['Ant-Man', 'Eega', 'Robo', 'Akhanda'], correctAnswer: 'Eega' },
+                { question: 'Which Tollywood movie?', clue: 'Cycle + Fire', options: ['Arjun Reddy', 'Jersey', 'Race Gurram', 'Geetha Govindam'], correctAnswer: 'Arjun Reddy' },
+                { question: 'Which Tollywood movie?', clue: 'Fort + Ghost', options: ['Arundhati', 'Magadheera', 'Chandramukhi', 'Kanchana'], correctAnswer: 'Arundhati' },
+                { question: 'Which Tollywood movie?', clue: 'Ocean + Child', options: ['Bahubali', 'Sahoo', 'Kalki', 'Gangotri'], correctAnswer: 'Bahubali' },
+                { question: 'Which Tollywood movie?', clue: 'Lion + Fire', options: ['Simhadri', 'Simha', 'Legend', 'Lion'], correctAnswer: 'Simhadri' },
+                { question: 'Which Tollywood movie?', clue: 'King + Tiger', options: ['Rangasthalam', 'Pushpa', 'AVPL', 'Janatha Garage'], correctAnswer: 'Rangasthalam' },
+                { question: 'Which Tollywood movie?', clue: 'Mirror + Dance', options: ['Fidaa', 'Bommarillu', 'NVN', 'Arya 2'], correctAnswer: 'Fidaa' },
+                { question: 'Which Tollywood movie?', clue: 'Police + Spicy', options: ['Temper', 'Pokiri', 'Gabbar Singh', 'Dookudu'], correctAnswer: 'Temper' },
+            ],
+            song: [
+                { question: 'Complete: "Kannulu rendu..."', clue: 'Sita Ramam song', options: ['Kalisi untaayi', 'Maatallo untaayi', 'Swapnam lo untaayi', 'Gunde lo untaayi'], correctAnswer: 'Kalisi untaayi' },
+                { question: 'Who sang "Inkem Inkem Kaavaale"?', clue: 'Geetha Govindam', options: ['Sid Sriram', 'Anirudh', 'Shreya Ghoshal', 'SPB'], correctAnswer: 'Sid Sriram' },
+                { question: 'Complete: "Nee kallu chusthe..."', clue: 'Nenu Local', options: ['Gunde aagipoyindhe', 'Time aagipoyindhe', 'World aagipoyindhe', 'Love start ayindhe'], correctAnswer: 'Gunde aagipoyindhe' },
+                { question: '"Oopiri aaguthumandi..." from?', clue: 'Emotional hit', options: ['Vakeel Saab', 'Jersey', 'Mahanati', 'Majili'], correctAnswer: 'Vakeel Saab' },
+                { question: 'Baahubali music composer?', clue: 'Epic music', options: ['MM Keeravani', 'DSP', 'Thaman', 'Anirudh'], correctAnswer: 'MM Keeravani' },
+                { question: 'Complete: "Raamuloo..."', clue: 'RRR song', options: ['Rudrulaa', 'Seethalaa', 'Bheemulaa', 'Koushikaa'], correctAnswer: 'Rudrulaa' },
+            ],
+            food: [
+                { question: 'Main ingredient in Gongura Pachadi?', clue: 'Andhra special', options: ['Sorrel leaves', 'Spinach', 'Coriander', 'Mint'], correctAnswer: 'Sorrel leaves' },
+                { question: 'City famous for Hyderabadi Biryani?', clue: 'Nizam capital', options: ['Hyderabad', 'Vijayawada', 'Vizag', 'Warangal'], correctAnswer: 'Hyderabad' },
+                { question: 'Pesarattu is made from?', clue: 'Green gram', options: ['Moong Dal', 'Toor Dal', 'Chana Dal', 'Urad Dal'], correctAnswer: 'Moong Dal' },
+                { question: 'Pootharekulu is from?', clue: 'Paper sweet', options: ['Atreyapuram', 'Tirupati', 'Kakinada', 'Rajahmundry'], correctAnswer: 'Atreyapuram' },
+                { question: 'Kakinada is famous for?', clue: 'Sweet snack', options: ['Kaja', 'Jalebi', 'Laddu', 'Mysore Pak'], correctAnswer: 'Kaja' },
+                { question: 'Famous Andhra pickle?', clue: 'Spicy mango', options: ['Avakaya', 'Lemon Pickle', 'Chilli Pickle', 'Garlic Pickle'], correctAnswer: 'Avakaya' },
+            ],
+        };
 
-<!-- Notification Modal -->
-<div id="notifModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeNotifModal()">
-  <div class="modal">
-    <h3>Send Notification</h3>
-    <div class="form-group"><label>Title</label><input type="text" id="notifTitle" placeholder="Notification title"></div>
-    <div class="form-group"><label>Message</label><textarea id="notifMessage" placeholder="Notification message"></textarea></div>
-    <div class="form-row">
-      <div class="form-group"><label>Type</label>
-        <select id="notifType"><option value="info">Info</option><option value="warning">Warning</option><option value="alert">Alert</option></select>
-      </div>
-      <div class="form-group"><label>Priority</label>
-        <select id="notifPriority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select>
-      </div>
-    </div>
-    <div class="form-group"><label>Icon</label><input type="text" id="notifIcon" placeholder="📢" value="📢"></div>
-    <div class="form-group"><label>Image URL (optional)</label><input type="text" id="notifImage" placeholder="https://..."></div>
-    <div class="form-group"><label>Expires In (days)</label><input type="number" id="notifExpiry" value="30" min="1"></div>
-    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-      <button class="btn btn-outline" onclick="closeNotifModal()">Cancel</button>
-      <button class="btn btn-accent" onclick="sendNotification()">Send to All</button>
-    </div>
-  </div>
-</div>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`.tab:contains('${tab}')`).classList.add('active');
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
 
-<script>
-// ═══════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════
-let sessionToken = localStorage.getItem('sessionToken') || null;
-let statsInterval = null;
+        // Fix for :contains selector
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const text = this.textContent.trim();
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                if (text === 'Add Single') document.getElementById('panel-add').classList.add('active');
+                if (text === 'Bulk Import') document.getElementById('panel-bulk').classList.add('active');
+                if (text === 'Demo Data') document.getElementById('panel-demo').classList.add('active');
+            });
+        });
 
-// ═══════════════════════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════════════════════
-async function login() {
-  const key = document.getElementById('adminKeyInput').value.trim();
-  if (!key) return showLoginError('Please enter admin key');
-  
-  try {
-    const res = await fetch('/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adminKey: key })
-    });
-    const data = await res.json();
-    if (data.success) {
-      sessionToken = data.sessionToken;
-      localStorage.setItem('sessionToken', sessionToken);
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('dashboard').classList.add('active');
-      initDashboard();
-    } else {
-      showLoginError(data.error || 'Login failed');
-    }
-  } catch (e) {
-    showLoginError('Connection error');
-  }
-}
+        async function apiPost(endpoint, body) {
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+                body: JSON.stringify(body),
+            });
+            return res.json();
+        }
 
-function showLoginError(msg) {
-  document.getElementById('loginError').textContent = msg;
-}
+        async function apiGet(endpoint) {
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                headers: { 'x-api-key': API_KEY },
+            });
+            return res.json();
+        }
 
-function logout() {
-  fetch('/admin/logout', {
-    method: 'POST',
-    headers: { ...headers(), 'Content-Type': 'application/json' }
-  }).catch(() => {});
-  localStorage.removeItem('sessionToken');
-  sessionToken = null;
-  if (statsInterval) clearInterval(statsInterval);
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('dashboard').classList.remove('active');
-  document.getElementById('adminKeyInput').value = '';
-}
+        async function loadStats() {
+            try {
+                const data = await apiGet('/api/games/questions?gameType=movie&limit=100');
+                const movieCount = data.questions?.length || 0;
+                const songData = await apiGet('/api/games/questions?gameType=song&limit=100');
+                const songCount = songData.questions?.length || 0;
+                const foodData = await apiGet('/api/games/questions?gameType=food&limit=100');
+                const foodCount = foodData.questions?.length || 0;
+                
+                document.getElementById('stats').innerHTML = `
+                    <div class="stat"><div class="stat-num">${movieCount}</div><div class="stat-label">Movies</div></div>
+                    <div class="stat"><div class="stat-num">${songCount}</div><div class="stat-label">Songs</div></div>
+                    <div class="stat"><div class="stat-num">${foodCount}</div><div class="stat-label">Food</div></div>
+                    <div class="stat"><div class="stat-num">${movieCount + songCount + foodCount}</div><div class="stat-label">Total</div></div>
+                `;
+            } catch(e) { console.log('Stats load error:', e); }
+        }
 
-function headers() {
-  return sessionToken ? { 'x-session-token': sessionToken } : {};
-}
+        function showMsg(panel, type, text) {
+            document.getElementById(`msg-${panel}`).innerHTML = `<div class="msg ${type}">${text}</div>`;
+        }
 
-function authFetch(url, options = {}) {
-  return fetch(url, { ...options, headers: { ...options.headers, ...headers() } });
-}
+        async function submitSingle() {
+            const gameType = document.getElementById('gameType').value;
+            const question = document.getElementById('question').value;
+            const clue = document.getElementById('clue').value;
+            const options = ['opt1','opt2','opt3','opt4'].map(id => document.getElementById(id).value).filter(o => o.trim());
+            const correctAnswer = document.getElementById('correct').value;
 
-// ═══════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════
-function initDashboard() {
-  if (sessionToken) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('dashboard').classList.add('active');
-    loadAllStats();
-    statsInterval = setInterval(loadAllStats, 10000);
-  }
-}
+            if (!question || options.length < 2 || !correctAnswer) {
+                return showMsg('add', 'error', 'Fill question, 2+ options, and correct answer');
+            }
 
-function loadAllStats() {
-  loadDashboard();
-  loadBans();
-  loadReports();
-  loadNotifications();
-  loadGenderStats();
-  loadConfig();
-}
+            try {
+                const data = await apiPost('/api/games/add-question', { gameType, question, clue, options, correctAnswer });
+                if (data.success) {
+                    showMsg('add', 'success', 'Question added!');
+                    document.querySelectorAll('#panel-add input').forEach(i => i.value = '');
+                    loadStats();
+                } else {
+                    showMsg('add', 'error', data.error || 'Failed');
+                }
+            } catch(err) {
+                showMsg('add', 'error', err.message);
+            }
+        }
 
-// ═══════════════════════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════════════════════
-document.querySelectorAll('.tabs button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-  });
-});
+        async function submitBulk() {
+            const gameType = document.getElementById('bulkGameType').value;
+            let questions;
+            try {
+                questions = JSON.parse(document.getElementById('bulkJson').value);
+            } catch(e) {
+                return showMsg('bulk', 'error', 'Invalid JSON format');
+            }
 
-// ═══════════════════════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════════════════════
-async function loadDashboard() {
-  try {
-    const res = await authFetch('/admin/stats');
-    const stats = await res.json();
-    document.getElementById('dashboardLoading').style.display = 'none';
-    
-    const genderQ = stats.genderStats || {};
-    
-    document.getElementById('dashboardStats').innerHTML = `
-      <div class="stat-card"><div class="label">Active Connections</div><div class="value accent">${stats.activeConnections || 0}</div></div>
-      <div class="stat-card"><div class="label">Active Rooms</div><div class="value accent">${stats.activeRooms || 0}</div></div>
-      <div class="stat-card"><div class="label">Banned Devices</div><div class="value red">${stats.bannedDevices || 0}</div></div>
-      <div class="stat-card"><div class="label">Pending Reports</div><div class="value red">${stats.pendingReports || 0}</div></div>
-      <div class="stat-card"><div class="label">Notifications</div><div class="value accent">${stats.totalNotifications || 0}</div></div>
-      <div class="stat-card"><div class="label">Admin Sessions</div><div class="value accent">${stats.activeAdminSessions || 0}</div></div>
-      <div class="stat-card"><div class="label">Uptime</div><div class="value">${formatUptime(stats.uptime || 0)}</div></div>
-      <div class="stat-card"><div class="label">Memory</div><div class="value">${(stats.memoryMB || 0).toFixed(1)} MB</div></div>
-      <div class="stat-card"><div class="label">DB Status</div><div class="value green">${stats.dbState || 'unknown'}</div></div>
-      <div class="stat-card"><div class="label">♂️ Males Waiting</div><div class="value">${genderQ.maleWaiting || 0}</div></div>
-      <div class="stat-card"><div class="label">♀️ Females Waiting</div><div class="value">${genderQ.femaleWaiting || 0}</div></div>
-      <div class="stat-card"><div class="label">Random Queue</div><div class="value">${genderQ.randomQueueLength || 0}</div></div>
-    `;
-  } catch (e) {
-    document.getElementById('dashboardLoading').textContent = 'Error loading stats';
-  }
-}
+            if (!Array.isArray(questions) || questions.length === 0) {
+                return showMsg('bulk', 'error', 'Must be a non-empty array');
+            }
 
-// ═══════════════════════════════════════════════════════════════
-// BANS
-// ═══════════════════════════════════════════════════════════════
-async function loadBans() {
-  try {
-    const res = await authFetch('/admin/banned-devices');
-    const data = await res.json();
-    document.getElementById('bansLoading').style.display = 'none';
-    
-    if (!data.bannedDevices || data.bannedDevices.length === 0) {
-      document.getElementById('bansTable').innerHTML = '<div class="empty">No banned devices</div>';
-      return;
-    }
-    
-    document.getElementById('bansTable').innerHTML = `
-      <table>
-        <thead><tr><th>Device ID</th><th>Reason</th><th>Source</th><th>Type</th><th>Expires</th><th>Actions</th></tr></thead>
-        <tbody>${data.bannedDevices.map(b => `
-          <tr>
-            <td class="mono">${b.deviceId.substring(0, 16)}...</td>
-            <td>${b.reason || '-'}</td>
-            <td>${b.source || 'manual'}</td>
-            <td>${b.permanent ? '<span class="badge-hp">Permanent</span>' : b.isHighPriority ? '<span class="badge-hp">High Priority</span>' : 'Temporary'}</td>
-            <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Never'}</td>
-            <td><button class="btn btn-green btn-sm" onclick="unbanDevice('${b.deviceId}')">Unban</button></td>
-          </tr>
-        `).join('')}</tbody>
-      </table>`;
-  } catch (e) {
-    document.getElementById('bansLoading').textContent = 'Error loading bans';
-  }
-}
+            let added = 0, failed = 0;
+            for (const q of questions) {
+                try {
+                    await apiPost('/api/games/add-question', { ...q, gameType });
+                    added++;
+                } catch(e) { failed++; }
+            }
+            showMsg('bulk', 'success', `Imported: ${added} success, ${failed} failed`);
+            loadStats();
+        }
 
-function showBanModal() { document.getElementById('banModal').style.display = 'flex'; }
-function closeBanModal() { document.getElementById('banModal').style.display = 'none'; }
+        function generateDemo() {
+            const type = document.getElementById('demoGameType').value;
+            let data = {};
+            if (type === 'all') {
+                data = DEMO_DATA;
+            } else {
+                data = { [type]: DEMO_DATA[type] };
+            }
+            document.getElementById('demoPreview').textContent = JSON.stringify(data, null, 2);
+            window._demoData = data;
+        }
 
-async function banDevice() {
-  const deviceId = document.getElementById('banDeviceId').value.trim();
-  const reason = document.getElementById('banReason').value.trim();
-  const durationHours = parseInt(document.getElementById('banDuration').value) || 0;
-  
-  if (!deviceId) return toast('Device ID required', 'error');
-  
-  try {
-    const res = await authFetch('/admin/ban-device', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, reason: reason || 'Violation of terms', durationHours })
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast('Device banned successfully', 'success');
-      closeBanModal();
-      loadBans();
-      document.getElementById('banDeviceId').value = '';
-      document.getElementById('banReason').value = '';
-    } else {
-      toast(data.error || 'Ban failed', 'error');
-    }
-  } catch (e) {
-    toast('Connection error', 'error');
-  }
-}
+        async function importDemo() {
+            if (!window._demoData) {
+                return showMsg('demo', 'error', 'Click "Preview Demo Data" first');
+            }
+            
+            let added = 0, failed = 0;
+            for (const [gameType, questions] of Object.entries(window._demoData)) {
+                for (const q of questions) {
+                    try {
+                        await apiPost('/api/games/add-question', { ...q, gameType });
+                        added++;
+                    } catch(e) { failed++; }
+                }
+            }
+            showMsg('demo', 'success', `Imported: ${added} success, ${failed} failed`);
+            loadStats();
+        }
 
-async function unbanDevice(deviceId) {
-  if (!confirm('Unban this device?')) return;
-  try {
-    const res = await authFetch(`/admin/ban-device/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
-      toast('Device unbanned', 'success');
-      loadBans();
-    } else {
-      toast(data.error || 'Unban failed', 'error');
-    }
-  } catch (e) {
-    toast('Connection error', 'error');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// REPORTS
-// ═══════════════════════════════════════════════════════════════
-async function loadReports() {
-  try {
-    const status = document.getElementById('reportFilter')?.value || '';
-    const url = '/admin/reports' + (status ? `?status=${status}` : '');
-    const res = await authFetch(url);
-    const data = await res.json();
-    document.getElementById('reportsLoading').style.display = 'none';
-    
-    if (!data.reports || data.reports.length === 0) {
-      document.getElementById('reportsTable').innerHTML = '<div class="empty">No reports found</div>';
-      return;
-    }
-    
-    document.getElementById('reportsTable').innerHTML = `
-      <table>
-        <thead><tr><th>ID</th><th>Reported</th><th>Reason</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-        <tbody>${data.reports.map(r => `
-          <tr>
-            <td class="mono">${r.id}</td>
-            <td class="mono">${(r.reportedDeviceId || '').substring(0, 12)}...</td>
-            <td>${r.isHighPriority ? '<span class="badge-hp">HP</span> ' : ''}${r.reason}</td>
-            <td><span class="badge-pending">${r.status}</span></td>
-            <td>${new Date(r.timestamp).toLocaleDateString()}</td>
-            <td>${r.status === 'pending' ? `
-              <button class="btn btn-red btn-sm" onclick="reviewReport('${r.id}','ban')">Ban</button>
-              <button class="btn btn-yellow btn-sm" onclick="reviewReport('${r.id}','warn')">Warn</button>
-              <button class="btn btn-outline btn-sm" onclick="reviewReport('${r.id}','dismiss')">Dismiss</button>
-            ` : '<span style="color:var(--text-dim);font-size:0.75rem;">Reviewed</span>'}</td>
-          </tr>
-        `).join('')}</tbody>
-      </table>`;
-  } catch (e) {
-    document.getElementById('reportsLoading').textContent = 'Error loading reports';
-  }
-}
-
-async function reviewReport(reportId, action) {
-  const notes = prompt('Review notes (optional):') || '';
-  try {
-    const res = await authFetch(`/admin/reports/${reportId}/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, notes })
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast(`Report ${action}ned`, 'success');
-      loadReports();
-      loadBans();
-    } else {
-      toast(data.error || 'Action failed', 'error');
-    }
-  } catch (e) {
-    toast('Connection error', 'error');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// NOTIFICATIONS
-// ═══════════════════════════════════════════════════════════════
-async function loadNotifications() {
-  try {
-    const [notifRes, statsRes] = await Promise.all([
-      authFetch('/admin/notifications'),
-      authFetch('/admin/notifications/stats')
-    ]);
-    const notifData = await notifRes.json();
-    const statsData = await statsRes.json();
-    
-    document.getElementById('notifsLoading').style.display = 'none';
-    
-    document.getElementById('notifStats').innerHTML = `
-      <div class="stat-card"><div class="label">Total</div><div class="value">${statsData.total}</div></div>
-      <div class="stat-card"><div class="label">Active</div><div class="value accent">${statsData.active}</div></div>
-      <div class="stat-card"><div class="label">Unread</div><div class="value red">${statsData.unread}</div></div>
-      <div class="stat-card"><div class="label">Subscriptions</div><div class="value">${statsData.subscriptions}</div></div>
-    `;
-    
-    const notifs = notifData.notifications || [];
-    if (notifs.length === 0) {
-      document.getElementById('notifsTable').innerHTML = '<div class="empty">No notifications</div>';
-      return;
-    }
-    
-    document.getElementById('notifsTable').innerHTML = `
-      <table>
-        <thead><tr><th>ID</th><th>Icon</th><th>Title</th><th>Type</th><th>Priority</th><th>Read</th><th>Date</th><th>Actions</th></tr></thead>
-        <tbody>${notifs.slice(0, 50).map(n => `
-          <tr>
-            <td>#${n.id}</td>
-            <td>${n.icon || '📢'}</td>
-            <td>${n.title}</td>
-            <td>${n.type}</td>
-            <td>${n.priority}</td>
-            <td>${n.isRead ? '✅' : '❌'}</td>
-            <td>${new Date(n.timestamp).toLocaleDateString()}</td>
-            <td><button class="btn btn-red btn-sm" onclick="deleteNotif(${n.id})">Delete</button></td>
-          </tr>
-        `).join('')}</tbody>
-      </table>`;
-  } catch (e) {
-    document.getElementById('notifsLoading').textContent = 'Error loading notifications';
-  }
-}
-
-function showNotificationModal() { document.getElementById('notifModal').style.display = 'flex'; }
-function closeNotifModal() { document.getElementById('notifModal').style.display = 'none'; }
-
-async function sendNotification() {
-  const title = document.getElementById('notifTitle').value.trim();
-  const message = document.getElementById('notifMessage').value.trim();
-  if (!title || !message) return toast('Title and message required', 'error');
-  
-  try {
-    const res = await authFetch('/admin/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title, message,
-        type: document.getElementById('notifType').value,
-        priority: document.getElementById('notifPriority').value,
-        icon: document.getElementById('notifIcon').value,
-        imageUrl: document.getElementById('notifImage').value || null,
-        expiresIn: parseInt(document.getElementById('notifExpiry').value) || 30
-      })
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast(`Notification sent to ${data.activeClients} clients!`, 'success');
-      closeNotifModal();
-      loadNotifications();
-      document.getElementById('notifTitle').value = '';
-      document.getElementById('notifMessage').value = '';
-    } else {
-      toast(data.error || 'Failed', 'error');
-    }
-  } catch (e) {
-    toast('Connection error', 'error');
-  }
-}
-
-async function deleteNotif(id) {
-  if (!confirm('Delete this notification?')) return;
-  try {
-    const res = await authFetch(`/admin/notifications/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) { toast('Deleted', 'success'); loadNotifications(); }
-    else toast(data.error || 'Failed', 'error');
-  } catch (e) { toast('Connection error', 'error'); }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// GENDER STATS
-// ═══════════════════════════════════════════════════════════════
-async function loadGenderStats() {
-  try {
-    const res = await authFetch('/admin/gender-stats');
-    const data = await res.json();
-    document.getElementById('genderLoading').style.display = 'none';
-    document.getElementById('genderStatsGrid').innerHTML = `
-      <div class="stat-card"><div class="label">♂️ Males Waiting</div><div class="value accent">${data.maleWaiting || 0}</div></div>
-      <div class="stat-card"><div class="label">♀️ Females Waiting</div><div class="value" style="color:#ec4899;">${data.femaleWaiting || 0}</div></div>
-      <div class="stat-card"><div class="label">Total Gender Queue</div><div class="value">${data.totalWaiting || 0}</div></div>
-      <div class="stat-card"><div class="label">Random Queue</div><div class="value">${data.randomQueueLength || 0}</div></div>
-    `;
-  } catch (e) {
-    document.getElementById('genderLoading').textContent = 'Error loading gender stats';
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════
-async function loadConfig() {
-  try {
-    const res = await authFetch('/api/config');
-    const config = await res.json();
-    document.getElementById('configLoading').style.display = 'none';
-    
-    const safety = config.safety || {};
-    const maintenance = config.maintenance || {};
-    
-    document.getElementById('configForm').innerHTML = `
-      <h4 style="color:var(--text-dim);margin-bottom:8px;">Safety Settings</h4>
-      <div class="form-row">
-        <div class="form-group"><label>Auto Ban</label><select id="cfgAutoBan"><option value="true" ${safety.autoBanEnabled ? 'selected' : ''}>Enabled</option><option value="false" ${!safety.autoBanEnabled ? 'selected' : ''}>Disabled</option></select></div>
-        <div class="form-group"><label>Ban Threshold</label><input type="number" id="cfgBanThreshold" value="${safety.autoBanThreshold || 3}" min="1"></div>
-        <div class="form-group"><label>HP Threshold</label><input type="number" id="cfgHpThreshold" value="${safety.highPriorityThreshold || 2}" min="1"></div>
-      </div>
-      <h4 style="color:var(--text-dim);margin:16px 0 8px;">Maintenance</h4>
-      <div class="form-row">
-        <div class="form-group"><label>Maintenance Mode</label><select id="cfgMaintenance"><option value="true" ${maintenance.enabled ? 'selected' : ''}>Enabled</option><option value="false" ${!maintenance.enabled ? 'selected' : ''}>Disabled</option></select></div>
-        <div class="form-group"><label>Message</label><input type="text" id="cfgMaintenanceMsg" value="${maintenance.message || ''}"></div>
-      </div>
-      <button class="btn btn-accent" style="margin-top:16px;" onclick="saveConfig()">💾 Save Config</button>
-    `;
-  } catch (e) {
-    document.getElementById('configLoading').textContent = 'Error loading config';
-  }
-}
-
-async function saveConfig() {
-  try {
-    const safetyRes = await authFetch('/admin/safety-settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        autoBanEnabled: document.getElementById('cfgAutoBan').value === 'true',
-        autoBanThreshold: parseInt(document.getElementById('cfgBanThreshold').value) || 3,
-        highPriorityThreshold: parseInt(document.getElementById('cfgHpThreshold').value) || 2
-      })
-    });
-    
-    const maintRes = await authFetch('/admin/maintenance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        enabled: document.getElementById('cfgMaintenance').value === 'true',
-        message: document.getElementById('cfgMaintenanceMsg').value
-      })
-    });
-    
-    toast('Settings saved and broadcast to clients', 'success');
-  } catch (e) {
-    toast('Error saving config', 'error');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════════════════
-function formatUptime(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m}m`;
-}
-
-function toast(message, type = 'info') {
-  const existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = message;
-  document.body.appendChild(el);
-  
-  setTimeout(() => el.remove(), 3500);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// STARTUP
-// ═══════════════════════════════════════════════════════════════
-if (sessionToken) {
-  // Verify session is still valid
-  authFetch('/admin/stats')
-    .then(res => {
-      if (res.ok) {
-        initDashboard();
-      } else {
-        localStorage.removeItem('sessionToken');
-        sessionToken = null;
-      }
-    })
-    .catch(() => {
-      localStorage.removeItem('sessionToken');
-      sessionToken = null;
-    });
-}
-
-// Focus admin key input on load
-document.getElementById('adminKeyInput')?.focus();
-</script>
-
+        loadStats();
+    </script>
 </body>
 </html>
