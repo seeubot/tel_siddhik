@@ -166,6 +166,9 @@ const ChatRoomSchema = new mongoose.Schema({
   messages: [{ senderUid: String, senderName: String, message: String, type: { type: String, enum: ['text', 'sticker', 'emoji', 'joke', 'dialogue'], default: 'text' }, stickerId: String, timestamp: { type: Date, default: Date.now } }],
   startedAt: { type: Date, default: Date.now }, endedAt: Date, isActive: { type: Boolean, default: true },
 });
+
+
+
 const ChatRoom = mongoose.model('ChatRoom', ChatRoomSchema);
 
 const LeaderboardSchema = new mongoose.Schema({
@@ -305,6 +308,15 @@ async function initDB() {
   if (!cfg) { cfg = { _id: 'main', videoQuality: { default: 'medium', autoAdjust: true, maxBitrate: 1500000, allowedQualities: ['low', 'medium', 'high', 'hd'], adaptiveBitrate: true, networkThresholds: { excellent: 5000, good: 2000, fair: 800, poor: 300 } }, safety: { reportingEnabled: true, contentModeration: true, maxReportsBeforeReview: 5 }, termsVersion: '1.0.0', latestAppVersion: '1.0.0', minimumAppVersion: '1.0.0' }; await AppConfigModel.create(cfg); }
   appConfig = cfg;
 }
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Admin page
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 
 // ==================== ROUTES ====================
 
