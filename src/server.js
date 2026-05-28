@@ -426,6 +426,31 @@ setInterval(async () => { const now = new Date(); if (now.getDay() === 0 && now.
 setInterval(async () => { const now = new Date(); if (now.getDate() === 1 && now.getHours() === 0 && now.getMinutes() === 0) { await Leaderboard.updateMany({}, { monthlyScore: 0, monthlyChats: 0 }); console.log('Monthly leaderboard reset'); } }, 60000);
 setInterval(cleanExpiredOreyIds, 10 * 60 * 1000);
 
+
+// Add game question (admin)
+app.post('/api/games/add-question', verifyApiKey, async (req, res) => {
+  const { gameType, question, clue, options, correctAnswer } = req.body;
+  
+  if (!gameType || !question || !options || !correctAnswer) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  try {
+    const newQuestion = new GameQuestion({
+      gameType,
+      question,
+      clue: clue || '',
+      options,
+      correctAnswer,
+      difficulty: 'medium',
+    });
+    await newQuestion.save();
+    res.json({ success: true, question: newQuestion });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 async function start() {
   try {
     await initDB();
