@@ -309,14 +309,10 @@ async function initDB() {
   appConfig = cfg;
 }
 
-// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Admin page
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
-
 
 // ==================== ROUTES ====================
 
